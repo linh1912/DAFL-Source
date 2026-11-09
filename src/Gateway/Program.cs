@@ -15,7 +15,7 @@
 // catch-all "/" của shop không nuốt mất):
 //   GET /gateway/health — trả "Healthy" (healthcheck Docker + Jenkins).
 //   GET /gateway        — trang trạng thái HTML tĩnh do chính Gateway serve
-//                         (xem GatewayStatusHtml bên dưới): thẻ trạng thái
+//                         (khai báo ở trên, trước MapGet): thẻ trạng thái
 //                         từng service + bảng routes + nút kiểm tra.
 //                         Trang tự fetch /gateway/health và /health qua
 //                         gateway để tô trạng thái THẬT — không hard-code
@@ -30,18 +30,6 @@ builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
 var app = builder.Build();
-
-// Healthcheck riêng của gateway (không proxy về backend).
-app.MapGet("/gateway/health", () => Results.Text("Healthy"));
-
-// Trang trạng thái Gateway (HTML tĩnh, serve trực tiếp — không proxy).
-app.MapGet("/gateway", () => Results.Content(GatewayStatusHtml, "text/html; charset=utf-8"));
-app.MapGet("/gateway/", () => Results.Content(GatewayStatusHtml, "text/html; charset=utf-8"));
-
-// Mọi request còn lại: YARP proxy theo Routes trong appsettings.json.
-app.MapReverseProxy();
-
-app.Run();
 
 // Trang trạng thái: vàng #FFD900 + hồng #D81B60, font Be Vietnam Pro /
 // Plus Jakarta Sans, bo góc 12–16px, responsive mobile (đúng brief của
@@ -191,3 +179,19 @@ const string GatewayStatusHtml = """
 </body>
 </html>
 """;
+
+// Healthcheck riêng của gateway (không proxy về backend).
+app.MapGet("/gateway/health", () => Results.Text("Healthy"));
+
+// Trang trạng thái Gateway (HTML tĩnh, serve trực tiếp — không proxy).
+// CHỈ đăng ký 1 pattern "/gateway/{*rest}" cho cả /gateway và /gateway/:
+// đăng ký riêng 2 MapGet "/gateway" + "/gateway/" gây AmbiguousMatchException
+// vì routing coi 2 pattern này là trùng nhau (lỗi thật trên máy Acer).
+// Route "/gateway/health" ở trên có 2 đoạn literal nên vẫn được ưu tiên
+// hơn pattern này; route catch-all của shop cũng thua pattern này.
+app.MapGet("/gateway/{*rest}", () => Results.Content(GatewayStatusHtml, "text/html; charset=utf-8"));
+
+// Mọi request còn lại: YARP proxy theo Routes trong appsettings.json.
+app.MapReverseProxy();
+
+app.Run();

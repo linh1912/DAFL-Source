@@ -1,6 +1,20 @@
 pipeline {
     agent any
 
+    // PIPELINE TỔNG của repo DAFL-Source (linh1912/DAFL-Source) — đợt 14.
+    // Phân công CI/CD (đừng nhầm với Jenkinsfile của repo test):
+    //  - Repo test linh1912/DAFL_DO_AN_TOT_NGHIEP đã có sẵn 3 Jenkinsfile
+    //    riêng (Jenkinsfile, Jenkinsfile.auto, Jenkinsfile.pt) để chạy test
+    //    độc lập — file này KHÔNG viết lại và KHÔNG sửa chúng.
+    //  - File này chỉ làm pipeline tổng: checkout source ở đây + clone repo
+    //    test (nhánh main) vào build-worktree/dafl-tests + build source và
+    //    Gateway + chạy suite test TỪ repo test (không copy test sang repo
+    //    Source, không tách JMeter ra repo riêng) + Quality Gate + deploy.
+    //  - Suite Selenium: dafl-tests/automation/testng-web.xml (web :3000),
+    //    dafl-tests/automation/testng-admin.xml (admin :3001).
+    //  - JMeter: dafl-tests/performance/dafl-loadtest.jmx, script kiểm tra
+    //    Quality Gate hiệu năng: dafl-tests/quality-gate/check_performance_gate.sh.
+
     options {
         // Chống 2 build chạy song song đụng container
         disableConcurrentBuilds()
@@ -13,9 +27,9 @@ pipeline {
     }
 
     environment {
-        REPO_URL        = 'https://github.com/linh1912/DAFL.git'
+        REPO_URL        = 'https://github.com/linh1912/DAFL-Source.git'
         TEST_REPO_URL   = 'https://github.com/linh1912/DAFL_DO_AN_TOT_NGHIEP.git'
-        TARGET_BRANCH   = 'develop'
+        TARGET_BRANCH   = 'main'
         WORKTREE_DIR    = 'build-worktree'
         PROJECT_NAME    = 'dafl'
         DOCKER_NETWORK  = 'dafl_dafl-network'
@@ -64,8 +78,8 @@ pipeline {
                 echo "=== Build và khởi chạy SUT (System Under Test) trên Docker ==="
                 dir(env.WORKTREE_DIR) {
                     sh """
-                        # Build container backend và 2 app frontend (shop + admin) phiên bản mới nhất
-                        docker compose -p ${PROJECT_NAME} -f docker-compose.yml build backend frontend admin
+                        # Build container backend, gateway và 2 app frontend (shop + admin) phiên bản mới nhất
+                        docker compose -p ${PROJECT_NAME} -f docker-compose.yml build backend frontend admin gateway
 
                         # Chạy toàn bộ services (Postgres, Kafka, Backend, Frontend)
                         docker compose -p ${PROJECT_NAME} -f docker-compose.yml up -d
@@ -89,6 +103,26 @@ pipeline {
                         fi
                     """
                 }
+            }
+        }
+
+        // Gateway Smoke Test (đợt 14): kiểm tra gateway vừa build xong —
+        // /gateway/health do gateway tự trả, /health và trang shop qua
+        // gateway (proxy về backend / frontend). Fail ở đây thì dừng
+        // pipeline trước khi chạy Selenium (đỡ tốn thời gian chạy test
+        // trên một gateway hỏng). Chạy trong container dafl-gateway
+        // (image runtime đã cài curl chỉ để healthcheck).
+        stage('Gateway Smoke Test') {
+            steps {
+                echo "=== Gateway Smoke Test: /gateway/health + /health + shop qua gateway ==="
+                sh """
+                    docker exec dafl-gateway curl -fsS http://localhost:8080/gateway/health
+                    echo "✅ Gateway tự trả /gateway/health"
+                    docker exec dafl-gateway curl -fsS http://localhost:8080/health
+                    echo "✅ Backend trả /health qua gateway"
+                    docker exec dafl-gateway curl -fsS -o /dev/null http://localhost:8080/
+                    echo "✅ Shop trả 200 qua gateway"
+                """
             }
         }
 
@@ -235,7 +269,10 @@ pipeline {
         stage('Stage 4: Performance Test') {
             steps {
                 echo "=== Stage 4: Gọi JMeter Non-GUI (RAM Limit: 768MB, Heap: 512MB) ==="
-                dir("${env.WORKTREE_DIR}/tests/performance-jmeter") {
+                // File .jmx lấy TỪ repo test đã clone (dafl-tests/performance/),
+                // không copy sang repo Source. Đường dẫn cũ
+                // tests/performance-jmeter không tồn tại trong repo test.
+                dir("${env.WORKTREE_DIR}/dafl-tests/performance") {
                     sh """
                         # Chuẩn bị thư mục kết quả
                         rm -rf results && mkdir -p results
@@ -265,14 +302,14 @@ pipeline {
                         allowMissing: true,
                         alwaysLinkToLastBuild: true,
                         keepAll: true,
-                        reportDir: "${env.WORKTREE_DIR}/tests/performance-jmeter/results/dashboard",
+                        reportDir: "${env.WORKTREE_DIR}/dafl-tests/performance/results/dashboard",
                         reportFiles: 'index.html',
                         reportName: 'JMeter Performance Dashboard',
                         reportTitles: 'JMeter Dashboard Report'
                     ])
 
                     // Lưu trữ file .jtl làm Artifacts
-                    archiveArtifacts artifacts: "${env.WORKTREE_DIR}/tests/performance-jmeter/results/*.jtl", allowEmptyArchive: true
+                    archiveArtifacts artifacts: "${env.WORKTREE_DIR}/dafl-tests/performance/results/*.jtl", allowEmptyArchive: true
                 }
             }
         }
@@ -280,10 +317,13 @@ pipeline {
         stage('Stage 5: Performance Quality Gate') {
             steps {
                 echo "=== Stage 5: Kiểm tra Response Time và Error Rate từ .jtl ==="
-                dir("${env.WORKTREE_DIR}/tests/performance-jmeter") {
+                // Script gate nằm ở dafl-tests/quality-gate/ trong repo test
+                // (đường dẫn cũ check_performance_gate.sh tại thư mục chạy
+                // không tồn tại trong repo test).
+                dir("${env.WORKTREE_DIR}/dafl-tests/performance") {
                     sh """
-                        chmod +x check_performance_gate.sh
-                        ./check_performance_gate.sh results/result.jtl ${MAX_ERROR_RATE} ${MAX_AVG_RT_MS}
+                        chmod +x ../quality-gate/check_performance_gate.sh
+                        ../quality-gate/check_performance_gate.sh results/result.jtl ${MAX_ERROR_RATE} ${MAX_AVG_RT_MS}
                     """
                 }
             }
@@ -294,9 +334,9 @@ pipeline {
                 echo "=== Tất cả các Test & Quality Gate đã PASSED! Tiến hành cập nhật Container ==="
                 dir(env.WORKTREE_DIR) {
                     sh """
-                        # 1. Dừng và gỡ bỏ container backend/frontend/admin cũ
-                        docker compose -p ${PROJECT_NAME} -f docker-compose.yml stop backend frontend admin || true
-                        docker compose -p ${PROJECT_NAME} -f docker-compose.yml rm -f backend frontend admin || true
+                        # 1. Dừng và gỡ bỏ container backend/frontend/admin/gateway cũ
+                        docker compose -p ${PROJECT_NAME} -f docker-compose.yml stop backend frontend admin gateway || true
+                        docker compose -p ${PROJECT_NAME} -f docker-compose.yml rm -f backend frontend admin gateway || true
 
                         # 2. Khởi tạo container mới từ image vừa build và pass test
                         docker compose -p ${PROJECT_NAME} -f docker-compose.yml up -d --remove-orphans
@@ -329,6 +369,7 @@ pipeline {
         success {
             echo "=========================================================="
             echo "🎉 Pipeline thành công: Functional & Performance Quality Gates PASSED!"
+            echo "👉 Gateway  : http://localhost:8080"
             echo "👉 Frontend : http://localhost:3000"
             echo "👉 Admin    : http://localhost:3001"
             echo "👉 Backend  : http://localhost:5000"

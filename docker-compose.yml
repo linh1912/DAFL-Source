@@ -129,6 +129,35 @@ services:
     networks:
       - dafl-network
 
+  # 7. Gateway: YARP reverse proxy .NET 8 (đợt 14) — điểm vào chung cho
+  # shop + API ở cổng 8080. Chỉ proxy, không có logic nghiệp vụ.
+  # Admin KHÔNG qua gateway (quyết định có chủ ý): admin giữ cổng riêng
+  # trực tiếp :3001 làm entry riêng vì lý do bảo mật; test Selenium admin
+  # chạy thẳng :3001, không đổi. Xem src/Gateway/README.md.
+  gateway:
+    build:
+      context: ./src/Gateway
+      dockerfile: Dockerfile
+    container_name: dafl-gateway
+    restart: unless-stopped
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+    depends_on:
+      - backend
+      - frontend
+      - admin
+    networks:
+      - dafl-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/gateway/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
 networks:
   dafl-network:
     driver: bridge

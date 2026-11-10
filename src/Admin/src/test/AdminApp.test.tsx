@@ -195,4 +195,19 @@ describe('Admin app (src/Admin)', () => {
     expect(centeredRule).toContain('justify-content: center');
     expect(centeredRule).toContain('min-height: 100vh');
   });
+
+  it('route /orders/:code mở trang chi tiết đơn (đợt 21), không redirect về /admin', async () => {
+    render(
+      <MemoryRouter initialEntries={['/orders/DH-1001']}>
+        <App />
+      </MemoryRouter>
+    );
+    // Mock chung trả [] cho /api/admin/orders nên resolve không thấy đơn —
+    // nhưng route đã khớp: hiện khung chi tiết + lỗi, KHÔNG phải dashboard.
+    await waitFor(() => {
+      expect(screen.getByTestId('admin-order-detail')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('admin-order-detail-error')).toHaveTextContent('Không tìm thấy đơn DH-1001.');
+    expect(screen.queryByTestId('admin-dashboard')).toBeNull();
+  });
 });

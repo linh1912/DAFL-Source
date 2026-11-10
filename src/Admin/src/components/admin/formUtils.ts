@@ -37,6 +37,32 @@ export const discountPercent = (price: number, originalPrice: number | null): nu
   return Math.round((1 - price / originalPrice) * 100);
 };
 
+/** "319000" -> "319.000₫" (chế độ xem). Số không hợp lệ -> "—". */
+export const formatMoneyVND = (value: number | string): string => {
+  const n = typeof value === 'string' ? parseMoney(value) : value;
+  if (typeof n !== 'number' || Number.isNaN(n)) return '—';
+  return `${n.toLocaleString('vi-VN')}₫`;
+};
+
+const pad2 = (n: number): string => String(n).padStart(2, '0');
+
+/** ISO/date -> "dd/mm/yyyy" (chế độ xem). Trống -> "—", không parse được -> giữ nguyên. */
+export const formatDateVN = (value: string): string => {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
+};
+
+/** ISO/datetime -> "dd/mm/yyyy HH:mm"; date-only -> "dd/mm/yyyy" (chế độ xem). */
+export const formatDateTimeVN = (value: string): string => {
+  if (!value) return '—';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return formatDateVN(value);
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return `${formatDateVN(value)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+};
+
 /** Sinh mã khuyến mãi ngẫu nhiên: 8 ký tự A-Z0-9. */
 export const randomPromoCode = (length = 8): string => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -44,6 +70,58 @@ export const randomPromoCode = (length = 8): string => {
   if (typeof crypto !== 'undefined' && 'getRandomValues' in crypto) crypto.getRandomValues(buf);
   else for (let i = 0; i < length; i++) buf[i] = Math.floor(Math.random() * chars.length);
   return Array.from(buf, n => chars[n % chars.length]).join('');
+};
+
+// ---------- Validate dùng chung (đợt 17 — chuỗi lấy nguyên văn từ mẫu VCB, §2) ----------
+
+/** Trường bắt buộc để trống → message đỏ dưới từng ô (mẫu VCB, áp mọi form). */
+export const REQUIRED_MSG = 'Vui lòng bổ sung thông tin bắt buộc.';
+/** Email sai định dạng (mẫu VCB). */
+export const EMAIL_FORMAT_MSG = 'Email không đúng định dạng.';
+/** SĐT sai định dạng (mẫu VCB). */
+export const PHONE_FORMAT_MSG = 'Số điện thoại không đúng định dạng.';
+
+/** SĐT VN: bắt đầu bằng 0 + 9 chữ số (đúng validator BE). */
+export const PHONE_RE = /^0\d{9}$/;
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Mã thực thể (SP/DM/KH): 3–20 ký tự, chỉ chữ in hoa / chữ số / gạch ngang.
+ *  Để trống khi tạo → backend tự sinh số tiếp theo (SP-xxxx / DM-xxxx / KH-xxxx). */
+export const ENTITY_CODE_RE = /^[A-Z0-9-]{3,20}$/;
+export const validateEntityCode = (code: string, label: string): string | null => {
+  if (code === '') return null; // để trống = tự sinh
+  return ENTITY_CODE_RE.test(code)
+    ? null
+    : `Mã ${label} phải có 3–20 ký tự, chỉ gồm chữ in hoa, chữ số và gạch ngang.`;
+};
+
+/** Mật khẩu mới theo đúng policy BE (PasswordPolicy.Validate): ≥8 ký tự,
+ *  ≥1 chữ hoa, ≥1 chữ số, ≥1 ký tự đặc biệt. Trả message lỗi đầu tiên gặp. */
+export const passwordPolicyError = (password: string): string | null => {
+  if (!password || password.length < 8) return 'Mật khẩu phải có tối thiểu 8 ký tự.';
+  if (!/[A-Z]/.test(password)) return 'Mật khẩu phải chứa ít nhất 1 ký tự chữ hoa (A-Z).';
+  if (!/\d/.test(password)) return 'Mật khẩu phải chứa ít nhất 1 chữ số (0-9).';
+  if (!/[^A-Za-z0-9]/.test(password)) return 'Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt (ví dụ: !@#$%^&*...).';
+  return null;
+};
+
+/**
+ * Map message lỗi BE → key field để hiện message đỏ inline dưới đúng ô.
+ * Trùng mã (đợt 17, mẫu VCB §2 — CẢ toast CẢ inline, cùng nội dung):
+ *  "Mã sản phẩm đã tồn tại." / "Mã danh mục đã tồn tại." /
+ *  "Mã khách hàng đã tồn tại." / "Mã giảm giá đã tồn tại." → 'code'.
+ * Tương thích cả message cũ ("Mã {mã} đã tồn tại.", "Mã khuyến mãi đã tồn tại…")
+ * và trùng slug/email/SĐT.
+ * Trả null khi không map được field nào (caller hiện toast, không im lặng).
+ */
+export const duplicateFieldOf = (message: string): string | null => {
+  const m = message ?? '';
+  if (/Mã (sản phẩm|danh mục|khách hàng|giảm giá|khuyến mãi)\b/i.test(m)) return 'code';
+  if (/Mã \S+ đã tồn tại/i.test(m)) return 'code';
+  if (/Slug .* đã tồn tại/i.test(m)) return 'slug';
+  if (/Email đã tồn tại/i.test(m)) return 'email';
+  if (/Số điện thoại đã (tồn tại|được sử dụng)/i.test(m)) return 'phoneNumber';
+  return null;
 };
 
 // ---------- Upload ảnh ----------
@@ -58,6 +136,18 @@ export const validateImageFile = (file: File): string | null => {
   if (file.size > MAX_IMAGE_BYTES) return 'Ảnh vượt quá 5MB.';
   return null;
 };
+
+/** Loại lỗi ảnh, để caller chọn đúng toast messages.vi §3.9
+ *  (unsupportedFormat / tooLarge) thay vì chỉ chuỗi inline chung. */
+export type ImageFileErrorKind = 'format' | 'size';
+export const imageFileErrorKind = (file: File): ImageFileErrorKind | null => {
+  if (!ACCEPTED_TYPES.includes(file.type)) return 'format';
+  if (file.size > MAX_IMAGE_BYTES) return 'size';
+  return null;
+};
+
+/** Dung lượng file theo MB, 1 chữ số thập phân (cho toast §3.9: {x}MB). */
+export const formatFileSizeMB = (bytes: number): string => (bytes / (1024 * 1024)).toFixed(1);
 
 /**
  * Nén/resize client trước khi gửi: cạnh dài tối đa 1600px (canvas).

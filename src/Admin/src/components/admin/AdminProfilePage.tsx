@@ -195,7 +195,7 @@ export default function AdminProfilePage({ profile, onSaveProfile, onChangePassw
         {editing ? (
           <form onSubmit={handleSaveProfile} data-testid="admin-profile-form" noValidate>
             {formError && <p className="sa-error" role="alert">{formError}</p>}
-            <div className="sa-form-grid">
+            <div className="sa-form-grid sa-profile-info-grid" data-testid="admin-profile-form-grid">
               <div className="sa-field">
                 <label className="sa-field-label" htmlFor="admin-profile-name">Họ tên<Req /></label>
                 <input
@@ -253,7 +253,7 @@ export default function AdminProfilePage({ profile, onSaveProfile, onChangePassw
             </div>
           </form>
         ) : (
-          <div>
+          <div className="sa-profile-info-grid" data-testid="admin-profile-info-grid">
             <p><strong>Họ tên:</strong> {profile.fullName}</p>
             <p><strong>Email:</strong> {profile.email}</p>
             <p><strong>Số điện thoại:</strong> {profile.phoneNumber ?? '—'}</p>

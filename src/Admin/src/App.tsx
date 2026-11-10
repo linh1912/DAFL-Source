@@ -10,9 +10,23 @@ import { apiJson, setSessionExpiredHandler, setToken } from '../../Shared/utils/
  * Trước đây là nhánh `IS_ADMIN_ONLY` trong src/Frontend/src/App.tsx
  * (cờ build VITE_ADMIN_ONLY=true); nay là app độc lập, không còn cờ đó.
  *
- * Chỉ có 2 màn: /login (AuthModal adminOnly — form cơ bản, không tab đăng ký,
- * không social) và /admin (AdminPage, tự chặn quyền: chưa đăng nhập hoặc
- * không phải SuperAdmin thì chuyển về /login). Route / và * đều về /admin.
+ * Chỉ có các màn: /login (AuthModal adminOnly — form cơ bản, không tab đăng ký,
+ * không social), /admin (AdminPage, tự chặn quyền: chưa đăng nhập hoặc
+ * không phải SuperAdmin thì chuyển về /login), /orders/:code (AdminPage
+ * hiển thị trang chi tiết đơn — đợt 21, bỏ Drawer chi tiết đơn) và
+ * /promotions/* (AdminPage hiển thị các trang Khuyến mãi full page — đợt 21:
+ * /promotions/new thêm mới, /promotions/:code chi tiết,
+ * /promotions/:code/edit chỉnh sửa, /promotions/:code/usages lịch sử sử dụng;
+ * danh sách KM vẫn ở tab Khuyến mãi trong /admin).
+ * /products/* (AdminPage hiển thị các trang Sản phẩm full page — đợt 21:
+ * /products/new thêm mới, /products/:code chi tiết, /products/:code/edit
+ * chỉnh sửa; danh sách SP vẫn ở tab Sản phẩm trong /admin).
+ * Route / và * đều về /admin.
+ * Đợt 21 — trang con Danh mục/Khách hàng/Trả hàng/Đánh giá (full page):
+ * /categories/new, /categories/:code, /categories/:code/edit,
+ * /customers/:code, /customers/:code/edit, /returns/:code, /reviews/:id
+ * (AdminPage hiển thị trang tương ứng; :code = mã DM/mã KH/mã đơn hiển thị,
+ * :id = Guid đánh giá).
  * Đăng nhập thành công chỉ lưu JWT rồi vào /admin; mọi dữ liệu lấy qua
  * /api/admin/* chung backend với shop (1 API chung, không tách backend).
  */
@@ -109,6 +123,29 @@ export default function App() {
     <div className="admin-app" data-testid="admin-app">
       <Routes>
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/orders/:code" element={<AdminPage />} />
+        {/* Đợt 21 — Khuyến mãi full page: /promotions/new PHẢI khai trước
+          * /promotions/:code để "new" không bị bắt làm :code. */}
+        <Route path="/promotions/new" element={<AdminPage />} />
+        <Route path="/promotions/:code/usages" element={<AdminPage />} />
+        <Route path="/promotions/:code/edit" element={<AdminPage />} />
+        <Route path="/promotions/:code" element={<AdminPage />} />
+        {/* Đợt 21 — Sản phẩm full page: /products/new PHẢI khai trước
+          * /products/:code để "new" không bị bắt làm :code. */}
+        <Route path="/products/new" element={<AdminPage />} />
+        <Route path="/products/:code/edit" element={<AdminPage />} />
+        <Route path="/products/:code" element={<AdminPage />} />
+        {/* Đợt 21 — Danh mục full page: /categories/new PHẢI khai trước
+          * /categories/:code để "new" không bị bắt làm :code. */}
+        <Route path="/categories/new" element={<AdminPage />} />
+        <Route path="/categories/:code/edit" element={<AdminPage />} />
+        <Route path="/categories/:code" element={<AdminPage />} />
+        {/* Đợt 21 — Khách hàng full page (không có trang thêm mới). */}
+        <Route path="/customers/:code/edit" element={<AdminPage />} />
+        <Route path="/customers/:code" element={<AdminPage />} />
+        {/* Đợt 21 — Trả hàng / Đánh giá full page. */}
+        <Route path="/returns/:code" element={<AdminPage />} />
+        <Route path="/reviews/:id" element={<AdminPage />} />
         <Route
           path="/login"
           element={(

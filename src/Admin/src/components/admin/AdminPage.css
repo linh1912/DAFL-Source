@@ -16,6 +16,11 @@
   --sa-text: #111827;
   --sa-muted: #6b7280;
   --sa-danger: #dc2626;
+  /* Đợt 21 — danh sách Đơn hàng (KHÔNG có dark mode trong admin: chỉ có các
+     biến sáng này; style mới dùng biến/token, không hard-code màu lẻ trừ
+     các màu pill đã có sẵn trong hệ pill). */
+  --sa-orders-header-bg: #eef4f0;
+  --sa-orders-row-hover: #f7faf7;
   display: flex;
   min-height: 100vh;
   background: var(--sa-page-bg);
@@ -156,19 +161,64 @@
 .spark-admin .sa-nav-overview {
   margin-bottom: 20px;
 }
+/* Tiêu đề nhóm — DROPDOWN (đợt 21, 22:18): là <button> bấm được, chữ TO
+   hơn tên menu (16px/700 so với 14px/500), chevron Lucide ở phía PHẢI xoay
+   180° khi mở. Chữ trắng 50% trên nền #0B1F17: tương phản 5.15 (WCAG AA). */
 .spark-admin .sa-nav-group-title {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   width: 100%;
   padding: 0 12px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
   color: rgba(255, 255, 255, 0.5);
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   letter-spacing: 0.02em;
+  line-height: 24px;
   text-align: left;
-  cursor: default;
+  cursor: pointer;
   user-select: none;
+}
+.spark-admin .sa-nav-group-title:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.75);
+}
+.spark-admin .sa-nav-group-title:focus {
+  outline: none;
+}
+.spark-admin .sa-nav-group-title:focus-visible {
+  outline: 2px solid rgba(198, 244, 50, 0.6);
+  outline-offset: 2px;
+}
+/* Chevron phải: xoay 180° (chỉ xuống → chỉ lên) khi nhóm mở, ~200ms. */
+.spark-admin .sa-nav-group-chevron {
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.5);
+  transition: transform 200ms ease-out;
+}
+.spark-admin .sa-nav-group.sa-open .sa-nav-group-chevron {
+  transform: rotate(180deg);
+}
+/* Vùng mục con: mở/thu mượt ~200ms ease-out bằng grid-rows (không dùng
+   max-height cố định); khi đóng thì visibility:hidden nên không tab tới được. */
+.spark-admin .sa-nav-group-items {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 200ms ease-out, visibility 0s linear 0s;
+}
+.spark-admin .sa-nav-group-items-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+.spark-admin .sa-nav-group:not(.sa-open) .sa-nav-group-items {
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition: grid-template-rows 200ms ease-out, visibility 0s linear 200ms;
 }
 
 .spark-admin .sa-nav-btn {
@@ -418,6 +468,9 @@
   .spark-admin .sa-nav-btn,
   .spark-admin .sa-nav-label,
   .spark-admin .sa-nav-badge,
+  .spark-admin .sa-nav-group-title,
+  .spark-admin .sa-nav-group-chevron,
+  .spark-admin .sa-nav-group-items,
   .spark-admin .sa-logo {
     transition: none !important;
     animation: none !important;
@@ -576,6 +629,39 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ---------- Đợt 21: menu tài khoản topbar gọn (chỉ 2 mục) ---------- */
+.spark-admin .sa-topbar-user-menu {
+  width: 220px;
+  padding: 6px;
+}
+.spark-admin .sa-topbar-user-menu-item {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--sa-text);
+  font-size: 0.92rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.spark-admin .sa-topbar-user-menu-item:hover {
+  background: #f1f5f9;
+}
+.spark-admin .sa-topbar-user-menu-sep {
+  height: 1px;
+  margin: 6px 4px;
+  background: #e5e7eb;
+}
+.spark-admin .sa-topbar-user-menu-logout {
+  color: var(--sa-danger);
+}
+.spark-admin .sa-topbar-user-menu-logout:hover {
+  background: rgba(220, 38, 38, 0.08);
 }
 
 /* ---------- Nội dung: tràn full màn hình (không giới hạn 1240px) ---------- */
@@ -1909,6 +1995,20 @@
 .spark-admin .sa-profile-card { margin-bottom: 1rem; }
 .spark-admin .sa-profile-card h3 { margin-top: 0; }
 
+/* Đợt 21: thẻ "Thông tin cá nhân" 2 hàng × 2 cột (Họ tên | Email /
+ * Số điện thoại | Địa chỉ) ở CẢ trạng thái xem lẫn form sửa — form sửa
+ * dùng chung class này cùng .sa-form-grid. Dưới 640px về 1 cột (cùng
+ * breakpoint với .sa-form-grid). */
+.spark-admin .sa-profile-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+}
+.spark-admin .sa-profile-info-grid > p { margin: 0; }
+@media (max-width: 640px) {
+  .spark-admin .sa-profile-info-grid { grid-template-columns: 1fr; }
+}
+
 /* ==========================================================================
    Đợt 18 — W3: Lists & shell (PageToolbar, Badge, Pagination, EmptyState,
    sidebar nhóm dropdown + badge đếm, form Drawer/Modal, responsive).
@@ -2177,5 +2277,489 @@
   }
   .spark-admin .sa-list-card .sa-table-wrap > table {
     min-width: 560px;
+  }
+}
+
+/* ==========================================================================
+ * Đợt 21 — Danh sách Đơn hàng (class tiền tố sa-orders-, chỉ scope trong
+ * .sa-orders-card nên không ảnh hưởng bảng khác). Thanh lọc + bảng nằm chung
+ * 1 card bo 14px, viền mảnh, bóng nhẹ (kế thừa .sa-list-card); tông xanh lá
+ * đậm thương hiệu (--sa-green-dark). Admin KHÔNG có dark mode.
+ * ========================================================================== */
+
+/* Pill trạng thái mới chỉ dùng ở bảng đơn: Preparing xanh dương nhạt (sky),
+   Yêu cầu trả hàng cam. Các màu pill còn lại (green/amber/red/blue/purple/
+   gray) đã có sẵn ở trên. */
+.spark-admin .sa-pill-sky {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+.spark-admin .sa-pill-orange {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.spark-admin .sa-orders-card {
+  border-radius: 14px;
+}
+
+/* Header bảng: nền xám xanh nhạt, chữ 11.5px in hoa, letter-spacing, muted. */
+.spark-admin .sa-orders-card .sa-table-wrap > table th {
+  background: var(--sa-orders-header-bg);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sa-muted);
+  padding: 12px 16px;
+}
+
+/* Dòng: padding 14px 16px, hover nền nhẹ. */
+.spark-admin .sa-orders-card .sa-table-wrap > table td {
+  padding: 14px 16px;
+}
+.spark-admin .sa-orders-card .sa-table-wrap > table tbody tr.sa-clickable:hover {
+  background: var(--sa-orders-row-hover);
+}
+
+/* Mã đơn đậm, dạng link (gạch chân khi hover dòng). */
+.spark-admin .sa-orders-card .sa-orders-code {
+  color: var(--sa-green-dark);
+}
+.spark-admin .sa-orders-card tbody tr.sa-clickable:hover .sa-orders-code {
+  text-decoration: underline;
+}
+
+/* Tổng tiền căn phải, số tabular (không nhảy độ rộng khi đổi trang). */
+.spark-admin .sa-orders-card .sa-money {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Cột khách: avatar tròn màu theo tên (có sẵn) + tên đậm + email nhỏ muted,
+   ellipsis khi dài. */
+.spark-admin .sa-orders-card .sa-user-cell-names {
+  max-width: 220px;
+}
+.spark-admin .sa-orders-card .sa-user-cell-names strong,
+.spark-admin .sa-orders-card .sa-user-cell-names small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Phương thức thanh toán (COD/PayOS): badge viền nhỏ. */
+.spark-admin .sa-orders-pay-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid var(--sa-card-border);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sa-muted);
+  white-space: nowrap;
+}
+
+/* Số kết quả "N / M đơn" (lọc được / đã tải). */
+.spark-admin .sa-orders-result-count {
+  margin: 0;
+  font-size: 13px;
+  color: var(--sa-muted);
+}
+
+/* Focus ring rõ cho select lọc + nút trong card đơn (dùng token --sa-info,
+   cùng chuẩn với :focus-visible toàn cục trong design-tokens.css). */
+.spark-admin .sa-orders-card .sa-filter-select:focus-visible,
+.spark-admin .sa-orders-card button:focus-visible {
+  outline: 2px solid var(--sa-info);
+  outline-offset: 2px;
+}
+
+/* Bảng cuộn ngang khi hẹp, không vỡ layout. */
+.spark-admin .sa-orders-card .sa-table-wrap {
+  overflow-x: auto;
+}
+
+/* ==========================================================================
+   Đợt 21 — Module Khuyến mãi full page (chỉ module KM; SP/DM/KH vẫn Drawer).
+   Tông xanh lá đậm (#051c12 / #15803d), nền trang xám rất nhạt, card trắng
+   viền nhẹ + shadow tinh tế (tái dùng .sa-list-card), input/select/datepicker
+   cao đồng nhất (class .sa-input có sẵn), icon Lucide, badge trạng thái.
+   ========================================================================== */
+
+/* Breadcrumb "Quản lý khuyến mãi / <trang>" — mục đầu là nút về danh sách. */
+.spark-admin .sa-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--sa-muted);
+  margin-bottom: 12px;
+}
+.spark-admin .sa-breadcrumb-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--sa-green-dark);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.spark-admin .sa-breadcrumb-link:hover { text-decoration: underline; }
+
+/* Trang KM full page: chiếm hết chiều rộng nội dung (không max-width hẹp). */
+.spark-admin .sa-promo-page,
+.spark-admin .sa-promo-page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Header sticky: tiêu đề + mô tả trái, nút Lưu/Hủy (hoặc Chỉnh sửa/Quay lại)
+   phải; dính trên cùng khi cuộn form dài. */
+.spark-admin .sa-promo-page-head {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: var(--sa-bg, #f8fafc);
+  padding: 12px 0;
+  border-bottom: 1px solid var(--sa-card-border);
+}
+.spark-admin .sa-promo-page-head-text h2 {
+  margin: 0 0 4px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--sa-text);
+}
+.spark-admin .sa-promo-page-head-text p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--sa-muted);
+}
+.spark-admin .sa-promo-page-head-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.spark-admin .sa-promo-page-head-actions .sa-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Form KM full page: các section dùng .sa-form-section có sẵn; khoảng cách
+   giữa các card + lưới 2 cột (xuống 1 cột ở mobile — xem media query cuối). */
+.spark-admin .sa-promo-page-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Radio card chọn loại giảm — 3 card nằm ngang, bấm cả card để chọn. */
+.spark-admin .sa-radio-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.spark-admin .sa-radio-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  text-align: left;
+  background: var(--sa-surface);
+  border: 1.5px solid var(--sa-card-border);
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--sa-text);
+}
+.spark-admin .sa-radio-card:hover { border-color: var(--sa-success); }
+.spark-admin .sa-radio-card-selected {
+  border-color: var(--sa-success);
+  background: var(--sa-success-bg);
+  box-shadow: 0 0 0 1px var(--sa-success);
+}
+.spark-admin .sa-radio-card:focus-visible {
+  outline: 2px solid var(--sa-info);
+  outline-offset: 2px;
+}
+.spark-admin .sa-radio-card:disabled { opacity: 0.6; cursor: not-allowed; }
+.spark-admin .sa-radio-card-indicator {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  border-radius: 50%;
+  border: 2px solid var(--sa-text-muted);
+  background: var(--sa-surface);
+  box-sizing: border-box;
+}
+.spark-admin .sa-radio-card-selected .sa-radio-card-indicator {
+  border-color: var(--sa-success);
+  background: var(--sa-success);
+  box-shadow: inset 0 0 0 3px var(--sa-surface);
+}
+.spark-admin .sa-radio-card-icon {
+  flex: none;
+  color: var(--sa-success);
+  line-height: 0;
+  margin-top: 1px;
+}
+.spark-admin .sa-radio-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.spark-admin .sa-radio-card-text strong { font-size: 0.95rem; }
+.spark-admin .sa-radio-card-text small {
+  font-size: 0.83rem;
+  line-height: 1.45;
+  color: var(--sa-muted);
+}
+
+/* Ghi chú tĩnh thay cho input giá trị khi loại FreeShip + mục Trạng thái. */
+.spark-admin .sa-promo-freeship-note,
+.spark-admin .sa-promo-status-note {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--sa-text);
+  background: var(--sa-success-bg);
+  border: 1px solid var(--sa-success);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+/* Trang chi tiết: lưới 2 cột các card (Thông tin chung / Điều kiện /
+   Thời gian / Thống kê) — 1 cột ở màn hẹp. */
+.spark-admin .sa-promo-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.spark-admin .sa-promo-detail-card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--sa-text);
+}
+.spark-admin .sa-promo-kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--sa-border);
+  font-size: 0.95rem;
+}
+.spark-admin .sa-promo-kv:last-child { border-bottom: 0; }
+.spark-admin .sa-promo-kv-label { color: var(--sa-muted); flex: none; }
+.spark-admin .sa-promo-kv-value {
+  text-align: right;
+  font-weight: 600;
+  color: var(--sa-text);
+  overflow-wrap: anywhere;
+}
+
+/* Trang lượt sử dụng: khối tổng quan + toolbar tìm/lọc ngày. */
+.spark-admin .sa-promo-usages-overview {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0 24px;
+}
+.spark-admin .sa-promo-usages-overview .sa-promo-kv {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.spark-admin .sa-promo-usages-overview .sa-promo-kv-value { text-align: left; }
+.spark-admin .sa-promo-usages-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.spark-admin .sa-promo-usages-toolbar > .sa-input { flex: 1 1 260px; }
+.spark-admin .sa-promo-usages-date {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--sa-text);
+}
+.spark-admin .sa-promo-usages-date .sa-input { min-width: 170px; }
+.spark-admin .sa-promo-usages-note { margin: 0; }
+
+/* Responsive: lưới form + radio card + chi tiết + tổng quan về 1 cột. */
+@media (max-width: 900px) {
+  .spark-admin .sa-promo-detail-grid { grid-template-columns: 1fr; }
+  .spark-admin .sa-promo-usages-overview { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 640px) {
+  .spark-admin .sa-radio-cards { grid-template-columns: 1fr; }
+  .spark-admin .sa-promo-usages-overview { grid-template-columns: 1fr; }
+  .spark-admin .sa-promo-page-head { position: static; }
+}
+
+/* ==========================================================================
+ * Trang Sản phẩm full page (đợt 21) — mirror style trang KM (sa-promo-*):
+ * chiếm hết chiều rộng nội dung, header sticky, lưới chi tiết 2 cột → 1 cột.
+ * Nút "+ Thêm mới" dùng .sa-page-toolbar-add-btn có sẵn (xanh lá đậm
+ * var(--sa-primary) + chữ trắng, đợt 18) — không định nghĩa riêng ở đây.
+ * ========================================================================== */
+.spark-admin .sa-product-page,
+.spark-admin .sa-product-page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.spark-admin .sa-product-page-head {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: var(--sa-bg, #f8fafc);
+  padding: 12px 0;
+  border-bottom: 1px solid var(--sa-card-border);
+}
+.spark-admin .sa-product-page-head-text h2 {
+  margin: 0 0 4px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--sa-text);
+}
+.spark-admin .sa-product-page-head-text p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--sa-muted);
+}
+.spark-admin .sa-product-page-head-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.spark-admin .sa-product-page-head-actions .sa-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.spark-admin .sa-product-page-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.spark-admin .sa-product-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.spark-admin .sa-product-detail-card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--sa-text);
+}
+.spark-admin .sa-product-kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--sa-border);
+  font-size: 0.95rem;
+}
+.spark-admin .sa-product-kv:last-child { border-bottom: 0; }
+.spark-admin .sa-product-kv-label { color: var(--sa-muted); flex: none; }
+.spark-admin .sa-product-kv-value {
+  text-align: right;
+  font-weight: 600;
+  color: var(--sa-text);
+  overflow-wrap: anywhere;
+}
+.spark-admin .sa-product-detail-desc {
+  margin: 8px 0 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--sa-text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 900px) {
+  .spark-admin .sa-product-detail-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .spark-admin .sa-product-page-head { position: static; }
+}
+
+/* ==========================================================================
+ * Trang full page Danh mục / Khách hàng / Trả hàng / Đánh giá (đợt 21) —
+ * tái dùng class layout trang KM (.sa-promo-page / .sa-promo-page-wrap /
+ * .sa-promo-page-head / .sa-promo-detail-grid / .sa-promo-kv) nên không
+ * định nghĩa riêng ở đây. Chỉ thêm panel xác nhận INLINE của trang Trả hàng
+ * (theo mẫu .od-panel của trang chi tiết đơn: panel là bước xác nhận, KHÔNG
+ * modal). Dùng đúng design token (--sa-*) + thang cỡ chữ đợt 18.
+ * Nút "+ Thêm mới" dùng .sa-page-toolbar-add-btn có sẵn (xanh lá đậm
+ * var(--sa-primary) + chữ trắng, đợt 18) — không định nghĩa riêng ở đây.
+ * ========================================================================== */
+.spark-admin .sa-entity-panel {
+  border: 1px solid var(--sa-card-border);
+  border-radius: 16px;
+  background: #fff;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.spark-admin .sa-entity-panel--danger {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+.spark-admin .sa-entity-panel h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--sa-text);
+}
+.spark-admin .sa-entity-panel-sub {
+  margin: 0;
+  color: var(--sa-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+.spark-admin .sa-entity-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  max-width: 420px;
+  color: var(--sa-text);
+}
+.spark-admin .sa-entity-panel-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+@media (max-width: 640px) {
+  .spark-admin .sa-entity-panel-actions {
+    flex-direction: column-reverse;
+  }
+  .spark-admin .sa-entity-panel-actions .sa-btn {
+    width: 100%;
   }
 }

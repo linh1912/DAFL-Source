@@ -1,0 +1,562 @@
+/* ==========================================================================
+ * design-tokens.css — Design token + style cho component dùng chung admin
+ * (đợt 18, worker W1: Toast / ConfirmDialog / PageToolbar / Badge /
+ * Pagination / EmptyState). Import 1 dòng trong src/Admin/src/main.tsx.
+ *
+ * Hệ spacing 4/8px, control cao 40px, transition 150–200ms, focus ring rõ,
+ * tương phản đạt WCAG AA. Mọi quy tắc nằm trong phạm vi .spark-admin để
+ * không rò sang shop.
+ * ========================================================================== */
+
+.spark-admin {
+  --sa-primary: #051c12;
+  --sa-accent: #b4f105;
+  --sa-bg: #f5f7fa;
+  --sa-surface: #ffffff;
+  --sa-border: #e5e7eb;
+  --sa-text: #111827;
+  --sa-text-muted: #6b7280;
+  --sa-success: #15803d;
+  --sa-success-bg: #dcfce7;
+  --sa-warning: #b45309;
+  --sa-warning-bg: #fef3c7;
+  --sa-danger: #dc2626;
+  --sa-danger-bg: #fee2e2;
+  --sa-info: #1d4ed8;
+  --sa-info-bg: #dbeafe;
+  --sa-radius-sm: 8px;
+  --sa-radius-md: 12px;
+  --sa-radius-full: 999px;
+  --sa-font: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --sa-topbar-height: 64px;
+  --sa-shadow-md: 0 8px 24px rgba(17, 24, 39, 0.12);
+  --sa-shadow-lg: 0 16px 40px rgba(17, 24, 39, 0.18);
+  font-family: var(--sa-font);
+}
+
+.spark-admin :focus-visible {
+  outline: 2px solid var(--sa-info);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+ * Toast (Toast.tsx)
+ * Fixed góc trên phải, cách phải 24px, đỉnh = topbar + 16px; KHÔNG đẩy
+ * nội dung trang. Mobile: trên giữa, rộng 92vw.
+ * ========================================================================== */
+
+.spark-admin .sa-toast-host {
+  position: fixed;
+  top: calc(var(--sa-topbar-height) + 16px);
+  right: 24px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 360px;
+  max-width: calc(100vw - 48px);
+  pointer-events: none;
+}
+
+.spark-admin .sa-toast-item {
+  pointer-events: auto;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 36px 12px 12px;
+  background: var(--sa-surface);
+  border: 1px solid var(--sa-border);
+  border-left: 4px solid var(--sa-info);
+  border-radius: var(--sa-radius-md);
+  box-shadow: var(--sa-shadow-md);
+  overflow: hidden;
+  animation: sa-toast-in 200ms ease-out;
+}
+
+@keyframes sa-toast-in {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.spark-admin .sa-toast-item--success { border-left-color: var(--sa-success); }
+.spark-admin .sa-toast-item--warning { border-left-color: var(--sa-warning); }
+.spark-admin .sa-toast-item--error { border-left-color: var(--sa-danger); }
+.spark-admin .sa-toast-item--info { border-left-color: var(--sa-info); }
+
+.spark-admin .sa-toast-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+.spark-admin .sa-toast-item--success .sa-toast-icon { background: var(--sa-success-bg); color: var(--sa-success); }
+.spark-admin .sa-toast-item--warning .sa-toast-icon { background: var(--sa-warning-bg); color: var(--sa-warning); }
+.spark-admin .sa-toast-item--error .sa-toast-icon { background: var(--sa-danger-bg); color: var(--sa-danger); }
+.spark-admin .sa-toast-item--info .sa-toast-icon { background: var(--sa-info-bg); color: var(--sa-info); }
+
+.spark-admin .sa-toast-body { flex: 1; min-width: 0; }
+.spark-admin .sa-toast-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+  color: var(--sa-text);
+}
+.spark-admin .sa-toast-desc {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--sa-text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.spark-admin .sa-toast-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: var(--sa-radius-sm);
+  background: transparent;
+  color: var(--sa-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.spark-admin .sa-toast-close:hover { background: #f3f4f6; color: var(--sa-text); }
+
+/* Thanh tiến trình mảnh dưới đáy toast; hover tạm dừng cùng đếm ngược. */
+.spark-admin .sa-toast-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  transform-origin: left;
+  animation-name: sa-toast-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  background: currentColor;
+  opacity: 0.35;
+}
+.spark-admin .sa-toast-item--success .sa-toast-progress { color: var(--sa-success); }
+.spark-admin .sa-toast-item--warning .sa-toast-progress { color: var(--sa-warning); }
+.spark-admin .sa-toast-item--error .sa-toast-progress { color: var(--sa-danger); }
+.spark-admin .sa-toast-item--info .sa-toast-progress { color: var(--sa-info); }
+.spark-admin .sa-toast-item--paused .sa-toast-progress { animation-play-state: paused; }
+
+@keyframes sa-toast-progress {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+/* ==========================================================================
+ * ConfirmDialog (ConfirmDialog.tsx)
+ * Modal giữa 440px, nền mờ + blur, fade + scale 180ms, bo 16px.
+ * Footer CHỈ ĐÚNG 2 NÚT: [Hủy] trái + [Xác nhận] phải.
+ * ========================================================================== */
+
+.spark-admin .sa-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(17, 24, 39, 0.5);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: sa-confirm-fade 180ms ease-out;
+}
+
+@keyframes sa-confirm-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.spark-admin .sa-confirm-dialog {
+  width: 440px;
+  max-width: 100%;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  background: var(--sa-surface);
+  border-radius: 16px;
+  box-shadow: var(--sa-shadow-lg);
+  padding: 24px;
+  text-align: center;
+  animation: sa-confirm-pop 180ms ease-out;
+}
+
+@keyframes sa-confirm-pop {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.spark-admin .sa-confirm-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+.spark-admin .sa-confirm-icon--danger { background: var(--sa-danger-bg); color: var(--sa-danger); }
+.spark-admin .sa-confirm-icon--warning { background: var(--sa-warning-bg); color: var(--sa-warning); }
+.spark-admin .sa-confirm-icon--info { background: var(--sa-info-bg); color: var(--sa-info); }
+
+.spark-admin .sa-confirm-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 26px;
+  color: var(--sa-text);
+}
+
+.spark-admin .sa-confirm-message {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--sa-text-muted);
+  text-align: center;
+}
+.spark-admin .sa-confirm-message strong { color: var(--sa-text); }
+
+.spark-admin .sa-confirm-field { text-align: left; margin: 0 0 16px; }
+.spark-admin .sa-confirm-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sa-text);
+}
+.spark-admin .sa-confirm-reason { resize: vertical; min-height: 72px; }
+
+.spark-admin .sa-confirm-irreversible {
+  margin: 0 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--sa-danger);
+}
+
+.spark-admin .sa-confirm-error {
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  background: var(--sa-danger-bg);
+  border-radius: var(--sa-radius-sm);
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--sa-danger);
+  text-align: left;
+}
+
+.spark-admin .sa-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.spark-admin .sa-confirm-cancel-btn,
+.spark-admin .sa-confirm-confirm-btn {
+  min-height: 40px;
+  padding: 8px 16px;
+  border-radius: var(--sa-radius-sm);
+  font-family: var(--sa-font);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, opacity 150ms ease;
+}
+.spark-admin .sa-confirm-cancel-btn {
+  border: 1px solid var(--sa-border);
+  background: var(--sa-surface);
+  color: var(--sa-text);
+}
+.spark-admin .sa-confirm-cancel-btn:hover { background: #f9fafb; }
+.spark-admin .sa-confirm-confirm-btn { border: 1px solid transparent; color: #fff; }
+.spark-admin .sa-confirm-confirm-btn--danger { background: var(--sa-danger); }
+.spark-admin .sa-confirm-confirm-btn--danger:hover { background: #b91c1c; }
+.spark-admin .sa-confirm-confirm-btn--warning { background: #ea580c; }
+.spark-admin .sa-confirm-confirm-btn--warning:hover { background: #c2410c; }
+.spark-admin .sa-confirm-confirm-btn--info { background: var(--sa-info); }
+.spark-admin .sa-confirm-confirm-btn--info:hover { background: #1e40af; }
+.spark-admin .sa-confirm-cancel-btn:disabled,
+.spark-admin .sa-confirm-confirm-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+ * PageToolbar (PageToolbar.tsx) — một hàng duy nhất, cao 40px.
+ * ========================================================================== */
+
+.spark-admin .sa-page-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 40px;
+}
+
+.spark-admin .sa-page-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.spark-admin .sa-page-toolbar-search {
+  position: relative;
+  flex: 0 1 420px;
+  min-width: 280px;
+}
+
+.spark-admin .sa-page-toolbar-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: var(--sa-text-muted);
+  pointer-events: none;
+}
+
+.spark-admin .sa-page-toolbar-search-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px 0 36px;
+  border: 1px solid var(--sa-border);
+  border-radius: var(--sa-radius-sm);
+  background: var(--sa-surface);
+  font-family: var(--sa-font);
+  font-size: 14px;
+  color: var(--sa-text);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.spark-admin .sa-page-toolbar-search-input::placeholder { color: #9ca3af; }
+.spark-admin .sa-page-toolbar-search-input:focus {
+  outline: none;
+  border-color: var(--sa-primary);
+  box-shadow: 0 0 0 3px rgba(5, 28, 18, 0.12);
+}
+
+.spark-admin .sa-page-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.spark-admin .sa-page-toolbar-icon-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--sa-border);
+  border-radius: var(--sa-radius-sm);
+  background: var(--sa-surface);
+  color: var(--sa-text);
+  font-size: 16px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+.spark-admin .sa-page-toolbar-icon-btn:hover { background: #f9fafb; border-color: #d1d5db; }
+
+.spark-admin .sa-page-toolbar-add-btn {
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: var(--sa-radius-sm);
+  background: var(--sa-primary);
+  color: #fff;
+  font-family: var(--sa-font);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+.spark-admin .sa-page-toolbar-add-btn:hover { background: #0a2e1e; }
+
+/* ==========================================================================
+ * Badge / Pagination / EmptyState (shared.tsx)
+ * ========================================================================== */
+
+.spark-admin .sa-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--sa-radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.spark-admin .sa-badge--yellow { background: #fef9c3; color: #854d0e; }
+.spark-admin .sa-badge--blue { background: var(--sa-info-bg); color: var(--sa-info); }
+.spark-admin .sa-badge--green { background: var(--sa-success-bg); color: var(--sa-success); }
+.spark-admin .sa-badge--red { background: var(--sa-danger-bg); color: var(--sa-danger); }
+.spark-admin .sa-badge--gray { background: #f3f4f6; color: #4b5563; }
+.spark-admin .sa-badge--orange { background: #ffedd5; color: #c2410c; }
+
+.spark-admin .sa-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  font-size: 13px;
+  color: var(--sa-text-muted);
+}
+.spark-admin .sa-pager-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.spark-admin .sa-pager-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--sa-border);
+  border-radius: var(--sa-radius-sm);
+  background: var(--sa-surface);
+  color: var(--sa-text);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+.spark-admin .sa-pager-btn:hover:not(:disabled) { background: #f9fafb; }
+.spark-admin .sa-pager-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.spark-admin .sa-pager-range { font-weight: 600; color: var(--sa-text); }
+
+.spark-admin .sa-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 48px 16px;
+  text-align: center;
+}
+.spark-admin .sa-empty-state-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  color: var(--sa-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+.spark-admin .sa-empty-state-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--sa-text);
+}
+.spark-admin .sa-empty-state-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--sa-text-muted);
+  max-width: 420px;
+}
+.spark-admin .sa-empty-state-action { margin-top: 12px; }
+
+/* ==========================================================================
+ * Responsive — toast mobile ở trên giữa, confirm full-width hẹp.
+ * (Toolbar 2 hàng ở tablet + bảng cuộn ngang do W3 lo trong AdminPage.css.)
+ * ========================================================================== */
+
+@media (max-width: 640px) {
+  .spark-admin .sa-toast-host {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: 92vw;
+    max-width: 92vw;
+  }
+  .spark-admin .sa-confirm-dialog { padding: 20px 16px; }
+  .spark-admin .sa-page-toolbar-search { min-width: 0; flex: 1 1 auto; }
+}
+
+/* ==========================================================================
+ * Đợt 21 — PageToolbar, chỉ tab Đơn hàng (props hideSearchButton /
+ * showSearchClear / resetLabel): nút "×" xóa nhanh trong ô tìm, nút Đặt lại
+ * dạng nút chữ, option đầu dropdown "Trạng thái" màu nhạt (placeholder-like).
+ * Các tab khác không truyền các prop này nên giữ nguyên giao diện cũ.
+ * ========================================================================== */
+
+.spark-admin .sa-page-toolbar-search--with-clear .sa-page-toolbar-search-input {
+  padding-right: 36px;
+}
+
+.spark-admin .sa-page-toolbar-search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--sa-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.spark-admin .sa-page-toolbar-search-clear:hover {
+  background: #f3f4f6;
+  color: var(--sa-text);
+}
+
+.spark-admin .sa-page-toolbar-reset-btn {
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--sa-border);
+  border-radius: var(--sa-radius-sm);
+  background: var(--sa-surface);
+  color: var(--sa-text);
+  font-family: var(--sa-font);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+.spark-admin .sa-page-toolbar-reset-btn:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+.spark-admin .sa-page-toolbar-reset-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.spark-admin .sa-page-toolbar .sa-filter-select--placeholder {
+  color: #9ca3af;
+}

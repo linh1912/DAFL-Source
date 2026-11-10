@@ -1,5 +1,8 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
-import { compressImage, formatThousands, objectUrlOf, uploadImageFile, validateImageFile } from './formUtils';
+import React, { useEffect, useRef, useState } from 'react';
+import { ChevronDown, Image, Star, TriangleAlert, X } from 'lucide-react';
+import { compressImage, formatFileSizeMB, formatThousands, imageFileErrorKind, objectUrlOf, uploadImageFile, validateImageFile } from './formUtils';
+import { notify } from './notify';
+import { fmt, messages } from './messages.vi';
 
 /**
  * Control dùng chung cho 3 form admin (đợt redesign form + upload ảnh).
@@ -11,7 +14,7 @@ export function FieldError({ id, testid, message }: { id?: string; testid?: stri
   if (!message) return null;
   return (
     <p className="sa-field-error" id={id} data-testid={testid} role="alert">
-      <span aria-hidden="true">⚠</span> {message}
+      <span aria-hidden="true"><TriangleAlert size={14} strokeWidth={2} style={{ verticalAlign: '-2px' }} /></span> {message}
     </p>
   );
 }
@@ -42,16 +45,46 @@ export function Toggle({ checked, onChange, testid, label, disabled }: {
   );
 }
 
+// ---------- Switch trạng thái trong bảng (đợt 17, BR-06) ----------
+// Cùng cơ chế với Toggle (button role="switch" + aria-checked) nhưng gọn:
+// chỉ có núm gạt, không có nhãn chữ đi kèm — trạng thái đọc qua aria-checked
+// và cột Trạng thái. Selector cho test: getByTestId('admin-<loai>-status-switch-{id}')
+// + getAttribute('aria-checked') === 'true' (đang hoạt động) / 'false' (ngừng).
+// Bấm switch KHÔNG đổi ngay: cha mở popup "Xác nhận đổi trạng thái" trước,
+// chỉ gọi API khi xác nhận; Huỷ thì switch giữ nguyên (controlled theo dữ liệu).
+export function StatusSwitch({ checked, onToggle, testid, label, disabled }: {
+  checked: boolean; onToggle: () => void; testid: string; label: string; disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      title={label}
+      data-testid={testid}
+      className={`sa-toggle sa-status-switch${checked ? ' sa-toggle-on' : ''}`}
+      onClick={onToggle}
+      disabled={disabled}
+    >
+      <span className="sa-toggle-knob" aria-hidden="true" />
+    </button>
+  );
+}
+
 // ---------- Ô tiền tệ: hiển thị dấu chấm ngăn cách nghìn + hậu tố ₫, state giữ số thô ----------
-export function MoneyInput({ id, value, onChange, testid, errorId, disabled, placeholder }: {
+// readOnly (đợt 18, chế độ xem): ô xám nhạt, cho bôi đen/copy, không sửa được.
+export function MoneyInput({ id, value, onChange, testid, errorId, disabled, placeholder, readOnly, error }: {
   id: string; value: string; onChange: (digits: string) => void; testid: string;
-  errorId?: string; disabled?: boolean; placeholder?: string;
+  errorId?: string; disabled?: boolean; placeholder?: string; readOnly?: boolean;
+  /** Đợt 21: true thì viền đỏ (sa-input-error) — dùng khi field tiền bị lỗi validate. */
+  error?: boolean;
 }) {
   return (
     <span className="sa-money-wrap">
       <input
         id={id}
-        className="sa-input sa-money-input"
+        className={`sa-input sa-money-input${readOnly ? ' sa-view-input' : ''}${error ? ' sa-input-error' : ''}`}
         type="text"
         inputMode="numeric"
         autoComplete="off"
@@ -59,6 +92,7 @@ export function MoneyInput({ id, value, onChange, testid, errorId, disabled, pla
         placeholder={placeholder ?? '0'}
         aria-describedby={errorId}
         disabled={disabled}
+        readOnly={readOnly}
         data-testid={testid}
         onChange={e => onChange(e.target.value.replace(/\D/g, ''))}
       />
@@ -68,13 +102,15 @@ export function MoneyInput({ id, value, onChange, testid, errorId, disabled, pla
 }
 
 // ---------- Dropdown danh mục TỰ LÀM (trigger + listbox có ô tìm kiếm) ----------
-export function CategoryPicker({ value, categories, onChange, testid, errorId, placeholder }: {
+// disabled (đợt 18, chế độ xem): chỉ hiện tên đã chọn, không mở danh sách.
+export function CategoryPicker({ value, categories, onChange, testid, errorId, placeholder, disabled }: {
   value: string;
   categories: Array<{ id: string; name: string }>;
   onChange: (id: string) => void;
   testid: string;
   errorId?: string;
   placeholder?: string;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -95,20 +131,21 @@ export function CategoryPicker({ value, categories, onChange, testid, errorId, p
     <div className="sa-picker" ref={wrapRef}>
       <button
         type="button"
-        className="sa-input sa-picker-trigger"
+        className={`sa-input sa-picker-trigger${disabled ? ' sa-view-input' : ''}`}
         role="combobox"
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-describedby={errorId}
         aria-label="Danh mục"
         data-testid={testid}
-        onClick={() => setOpen(v => !v)}
+        disabled={disabled}
+        onClick={() => { if (!disabled) setOpen(v => !v); }}
         onKeyDown={e => { if (e.key === 'Escape') setOpen(false); }}
       >
         <span className={selected ? '' : 'sa-picker-placeholder'}>{selected ? selected.name : (placeholder ?? 'Chọn danh mục')}</span>
-        <span aria-hidden="true">▾</span>
+        <ChevronDown size={16} strokeWidth={2} aria-hidden="true" />
       </button>
-      {open && (
+      {open && !disabled && (
         <div className="sa-picker-list" role="listbox" aria-label="Danh sách danh mục">
           <input
             className="sa-input sa-picker-search"
@@ -195,10 +232,16 @@ export function ImageUploader({ prefix, images, onChange, multiple, max }: Image
     if (list.length === 0) return;
     if (!multiple && list.length > 1) setDropError('Chỉ chọn 1 ảnh cho danh mục.');
     const room = maxImages - imagesRef.current.length;
-    if (room <= 0) { setDropError(`Tối đa ${maxImages} ảnh.`); return; }
+    if (room <= 0) {
+      setDropError(`Tối đa ${maxImages} ảnh.`);
+      notify.warning(messages.toast.upload.tooMany.title, fmt(messages.toast.upload.tooMany.desc, { n: maxImages }));
+      return;
+    }
     const accepted = list.slice(0, multiple ? room : 1);
-    if (list.length > accepted.length) setDropError(`Tối đa ${maxImages} ảnh — chỉ nhận ${accepted.length} ảnh đầu.`);
-    else setDropError(null);
+    if (list.length > accepted.length) {
+      setDropError(`Tối đa ${maxImages} ảnh — chỉ nhận ${accepted.length} ảnh đầu.`);
+      notify.warning(messages.toast.upload.tooMany.title, fmt(messages.toast.upload.tooMany.desc, { n: maxImages }));
+    } else setDropError(null);
     accepted.forEach(file => {
       const err = validateImageFile(file);
       const item: UploadImageItem = {
@@ -206,12 +249,26 @@ export function ImageUploader({ prefix, images, onChange, multiple, max }: Image
         status: err ? 'error' : 'uploading', progress: 0, error: err, name: file.name,
       };
       onChange([...imagesRef.current, item]);
-      if (err) return;
+      if (err) {
+        // Lỗi validate: inline dưới dropzone + toast §3.9 (đúng loại lỗi).
+        const kind = imageFileErrorKind(file);
+        if (kind === 'format') {
+          notify.warning(messages.toast.upload.unsupportedFormat.title, messages.toast.upload.unsupportedFormat.desc);
+        } else if (kind === 'size') {
+          notify.warning(messages.toast.upload.tooLarge.title,
+            fmt(messages.toast.upload.tooLarge.desc, { 'tên file': file.name, x: formatFileSizeMB(file.size) }));
+        }
+        return;
+      }
       void (async () => {
         const compressed = await compressImage(file);
         const res = await uploadImageFile(compressed, pct => patchItem(item.id, { progress: pct }));
         if (res.ok && res.url) patchItem(item.id, { status: 'ready', progress: 100, url: res.url, error: null });
-        else patchItem(item.id, { status: 'error', error: res.error || 'Upload thất bại.' });
+        else {
+          patchItem(item.id, { status: 'error', error: res.error || 'Upload thất bại.' });
+          notify.error(messages.toast.upload.failed.title,
+            fmt(messages.toast.upload.failed.desc, { 'tên file': file.name }));
+        }
       })();
     });
   };
@@ -271,9 +328,15 @@ export function ImageUploader({ prefix, images, onChange, multiple, max }: Image
           if (files && files.length > 0) { e.preventDefault(); addFiles(files); }
         }}
       >
-        <span className="sa-dropzone-icon" aria-hidden="true">☁️</span>
+        <span className="sa-dropzone-icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 16V4" />
+            <path d="m6 10 6-6 6 6" />
+            <path d="M4 20h16" />
+          </svg>
+        </span>
         <span className="sa-dropzone-text">Kéo thả ảnh vào đây hoặc bấm để chọn từ máy tính</span>
-        <span className="sa-dropzone-sub">PNG, JPG, WEBP – tối đa 5MB{multiple ? ' – tối đa 8 ảnh' : ''}</span>
+        <span className="sa-dropzone-sub">PNG, JPG, WEBP – tối đa 5MB{multiple ? ` – tối đa ${maxImages} ảnh` : ''}</span>
         {/* Input file thật, chỉ visually-hidden (không display:none) để Selenium sendKeys được. */}
         <input
           ref={fileInputRef}
@@ -292,7 +355,7 @@ export function ImageUploader({ prefix, images, onChange, multiple, max }: Image
       </div>
       {dropError && (
         <p className="sa-field-error" data-testid={`${prefix}-error`} role="alert">
-          <span aria-hidden="true">⚠</span> {dropError}
+          <span aria-hidden="true"><TriangleAlert size={14} strokeWidth={2} style={{ verticalAlign: '-2px' }} /></span> {dropError}
         </p>
       )}
       {images.length > 0 && (
@@ -318,7 +381,7 @@ export function ImageUploader({ prefix, images, onChange, multiple, max }: Image
             >
               {it.previewUrl
                 ? <img src={it.previewUrl} alt={it.name ?? `Ảnh ${i + 1}`} className="sa-thumb-img" />
-                : <span className="sa-thumb-ph" aria-hidden="true">🖼️</span>}
+                : <span className="sa-thumb-ph" aria-hidden="true"><Image size={24} strokeWidth={1.8} /></span>}
               {multiple && i === 0 && it.status === 'ready' && <span className="sa-thumb-main">Ảnh chính</span>}
               {it.status === 'uploading' && (
                 <span className="sa-thumb-progress" data-testid={`${prefix}-progress-${i}`}>
@@ -342,7 +405,7 @@ export function ImageUploader({ prefix, images, onChange, multiple, max }: Image
                     aria-label={`Đặt ảnh ${i + 1} làm ảnh chính`}
                     onClick={() => setMain(i)}
                   >
-                    ★
+                    <Star size={16} strokeWidth={2} fill="currentColor" />
                   </button>
                 )}
                 <button
@@ -353,7 +416,7 @@ export function ImageUploader({ prefix, images, onChange, multiple, max }: Image
                   aria-label={`Xóa ảnh ${i + 1}`}
                   onClick={() => removeItem(it.id)}
                 >
-                  ✕
+                  <X size={16} strokeWidth={2} />
                 </button>
               </span>
             </div>
@@ -386,86 +449,65 @@ export function ImageUploader({ prefix, images, onChange, multiple, max }: Image
   );
 }
 
-// ---------- Khung form: drawer (sản phẩm) / modal lớn (danh mục, khuyến mãi) ----------
-
-interface FormShellProps {
-  variant: 'drawer' | 'modal';
-  title: string;
-  subtitle?: string;
-  testid: string;
-  formTestid: string;
-  onRequestClose: () => void;
-  onSubmit: (e: React.FormEvent) => void;
-  footer: React.ReactNode;
-  children: React.ReactNode;
-}
-
-/**
- * Drawer trượt từ phải (560–640px, mobile = bottom sheet 95vh) hoặc modal
- * max-width 560px. Dùng chung class overlay/modal của SparkModal nên nhìn
- * đồng bộ; khác SparkModal ở: header có mô tả phụ, footer sticky, ESC/X/Hủy
- * đều đi qua onRequestClose (cha quyết định có hỏi "chưa lưu" không),
- * trap focus + autofocus ô đầu tiên, không đóng khi bấm ra ngoài overlay
- * (tránh mất dữ liệu đang nhập).
- */
-export function FormShell({ variant, title, subtitle, testid, formTestid, onRequestClose, onSubmit, footer, children }: FormShellProps) {
-  const titleId = useId();
-  const containerRef = useRef<HTMLDivElement>(null);
+// ---------- Thư viện ảnh CHỈ XEM (chế độ xem của form, đợt 18) ----------
+// Thumbnail 96×96, ảnh đầu nhãn "Ảnh chính", bấm phóng to (lightbox tối giản
+// trong form, đóng bằng X/ESC/bấm nền). KHÔNG có khung upload, nút xóa hay
+// đổi thứ tự. Testid thumbnail giữ cùng quy ước với ImageUploader
+// (`${prefix}-thumb` / `${prefix}-thumb-${i}`) để test tìm được ở mọi mode.
+export function ViewImageGallery({ prefix, urls }: { prefix: string; urls: string[] }) {
+  const [lightbox, setLightbox] = useState<number | null>(null);
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const prevActive = document.activeElement as HTMLElement | null;
-    const focusables = () =>
-      Array.from(el.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
-      ));
-    // Autofocus ô nhập đầu tiên khi mở (không phải nút X ở header).
-    const firstField = el.querySelector<HTMLElement>('input:not([disabled]), select:not([disabled]), textarea:not([disabled])');
-    (firstField ?? focusables()[0])?.focus();
+    if (lightbox === null) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); onRequestClose(); return; }
-      if (e.key !== 'Tab') return;
-      const list = focusables();
-      if (list.length === 0) return;
-      const firstEl = list[0];
-      const lastEl = list[list.length - 1];
-      if (e.shiftKey && document.activeElement === firstEl) { e.preventDefault(); lastEl.focus(); }
-      else if (!e.shiftKey && document.activeElement === lastEl) { e.preventDefault(); firstEl.focus(); }
+      if (e.key === 'Escape') { e.preventDefault(); setLightbox(null); }
     };
     document.addEventListener('keydown', onKeyDown, true);
-    return () => {
-      document.removeEventListener('keydown', onKeyDown, true);
-      prevActive?.focus?.();
-    };
-    // Chỉ chạy 1 lần khi mount (mở form); onRequestClose ổn định qua ref của cha.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return () => document.removeEventListener('keydown', onKeyDown, true);
+  }, [lightbox]);
+
+  if (urls.length === 0) return <p className="fs-view-desc">—</p>;
+  const multiple = urls.length > 1;
 
   return (
-    <div className="sa-modal-overlay sa-form-overlay">
-      <div
-        ref={containerRef}
-        className={variant === 'drawer' ? 'sa-drawer' : 'sa-modal sa-modal-lg'}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        data-testid={testid}
-      >
-        <form onSubmit={onSubmit} data-testid={formTestid} noValidate className="sa-form-shell">
-          <div className="sa-form-head">
-            <div className="sa-form-head-text">
-              <h3 id={titleId}>{title}</h3>
-              {subtitle && <p>{subtitle}</p>}
-            </div>
-            <button type="button" className="sa-modal-close" onClick={onRequestClose} aria-label="Đóng">
-              ✕
-            </button>
-          </div>
-          <div className="sa-form-body">{children}</div>
-          <div className="sa-form-foot">{footer}</div>
-        </form>
+    <>
+      <div className="fs-view-gallery">
+        {urls.map((url, i) => (
+          <button
+            key={`${url}-${i}`}
+            type="button"
+            className="fs-view-thumb"
+            data-testid={multiple ? `${prefix}-thumb-${i}` : `${prefix}-thumb`}
+            aria-label={`Xem ảnh ${i + 1}${i === 0 ? ' (ảnh chính)' : ''}`}
+            title="Bấm để phóng to"
+            onClick={() => setLightbox(i)}
+          >
+            <img src={url} alt={`Ảnh ${i + 1}`} />
+            {multiple && i === 0 && <span className="fs-view-thumb-main">Ảnh chính</span>}
+          </button>
+        ))}
       </div>
-    </div>
+      {lightbox !== null && (
+        <div
+          className="fs-lightbox"
+          data-testid={`${prefix}-lightbox`}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Ảnh ${lightbox + 1} / ${urls.length}`}
+          onClick={() => setLightbox(null)}
+        >
+          <img src={urls[lightbox]} alt={`Ảnh ${lightbox + 1}`} data-testid={`${prefix}-lightbox-img`} onClick={e => e.stopPropagation()} />
+          <button
+            type="button"
+            className="fs-lightbox-close"
+            data-testid={`${prefix}-lightbox-close-btn`}
+            aria-label="Đóng"
+            onClick={() => setLightbox(null)}
+          >
+            <X size={18} strokeWidth={2} />
+          </button>
+        </div>
+      )}
+    </>
   );
 }

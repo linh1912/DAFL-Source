@@ -89,6 +89,8 @@ function renderAdmin() {
     <MemoryRouter initialEntries={['/admin']}>
       <Routes>
         <Route path="/admin" element={<AdminPage />} />
+        {/* Đợt 21 — route chi tiết đánh giá full page (giữ đồng bộ với App.tsx). */}
+        <Route path="/reviews/:id" element={<AdminPage />} />
         <Route path="/login" element={<div data-testid="login-page">Đăng nhập</div>} />
         <Route path="/" element={<div data-testid="home-page">Trang chủ</div>} />
       </Routes>
@@ -124,28 +126,44 @@ describe('AdminPage — Đánh giá (đợt 16)', () => {
     expect(screen.getByText('Kem dưỡng ẩm La Roche')).toBeInTheDocument();
     expect(screen.getByText('Lan Anh')).toBeInTheDocument();
     expect(screen.getByText('Minh Quân')).toBeInTheDocument();
-    expect(screen.getByText('★★★★★ (5/5)')).toBeInTheDocument();
-    expect(screen.getByText('★☆☆☆☆ (1/5)')).toBeInTheDocument();
+    // Sao render bằng icon Lucide Star (đợt 18 wave D), không còn chuỗi '★★★★★ (5/5)':
+    // mỗi dòng có span aria-label "{n} trên 5 sao" chứa đúng 5 svg.lucide-star,
+    // số sao đầy (fill #f59e0b) = rating, còn lại viền xám (fill none), kèm "(n/5)".
+    const assertStars = (rating: number) => {
+      const span = document.querySelector(`span[aria-label="${rating} trên 5 sao"]`);
+      expect(span).not.toBeNull();
+      const stars = span!.querySelectorAll('svg.lucide-star');
+      expect(stars).toHaveLength(5);
+      const filled = Array.from(stars).filter(s => s.getAttribute('fill') === '#f59e0b');
+      expect(filled).toHaveLength(rating);
+      expect(span!.textContent).toContain(`(${rating}/5)`);
+      expect(span!.textContent).not.toContain('★');
+    };
+    assertStars(5);
+    assertStars(1);
     // Nội dung dài (> 80 ký tự) chỉ hiện 80 ký tự đầu + "..." trong bảng.
     expect(screen.getByText(`${longComment.slice(0, 80)}...`)).toBeInTheDocument();
     expect(screen.queryByText(longComment)).toBeNull();
     // Nội dung ngắn hiện nguyên vẹn.
     expect(screen.getByText(shortComment)).toBeInTheDocument();
-    // Toolbar chuẩn của mục: tìm kiếm + lọc sao + Tìm + Đặt lại + Làm mới + Export.
-    expect(screen.getByTestId('admin-review-search')).toBeInTheDocument();
+    // Toolbar chuẩn đợt 18 (PageToolbar): tìm kiếm + lọc sao + Đặt lại.
+    // Đợt 21: tìm/lọc TỰ ĐỘNG (debounce 300ms) nên KHÔNG còn nút icon Tìm;
+    // nút Đặt lại là nút chữ "Đặt lại bộ lọc". KHÔNG có nút Export / Làm mới
+    // / Thêm mới (admin không tạo đánh giá).
+    expect(screen.getByTestId('reviews-search-input')).toBeInTheDocument();
     expect(screen.getByTestId('admin-review-rating-filter')).toBeInTheDocument();
-    expect(screen.getByTestId('admin-reviews-search-btn')).toBeInTheDocument();
-    expect(screen.getByTestId('admin-reviews-reset-btn')).toBeInTheDocument();
-    expect(screen.getByTestId('admin-reviews-refresh-btn')).toBeInTheDocument();
-    expect(screen.getByTestId('admin-reviews-export-btn')).toBeInTheDocument();
-    // Không có nút Thêm mới: admin không tạo đánh giá (đánh giá là của khách).
-    expect(document.querySelector('.sa-toolbar .sa-btn-add')).toBeNull();
+    expect(screen.queryByTestId('reviews-search-btn')).toBeNull();
+    expect(screen.getByTestId('reviews-reset-btn')).toHaveTextContent('Đặt lại bộ lọc');
+    expect(screen.queryByTestId('reviews-refresh-btn')).toBeNull();
+    expect(screen.queryByTestId('reviews-add-btn')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Export/ })).toBeNull();
+    expect(document.querySelector('.sa-page-toolbar .sa-page-toolbar-add-btn')).toBeNull();
     expect(screen.getByTestId('admin-reviews-pagination')).toBeInTheDocument();
-    expect(screen.getByText(/Trang 1 \/ 1/)).toBeInTheDocument();
-    expect(screen.getByText(/Tổng 2 dòng/)).toBeInTheDocument();
+    expect(screen.getByTestId('admin-reviews-pagination-range')).toHaveTextContent('Trang 1 / 1');
+    expect(screen.getByText('Hiển thị 1–2 / 2 kết quả')).toBeInTheDocument();
   });
 
-  it('Đánh giá: lọc 1 sao gọi fetch với rating=1 và bảng chỉ hiện đánh giá 1 sao', async () => {
+  it('Đánh giá: lọc 1 sao TỰ ĐỘNG gọi fetch với rating=1 và bảng chỉ hiện đánh giá 1 sao (đợt 21, không cần bấm Tìm)', async () => {
     mockFetchReviews(mkReviews());
     await openReviews();
 
@@ -154,29 +172,29 @@ describe('AdminPage — Đánh giá (đợt 16)', () => {
     });
     fireEvent.change(screen.getByTestId('admin-review-rating-filter'), { target: { value: '1' } });
     expect(screen.getByTestId('admin-review-rating-filter')).toHaveValue('1');
-    fireEvent.click(screen.getByTestId('admin-reviews-search-btn'));
+    // Đợt 21: đổi dropdown là tải lại ngay (không bấm nút Tìm).
 
     await waitFor(() => {
       expect(screen.queryByText('Son kem 3CE')).toBeNull();
     });
     expect(screen.getByText('Kem dưỡng ẩm La Roche')).toBeInTheDocument();
     expect(screen.getByText('Minh Quân')).toBeInTheDocument();
-    expect(screen.getByText('★☆☆☆☆ (1/5)')).toBeInTheDocument();
-    expect(screen.queryByText('★★★★★ (5/5)')).toBeNull();
+    expect(document.querySelector('span[aria-label="1 trên 5 sao"]')).not.toBeNull();
+    expect(document.querySelector('span[aria-label="5 trên 5 sao"]')).toBeNull();
     expect(
       evaluationListCalls().some(([url]) => evaluationQuery(url).get('rating') === '1'),
     ).toBe(true);
   });
 
-  it('Đánh giá: gõ tên SP + bấm Tìm gọi fetch với search=<tên SP> và bảng hiện đúng dòng', async () => {
+  it('Đánh giá: gõ tên SP thì TỰ ĐỘNG gọi fetch với search=<tên SP> và bảng hiện đúng dòng (đợt 21, debounce 300ms, không cần bấm Tìm)', async () => {
     mockFetchReviews(mkReviews());
     await openReviews();
 
     await waitFor(() => {
       expect(screen.getByText('Son kem 3CE')).toBeInTheDocument();
     });
-    fireEvent.change(screen.getByTestId('admin-review-search'), { target: { value: 'Son kem' } });
-    fireEvent.click(screen.getByTestId('admin-reviews-search-btn'));
+    fireEvent.change(screen.getByTestId('reviews-search-input'), { target: { value: 'Son kem' } });
+    // Đợt 21: ngừng gõ 300ms là tải lại (không bấm nút Tìm).
 
     await waitFor(() => {
       expect(screen.queryByText('Kem dưỡng ẩm La Roche')).toBeNull();
@@ -188,7 +206,7 @@ describe('AdminPage — Đánh giá (đợt 16)', () => {
     ).toBe(true);
   });
 
-  it('Đánh giá: bấm xem mở modal chi tiết chứa TOÀN BỘ nội dung, tên SP, tên khách, sao', async () => {
+  it('Đánh giá (đợt 21, trang riêng): bấm xem mở TRANG CHI TIẾT full page chứa TOÀN BỘ nội dung, tên SP, tên khách, sao; breadcrumb "Đánh giá > ..." dùng dấu ">"', async () => {
     mockFetchReviews(mkReviews());
     await openReviews();
 
@@ -198,17 +216,38 @@ describe('AdminPage — Đánh giá (đợt 16)', () => {
     fireEvent.click(screen.getByLabelText('Xem đánh giá của Lan Anh'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('admin-review-detail-modal')).toBeInTheDocument();
+      expect(screen.getByTestId('admin-review-detail-page')).toBeInTheDocument();
     });
-    const modal = within(screen.getByTestId('admin-review-detail-modal'));
-    expect(modal.getByText(longComment)).toBeInTheDocument();
-    expect(modal.getByText('Son kem 3CE')).toBeInTheDocument();
-    expect(modal.getByText('Lan Anh')).toBeInTheDocument();
-    expect(modal.getByText('★★★★★ (5/5)')).toBeInTheDocument();
-    expect(modal.getByTestId('admin-review-delete-btn')).toBeInTheDocument();
+    expect(screen.queryByTestId('admin-review-detail-modal')).toBeNull();
+    const page = within(screen.getByTestId('admin-review-detail-page'));
+    expect(page.getByText(longComment)).toBeInTheDocument();
+    // Tên SP xuất hiện ở tiêu đề trang + breadcrumb + dòng "Sản phẩm".
+    expect(page.getAllByText('Son kem 3CE').length).toBeGreaterThanOrEqual(1);
+    expect(page.getByText('Lan Anh')).toBeInTheDocument();
+    // Breadcrumb "Đánh giá > Son kem 3CE" (dấu ">" như trang Sản phẩm).
+    expect(screen.getByTestId('admin-entity-breadcrumb')).toHaveTextContent('Đánh giá');
+    expect(screen.getByTestId('admin-entity-breadcrumb')).toHaveTextContent('Son kem 3CE');
+    // Chi tiết đánh giá cũng dùng icon Star Lucide: 5 sao đầy + "(5/5)".
+    const detailPage = screen.getByTestId('admin-review-detail-page');
+    const detailStars = detailPage.querySelector('.sa-stars');
+    expect(detailStars).not.toBeNull();
+    expect(detailStars!.querySelectorAll('svg.lucide-star')).toHaveLength(5);
+    expect(Array.from(detailStars!.querySelectorAll('svg.lucide-star')).filter(s => s.getAttribute('fill') === '#f59e0b')).toHaveLength(5);
+    expect(detailStars!.parentElement!.textContent).toContain('(5/5)');
+    expect(detailStars!.parentElement!.textContent).not.toContain('★');
+    expect(page.getByTestId('admin-review-delete-btn')).toBeInTheDocument();
+    // Bấm dòng cũng mở trang chi tiết: quay lại danh sách rồi bấm dòng.
+    fireEvent.click(screen.getByTestId('admin-review-detail-back-btn'));
+    await waitFor(() => {
+      expect(screen.getByTestId('admin-reviews-section')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId('admin-review-row-rv-1'));
+    await waitFor(() => {
+      expect(screen.getByTestId('admin-review-detail-page')).toBeInTheDocument();
+    });
   });
 
-  it('Đánh giá: xóa trong modal phải qua hộp xác nhận, gọi DELETE rồi dòng biến mất + toast thành công', async () => {
+  it('Đánh giá (đợt 18 + đợt 21): xóa trong TRANG CHI TIẾT phải qua ConfirmDialog 2 nút, gọi DELETE rồi về danh sách + toast', async () => {
     mockFetchReviews(mkReviews());
     await openReviews();
 
@@ -217,15 +256,19 @@ describe('AdminPage — Đánh giá (đợt 16)', () => {
     });
     fireEvent.click(screen.getByLabelText('Xem đánh giá của Minh Quân'));
     await waitFor(() => {
-      expect(screen.getByTestId('admin-review-detail-modal')).toBeInTheDocument();
+      expect(screen.getByTestId('admin-review-detail-page')).toBeInTheDocument();
     });
     fireEvent.click(screen.getByTestId('admin-review-delete-btn'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('admin-confirm-modal')).toBeInTheDocument();
+      expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument();
     });
-    expect(screen.getByText('Xác nhận xóa đánh giá')).toBeInTheDocument();
-    expect(screen.getByText('Xóa đánh giá này? Đánh giá sẽ bị xóa khỏi sản phẩm và không thể hoàn tác.')).toBeInTheDocument();
+    expect(screen.getByTestId('confirm-dialog-title')).toHaveTextContent('Xóa đánh giá?');
+    expect(screen.getByTestId('confirm-dialog-message')).toHaveTextContent('Bạn sắp xóa đánh giá của Minh Quân cho sản phẩm Kem dưỡng ẩm La Roche');
+    expect(screen.getByTestId('confirm-dialog')).toHaveTextContent('Hành động này không thể hoàn tác.');
+    expect(screen.getByTestId('confirm-dialog-confirm-btn')).toHaveTextContent('Xóa đánh giá');
+    expect(screen.getByTestId('confirm-dialog-cancel-btn')).toHaveTextContent('Hủy');
+    expect(within(screen.getByTestId('confirm-dialog')).getAllByRole('button')).toHaveLength(2);
     const calledDelete = () =>
       fetchCalls().some(
         ([url, init]) =>
@@ -233,27 +276,31 @@ describe('AdminPage — Đánh giá (đợt 16)', () => {
       );
     expect(calledDelete()).toBe(false);
 
-    fireEvent.click(screen.getByTestId('admin-confirm-yes-btn'));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm-btn'));
     await waitFor(() => {
       expect(calledDelete()).toBe(true);
     });
+    // Đợt 21: xóa từ trang chi tiết thì VỀ DANH SÁCH (không còn modal để đóng).
     await waitFor(() => {
-      expect(screen.queryByText('Kem dưỡng ẩm La Roche')).toBeNull();
+      expect(screen.getByTestId('admin-reviews-section')).toBeInTheDocument();
     });
+    expect(screen.queryByTestId('admin-review-detail-page')).toBeNull();
+    expect(screen.queryByText('Kem dưỡng ẩm La Roche')).toBeNull();
     expect(screen.getByText('Son kem 3CE')).toBeInTheDocument();
-    expect(screen.queryByTestId('admin-review-detail-modal')).toBeNull();
-    expect(screen.queryByTestId('admin-confirm-modal')).toBeNull();
-    expect(screen.getByTestId('admin-toast')).toHaveTextContent('Đã xóa đánh giá.');
+    expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+    expect(screen.getByTestId('admin-toast-title')).toHaveTextContent('Đã xóa đánh giá');
+    expect(screen.getByTestId('admin-toast-desc')).toHaveTextContent('Đánh giá của Minh Quân đã được xóa.');
   });
 
-  it('Đánh giá: API trả [] thì hiện thông báo trống, không có bảng/phân trang', async () => {
+  it('Đánh giá (đợt 18): API trả [] thì hiện EmptyState "Chưa có đánh giá nào", không có bảng/phân trang', async () => {
     mockFetchReviews([]);
     await openReviews();
 
     await waitFor(() => {
-      expect(screen.getByText('Chưa có đánh giá nào.')).toBeInTheDocument();
+      expect(screen.getByText('Chưa có đánh giá nào')).toBeInTheDocument();
     });
     expect(screen.getByTestId('admin-reviews-section')).toBeInTheDocument();
+    expect(screen.getByTestId('empty-state')).toBeInTheDocument();
     expect(screen.queryByTestId('admin-reviews-pagination')).toBeNull();
     expect(screen.queryByText('Son kem 3CE')).toBeNull();
   });

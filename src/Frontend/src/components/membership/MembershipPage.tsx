@@ -92,6 +92,11 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({ onBack }) => {
   const [vouchers, setVouchers] = useState<MyVoucher[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [birthDateInput, setBirthDateInput] = useState('');
+  const [birthDateError, setBirthDateError] = useState<string | null>(null);
+  const [birthDateSuccess, setBirthDateSuccess] = useState<string | null>(null);
+  const [voucherError, setVoucherError] = useState<string | null>(null);
+  const [voucherSuccess, setVoucherSuccess] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -121,6 +126,49 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({ onBack }) => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Đồng bộ ô ngày sinh khi /me tải xong (birthDate dạng ISO, lấy phần ngày).
+  useEffect(() => {
+    if (info?.birthDate) setBirthDateInput(info.birthDate.slice(0, 10));
+  }, [info?.birthDate]);
+
+  /** Lưu ngày sinh — PUT /api/membership/preferences (BE validate tuổi 10–120, sửa 1 lần/90 ngày). */
+  const saveBirthDate = async () => {
+    setBirthDateError(null);
+    setBirthDateSuccess(null);
+    if (!birthDateInput) return;
+    try {
+      const res = await apiJson('/api/membership/preferences', {
+        method: 'PUT',
+        body: JSON.stringify({ birthDate: birthDateInput || null }),
+      });
+      if (res.body?.success) {
+        setBirthDateSuccess('Đã cập nhật ngày sinh.');
+        await load();
+      } else {
+        setBirthDateError(res.body?.message || 'Không thể cập nhật ngày sinh.');
+      }
+    } catch {
+      setBirthDateError('Không thể kết nối đến máy chủ.');
+    }
+  };
+
+  /** Nhận voucher sinh nhật — POST /api/membership/birthday-voucher. Nút luôn bấm được để BE trả lỗi thật. */
+  const claimBirthdayVoucher = async () => {
+    setVoucherError(null);
+    setVoucherSuccess(null);
+    try {
+      const res = await apiJson('/api/membership/birthday-voucher', { method: 'POST' });
+      if (res.body?.success) {
+        setVoucherSuccess(res.body.message);
+        await load();
+      } else {
+        setVoucherError(res.body?.message || 'Không thể nhận voucher sinh nhật.');
+      }
+    } catch {
+      setVoucherError('Không thể kết nối đến máy chủ.');
+    }
+  };
 
   const pointsValue = (info?.availablePoints ?? 0) * POINTS_VALUE_VND;
   const nextGoal = info?.nextTierSpent ?? 0;
@@ -243,6 +291,62 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({ onBack }) => {
                 </span>
               ))}
             </div>
+          </div>
+
+          {/* Ngày sinh & voucher sinh nhật — đợt 15, mục 3 */}
+          <div style={{ marginTop: 24 }} data-testid="birthdate-section">
+            <h2 style={{ fontSize: '1.15rem', margin: '0 0 10px' }}>Ngày sinh &amp; voucher sinh nhật</h2>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <label htmlFor="birthdate-input" style={{ fontSize: '0.9rem' }}>
+                Ngày sinh
+              </label>
+              <input
+                id="birthdate-input"
+                type="date"
+                data-testid="birthdate-input"
+                value={birthDateInput}
+                onChange={e => setBirthDateInput(e.target.value)}
+              />
+              <button
+                type="button"
+                className="btn btn-primary"
+                data-testid="birthdate-save-btn"
+                onClick={() => void saveBirthDate()}
+              >
+                Lưu ngày sinh
+              </button>
+            </div>
+            {birthDateError && (
+              <p data-testid="birthdate-error-msg" style={{ color: '#d81b60', margin: '8px 0 0' }}>
+                {birthDateError}
+              </p>
+            )}
+            {birthDateSuccess && (
+              <p data-testid="birthdate-success-msg" style={{ color: '#1a7f37', margin: '8px 0 0' }}>
+                {birthDateSuccess}
+              </p>
+            )}
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: '16px 0 10px' }}>
+              Chỉ hạng Vàng trở lên, trong 30 ngày quanh ngày sinh, mỗi năm 1 lần.
+            </p>
+            <button
+              type="button"
+              className="btn btn-primary"
+              data-testid="claim-birthday-voucher-btn"
+              onClick={() => void claimBirthdayVoucher()}
+            >
+              Nhận voucher sinh nhật
+            </button>
+            {voucherError && (
+              <p data-testid="birthday-voucher-error-msg" style={{ color: '#d81b60', margin: '8px 0 0' }}>
+                {voucherError}
+              </p>
+            )}
+            {voucherSuccess && (
+              <p data-testid="birthday-voucher-success-msg" style={{ color: '#1a7f37', margin: '8px 0 0' }}>
+                {voucherSuccess}
+              </p>
+            )}
           </div>
 
           {/* Voucher của tôi */}

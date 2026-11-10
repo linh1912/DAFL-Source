@@ -20,6 +20,7 @@ import { SiteFooter } from './components/common/SiteFooter';
 import { CategoryFilter } from './components/product/CategoryFilter';
 import { ProductCard } from './components/product/ProductCard';
 import { ProductGallery } from './components/product/ProductGallery';
+import { ReviewForm } from './components/product/ReviewForm';
 import { resolveGalleryImages } from './utils/images';
 import { timeAgoVi } from './utils/shops';
 import { CartDrawer } from './components/cart/CartDrawer';
@@ -320,6 +321,10 @@ export default function App() {
 
   // Auth State (JWT — CN-02)
   const [user, setUser] = useState<User | null>(null);
+
+  // Điểm hội viên dùng ở checkout — đợt 15 (BE: CheckoutCommand.PointsToUse, 1 điểm = 1.000đ).
+  const [pointsToUse, setPointsToUse] = useState(0);
+  const [membershipPoints, setMembershipPoints] = useState<{ availablePoints: number; maxPointsPercent: number; tierLabel: string } | null>(null);
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -751,6 +756,32 @@ export default function App() {
     if (authUser.address) setShippingAddress(authUser.address);
   };
 
+  // Đợt 15: tải số dư điểm hội viên khi đăng nhập để dùng ở checkout (GET /api/membership/me).
+  // Chưa đăng nhập hoặc chưa tải xong → membershipPoints null → mục dùng điểm ẩn.
+  useEffect(() => {
+    if (!user?.id) {
+      setMembershipPoints(null);
+      setPointsToUse(0);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { body } = await apiJson<{ availablePoints: number; maxPointsPercent: number; tierLabel: string }>('/api/membership/me');
+        if (!cancelled && body?.success && body.data) {
+          setMembershipPoints({
+            availablePoints: body.data.availablePoints ?? 0,
+            maxPointsPercent: body.data.maxPointsPercent ?? 0,
+            tierLabel: body.data.tierLabel ?? '',
+          });
+        }
+      } catch {
+        if (!cancelled) setMembershipPoints(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
   /** Khôi phục phiên từ JWT đã lưu: /me trả data=null khi token hết hạn/không hợp lệ → coi như hết phiên (E3). */
   const fetchUserSession = async () => {
     const token = getToken();
@@ -1008,7 +1039,18 @@ export default function App() {
   const shippingFeeEstimate = orderableItems.length === 0 || rawSubTotal >= FREE_SHIPPING_THRESHOLD || appliedVoucher?.code === 'FREESHIP'
     ? 0
     : SHIPPING_FEE;
-  const finalTotal = Math.max(0, rawSubTotal - discountAmount) + shippingFeeEstimate;
+  // Đợt 15 — dùng điểm hội viên: 1 điểm = 1.000đ, trần = min(số dư, floor(tiền hàng sau voucher × maxPointsPercent% / 1000));
+  // mã FORDEV thì không dùng điểm (trần 0). Kẹp ở đây để tổng tiền/payload luôn khớp dù voucher đổi sau khi đã chọn điểm.
+  const goodsAfterVoucher = Math.max(0, rawSubTotal - discountAmount);
+  const maxPointsAllowed = membershipPoints && appliedVoucher?.code !== 'FORDEV'
+    ? Math.min(
+        membershipPoints.availablePoints,
+        Math.floor((goodsAfterVoucher * membershipPoints.maxPointsPercent) / 100 / 1000),
+      )
+    : 0;
+  const pointsToUseClamped = Math.max(0, Math.min(pointsToUse, maxPointsAllowed));
+  const pointsDiscount = pointsToUseClamped * 1000;
+  const finalTotal = Math.max(0, rawSubTotal - discountAmount - pointsDiscount) + shippingFeeEstimate;
   const totalItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleApplyVoucher = async (codeToApply?: string) => {
@@ -1113,6 +1155,7 @@ export default function App() {
         customerPhone: shipping?.phone ?? values?.customerPhone ?? customerPhone,
         shippingAddress: values?.shippingAddress ?? shippingAddress,
         voucherCode: appliedVoucher?.code,
+        pointsToUse: pointsToUseClamped,
         userId: user?.id,
         items: orderableItems.map(item => ({
           productId: item.product.id,
@@ -1158,6 +1201,7 @@ export default function App() {
         setLastOrderAddress(values?.shippingAddress ?? shippingAddress);
         // Đặt thành công → phiên checkout kết thúc, lần vào sau dùng key mới (E5).
         checkoutIdemKeyRef.current = null;
+        setPointsToUse(0);
         setAckedPriceSignature('');
         // BE đã xóa các sản phẩm đã đặt khỏi giỏ server → đồng bộ lại giỏ hiển thị.
         await loadServerCart();
@@ -3398,9 +3442,10 @@ export default function App() {
                       );
                     })()}
 
-                    {/* Đánh giá của khách hàng — chỉ HIỂN THỊ dữ liệu BE đã trả trong
+                    {/* Đánh giá của khách hàng — HIỂN THỊ dữ liệu BE đã trả trong
                      *  ProductDetailDto.Evaluations (Id, UserName, Rating 1-5, Comment,
-                     *  CreatedAt); không có form gửi đánh giá mới (BE chưa có API tạo). */}
+                     *  CreatedAt) + form gửi đánh giá mới (ReviewForm, đợt 15 phần 1)
+                     *  gọi POST /api/products/{id}/evaluations của BE. */}
                     {(() => {
                       const evals = selectedProduct.evaluations ?? [];
                       const avg = evals.length > 0
@@ -3473,6 +3518,18 @@ export default function App() {
                               </ul>
                             </>
                           )}
+                          <ReviewForm
+                            productId={selectedProduct.id}
+                            userId={user?.id ?? null}
+                            defaultName={user?.fullName ?? ''}
+                            onSubmitted={() => {
+                              // loadProductDetailById có guard bỏ qua khi cùng productId
+                              // đã tải — reset ref để tải lại chi tiết (danh sách +
+                              // điểm trung bình mới) sau khi gửi đánh giá.
+                              lastLoadedProductIdRef.current = null;
+                              void loadProductDetailById(selectedProduct.id);
+                            }}
+                          />
                         </section>
                       );
                     })()}
@@ -3502,6 +3559,13 @@ export default function App() {
               rawSubTotal={rawSubTotal}
               shippingFee={shippingFeeEstimate}
               finalTotal={finalTotal}
+              pointsAvailable={user ? membershipPoints?.availablePoints : undefined}
+              pointsMaxPointsPercent={membershipPoints?.maxPointsPercent}
+              pointsTierLabel={membershipPoints?.tierLabel}
+              pointsMaxAllowed={maxPointsAllowed}
+              pointsToUse={pointsToUseClamped}
+              onPointsToUseChange={setPointsToUse}
+              pointsDisabledReason={appliedVoucher?.code === 'FORDEV' ? 'Không dùng điểm cùng mã FORDEV.' : null}
               totalItemCount={totalItemCount}
               customerName={customerName}
               setCustomerName={setCustomerName}

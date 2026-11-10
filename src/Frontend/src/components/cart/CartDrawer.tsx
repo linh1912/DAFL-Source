@@ -4,6 +4,7 @@ import { CartItem, Voucher, CheckoutResult, User } from '../../../../Shared/type
 import { formatPrice, formatTime } from '../../utils/formatters';
 import { CartItemRow } from './CartItemRow';
 import { VoucherSection } from './VoucherSection';
+import { UsePointsSection } from './UsePointsSection';
 import { CheckoutForm, CheckoutFormValues } from '../checkout/CheckoutForm';
 import { PayOSGatewayView } from '../checkout/PayOSGatewayView';
 
@@ -56,6 +57,15 @@ export interface CartDrawerProps {
   user?: User | null;
   onRequireAuth?: () => void;
   isModal?: boolean;
+  /** Điểm hội viên ở checkout (đợt 15, phần 2/4) — App.tsx fetch từ
+   *  GET /api/membership/me và truyền xuống; CartDrawer chỉ hiển thị. */
+  pointsAvailable?: number;
+  pointsMaxPointsPercent?: number;
+  pointsTierLabel?: string;
+  pointsMaxAllowed?: number;
+  pointsToUse?: number;
+  onPointsToUseChange?: (n: number) => void;
+  pointsDisabledReason?: string | null;
 }
 
 export const CartDrawer: React.FC<CartDrawerProps> = ({
@@ -101,6 +111,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   user,
   onRequireAuth,
   isModal = false,
+  pointsAvailable,
+  pointsMaxPointsPercent,
+  pointsTierLabel,
+  pointsMaxAllowed,
+  pointsToUse,
+  onPointsToUseChange,
+  pointsDisabledReason,
 }) => {
   // Dòng giỏ đang chờ xác nhận xóa (CN-06.4 — áp cho cả nút Xóa và giảm về 0).
   const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
@@ -249,6 +266,22 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.9rem', color: '#10b981', fontWeight: 600 }}>
                       <span>Khuyến mãi Voucher ({appliedVoucher.code}):</span>
                       <span data-testid="cart-voucher-discount">-{formatPrice(appliedVoucher.discountAmount)}</span>
+                    </div>
+                  )}
+                  {/* Dùng điểm hội viên (đợt 15, phần 2/4) — khách vãng lai không hiện mục. */}
+                  <UsePointsSection
+                    availablePoints={pointsAvailable}
+                    maxPointsPercent={pointsMaxPointsPercent}
+                    tierLabel={pointsTierLabel}
+                    maxAllowed={pointsMaxAllowed}
+                    pointsToUse={pointsToUse}
+                    onPointsToUseChange={onPointsToUseChange}
+                    disabledReason={pointsDisabledReason}
+                  />
+                  {(pointsToUse ?? 0) > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.9rem', color: '#10b981', fontWeight: 600 }}>
+                      <span>Giảm giá bằng điểm hội viên:</span>
+                      <span data-testid="cart-points-discount">-{formatPrice((pointsToUse ?? 0) * 1000)}</span>
                     </div>
                   )}
                   {shippingFee !== undefined && (

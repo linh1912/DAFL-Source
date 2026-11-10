@@ -63,7 +63,7 @@ describe('AdminPage', () => {
     localStorage.clear();
   });
 
-  it('smoke: SuperAdmin thấy menu 8 mục và 4 thẻ số tổng quan', async () => {
+  it('smoke: SuperAdmin thấy menu 9 mục và 4 thẻ số tổng quan', async () => {
     mockFetchFor({
       status: 200,
       body: {
@@ -78,7 +78,7 @@ describe('AdminPage', () => {
     });
     for (const testid of [
       'admin-nav-dashboard', 'admin-nav-orders', 'admin-nav-products', 'admin-nav-categories',
-      'admin-nav-promotions', 'admin-nav-customers', 'admin-nav-membership', 'admin-nav-returns',
+      'admin-nav-promotions', 'admin-nav-customers', 'admin-nav-reviews', 'admin-nav-membership', 'admin-nav-returns',
     ]) {
       expect(screen.getByTestId(testid)).toBeInTheDocument();
     }

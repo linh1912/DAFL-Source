@@ -82,6 +82,15 @@ interface AuditLog {
   id: string; actorEmail: string; action: string; entityType?: string | null; entityId?: string | null;
   oldValueJson?: string | null; newValueJson?: string | null; ipAddress?: string | null; createdAt: string;
 }
+/** Đánh giá của khách (đợt 16): đúng hợp đồng GET /api/admin/evaluations —
+ *  mỗi item { id, productId, productName, userId, userName, rating, comment, createdAt },
+ *  trả trong ApiResponse<List<...>>. productName/userName đọc phòng thủ vì
+ *  EvaluationDto ở shop (GET /api/products/{id}) chưa có 2 field này. */
+interface AdminReview {
+  id: string; productId: string; productName?: string | null;
+  userId?: string | null; userName?: string | null;
+  rating: number; comment?: string | null; createdAt: string;
+}
 
 // ---------- Hằng số ----------
 // Palette admin: sidebar Dark Forest Green #051C12, điểm nhấn Lime Yellow #B4F105
@@ -122,6 +131,17 @@ const statusLabel = (v: string | number | undefined | null) => ORDER_STATUS_LABE
 const apiErr = (body: { message?: string; errors?: string[] } | null, fallback: string) => {
   if (body?.errors?.length) return body.errors.join(' ');
   return body?.message || fallback;
+};
+
+/** Hiển thị số sao dạng "★★★★☆" (kẹp 0–5, làm tròn xuống số nguyên). */
+const reviewStars = (rating: number) => {
+  const r = Math.max(0, Math.min(5, Math.floor(rating || 0)));
+  return '★'.repeat(r) + '☆'.repeat(5 - r);
+};
+/** Cắt ngắn nội dung đánh giá trong bảng: tối đa 80 ký tự + "...". */
+const shortComment = (comment?: string | null) => {
+  const s = comment ?? '';
+  return s.length > 80 ? `${s.slice(0, 80)}...` : s;
 };
 
 // ---------- Helper giao diện Spark (không đổi hành vi) ----------
@@ -222,7 +242,7 @@ const downloadCsv = (filename: string, header: string[], rows: Array<Array<strin
   URL.revokeObjectURL(url);
 };
 
-type Tab = 'dashboard' | 'orders' | 'products' | 'categories' | 'promotions' | 'customers' | 'membership' | 'returns';
+type Tab = 'dashboard' | 'orders' | 'products' | 'categories' | 'promotions' | 'customers' | 'reviews' | 'membership' | 'returns';
 const NAV: Array<{ key: Tab; label: string; testid: string; icon: string }> = [
   { key: 'dashboard', label: 'Tổng quan', testid: 'admin-nav-dashboard', icon: '▦' },
   { key: 'orders', label: 'Đơn hàng', testid: 'admin-nav-orders', icon: '🧾' },
@@ -230,13 +250,14 @@ const NAV: Array<{ key: Tab; label: string; testid: string; icon: string }> = [
   { key: 'categories', label: 'Danh mục', testid: 'admin-nav-categories', icon: '🗂️' },
   { key: 'promotions', label: 'Khuyến mãi', testid: 'admin-nav-promotions', icon: '🏷️' },
   { key: 'customers', label: 'Khách hàng', testid: 'admin-nav-customers', icon: '👥' },
+  { key: 'reviews', label: 'Đánh giá', testid: 'admin-nav-reviews', icon: '⭐' },
   { key: 'membership', label: 'Hội viên', testid: 'admin-nav-membership', icon: '⭐' },
   { key: 'returns', label: 'Trả hàng / Nhật ký', testid: 'admin-nav-returns', icon: '↩️' },
 ];
 /** Nhóm menu sidebar kiểu Spark: MENU / QUẢN LÝ / HỆ THỐNG. */
 const NAV_GROUPS: Array<{ title: string; keys: Tab[] }> = [
   { title: 'MENU', keys: ['dashboard', 'orders'] },
-  { title: 'QUẢN LÝ', keys: ['products', 'categories', 'promotions', 'customers', 'membership'] },
+  { title: 'QUẢN LÝ', keys: ['products', 'categories', 'promotions', 'customers', 'reviews', 'membership'] },
   { title: 'HỆ THỐNG', keys: ['returns'] },
 ];
 const NAV_BY_KEY: Record<Tab, (typeof NAV)[number]> = Object.fromEntries(NAV.map(i => [i.key, i])) as Record<Tab, (typeof NAV)[number]>;
@@ -247,6 +268,7 @@ const TAB_META: Record<Tab, { title: string; desc: string }> = {
   categories: { title: 'Danh mục', desc: 'Quản lý danh mục sản phẩm.' },
   promotions: { title: 'Khuyến mãi', desc: 'Voucher và chương trình giảm giá.' },
   customers: { title: 'Khách hàng', desc: 'Tài khoản khách hàng và lịch sử mua hàng.' },
+  reviews: { title: 'Đánh giá', desc: 'Đánh giá của khách hàng về sản phẩm.' },
   membership: { title: 'Hội viên', desc: 'Cấu hình hạng hội viên và điều chỉnh điểm.' },
   returns: { title: 'Trả hàng / Nhật ký', desc: 'Yêu cầu trả hàng và nhật ký hệ thống.' },
 };
@@ -357,6 +379,19 @@ export default function AdminPage() {
   const [customerTierFilter, setCustomerTierFilter] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<{ customer: Customer; recentOrders?: Array<{ orderCode: number; orderDisplayCode?: string | null; status?: string; totalAmount?: number; createdAt?: string }> } | null>(null);
   const [customerDetailLoading, setCustomerDetailLoading] = useState(false);
+
+  // Đánh giá (đợt 16): admin chỉ xem/xóa, KHÔNG tạo/sửa (đánh giá là của khách).
+  const [reviews, setReviews] = useState<AdminReview[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
+  const [reviewSearch, setReviewSearch] = useState('');
+  const [reviewRatingFilter, setReviewRatingFilter] = useState('');
+  const [selectedReview, setSelectedReview] = useState<AdminReview | null>(null);
+  const [reviewsPage, setReviewsPage] = useState(1);
+  // API đợt 16 không trả total → "còn trang sau" = trang hiện tại đủ 10 dòng.
+  const [reviewsHasNext, setReviewsHasNext] = useState(false);
+  // Nếu BE sau này trả dạng trang { items, total } thì dùng total thật.
+  const [reviewsTotal, setReviewsTotal] = useState<number | null>(null);
 
   // Hội viên
   const [tiers, setTiers] = useState<MembershipTier[]>([]);
@@ -530,6 +565,40 @@ export default function AdminPage() {
     finally { setCustomersLoading(false); }
   }, [customerTierFilter, customerSearch]);
 
+  /** Đánh giá (đợt 16): phân trang server-side, 10 dòng/trang.
+   *  GET /api/admin/evaluations?page=&pageSize=10&search=&rating= — search lọc theo
+   *  tên sản phẩm / tên khách / nội dung, rating lọc theo số sao (1–5).
+   *  Hợp đồng trả ApiResponse<List<AdminReview>>; đọc phòng thủ cả dạng trang
+   *  { items, total } nếu BE sau này đổi sang trả total. */
+  const loadReviews = useCallback(async (overrides?: { search?: string; rating?: string; page?: number }): Promise<AdminReview[] | null> => {
+    setReviewsLoading(true); setReviewsError(null);
+    try {
+      const search = overrides?.search ?? reviewSearch;
+      const rating = overrides?.rating ?? reviewRatingFilter;
+      const page = overrides?.page ?? reviewsPage;
+      const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+      if (search.trim()) params.set('search', search.trim());
+      if (rating) params.set('rating', rating);
+      const { body } = await apiJson<AdminReview[] | { items?: AdminReview[]; total?: number }>(`/api/admin/evaluations?${params.toString()}`, { skipAuthHandler: true });
+      const raw = body?.data;
+      const rows = Array.isArray(raw) ? raw : (raw?.items ?? null);
+      if (body?.success && Array.isArray(rows)) {
+        setReviews(rows);
+        if (!Array.isArray(raw) && typeof raw?.total === 'number') {
+          setReviewsTotal(raw.total);
+          setReviewsHasNext(page * PAGE_SIZE < raw.total);
+        } else {
+          setReviewsTotal(null);
+          setReviewsHasNext(rows.length === PAGE_SIZE);
+        }
+        return rows;
+      }
+      setReviewsError(apiErr(body, 'Không tải được đánh giá.'));
+      return null;
+    } catch { setReviewsError('Không thể kết nối đến máy chủ.'); return null; }
+    finally { setReviewsLoading(false); }
+  }, [reviewSearch, reviewRatingFilter, reviewsPage]);
+
   const loadTiers = useCallback(async () => {
     setTiersLoading(true); setTiersError(null);
     try {
@@ -572,9 +641,10 @@ export default function AdminPage() {
     if (tab === 'categories' && !loadedRef.current.has('categories')) { loadedRef.current.add('categories'); void loadCategories(); }
     if (tab === 'promotions' && !loadedRef.current.has('promotions')) { loadedRef.current.add('promotions'); void loadPromos(); void loadCategories(); }
     if (tab === 'customers' && !loadedRef.current.has('customers')) { loadedRef.current.add('customers'); void loadCustomers(); }
+    if (tab === 'reviews' && !loadedRef.current.has('reviews')) { loadedRef.current.add('reviews'); void loadReviews(); }
     if (tab === 'membership' && !loadedRef.current.has('membership')) { loadedRef.current.add('membership'); void loadTiers(); }
     if (tab === 'returns' && !loadedRef.current.has('returns')) { loadedRef.current.add('returns'); void loadReturns(); void loadAudit(); }
-  }, [tab, gate, loadDashboard, loadRevenue, loadOrders, loadProducts, loadCategories, loadPromos, loadCustomers, loadTiers, loadReturns, loadAudit]);
+  }, [tab, gate, loadDashboard, loadRevenue, loadOrders, loadProducts, loadCategories, loadPromos, loadCustomers, loadReviews, loadTiers, loadReturns, loadAudit]);
 
   // Đổi bộ lọc/tìm kiếm thì quay về trang 1 (phân trang client-side).
   useEffect(() => { setOrdersPage(1); }, [orderSearch, orderStatusFilter]);
@@ -582,6 +652,7 @@ export default function AdminPage() {
   useEffect(() => { setCategoriesPage(1); }, [catSearch, catStatusFilter]);
   useEffect(() => { setPromosPage(1); }, [promoSearch, promoStatusFilter]);
   useEffect(() => { setCustomersPage(1); }, [customerSearch, customerTierFilter]);
+  useEffect(() => { setReviewsPage(1); }, [reviewSearch, reviewRatingFilter]);
   useEffect(() => { setReturnsPage(1); }, [returnSearch, returnStatusFilter]);
   useEffect(() => { setAuditPage(1); }, [auditSearch, auditDateFrom, auditDateTo]);
 
@@ -594,6 +665,7 @@ export default function AdminPage() {
   const resetCategories = () => { setCatSearch(''); setCatStatusFilter(''); setCategoriesPage(1); };
   const resetPromos = () => { setPromoSearch(''); setPromoStatusFilter(''); setPromosPage(1); void loadPromos({ status: '' }); };
   const resetCustomers = () => { setCustomerSearch(''); setCustomerTierFilter(''); setCustomersPage(1); void loadCustomers({ tier: '', search: '' }); };
+  const resetReviews = () => { setReviewSearch(''); setReviewRatingFilter(''); setReviewsPage(1); void loadReviews({ search: '', rating: '', page: 1 }); };
   const resetReturns = () => { setReturnSearch(''); setReturnStatusFilter(''); setReturnsPage(1); };
   const resetAudit = () => { setAuditSearch(''); setAuditDateFromInput(''); setAuditDateToInput(''); setAuditDateFrom(''); setAuditDateTo(''); setAuditPage(1); };
   // Hội viên không có bộ lọc/tìm kiếm: Đặt lại = hủy thay đổi cấu hình hạng chưa lưu.
@@ -709,6 +781,17 @@ export default function AdminPage() {
   const customersPaging = paginate(customers, customersPage);
   const returnsPaging = paginate(filteredReturns, returnsPage);
   const auditPaging = paginate(filteredAudit, auditPage);
+
+  // Phân trang server-side cho đánh giá (SaPagination dùng chung): API không trả
+  // total nên "Tổng N dòng" là số dòng đã thấy trên các trang đã tải (+1 dòng ảo
+  // khi còn trang sau, để SaPagination hiện được nút/trang kế tiếp); tổng số
+  // trang = trang hiện tại + 1 khi còn trang sau. Khi BE trả total thì dùng
+  // total thật (xem loadReviews).
+  const reviewsTotalPages = reviewsTotal != null
+    ? Math.max(1, Math.ceil(reviewsTotal / PAGE_SIZE))
+    : reviewsPage + (reviewsHasNext ? 1 : 0);
+  const reviewsTotalForPager = reviewsTotal
+    ?? (reviewsPage - 1) * PAGE_SIZE + reviews.length + (reviewsHasNext ? 1 : 0);
 
   const openOrderDetail = async (id: string) => {
     setOrderDetailLoading(true); setOrderDetailError(null); setSelectedOrder(null);
@@ -956,6 +1039,37 @@ export default function AdminPage() {
     } catch { setPromosError('Không thể kết nối đến máy chủ.'); }
   };
 
+  /** Xóa đánh giá (đợt 16): bấm Xóa chỉ mở hộp xác nhận dùng chung (đợt 13) —
+   *  gọi API ở doDeleteReview sau khi xác nhận. */
+  const requestDeleteReview = (r: AdminReview) => {
+    setConfirmDlg({
+      title: 'Xác nhận xóa đánh giá',
+      message: 'Xóa đánh giá này? Đánh giá sẽ bị xóa khỏi sản phẩm và không thể hoàn tác.',
+      confirmLabel: 'Xóa đánh giá',
+      onConfirm: () => void doDeleteReview(r),
+    });
+  };
+
+  const doDeleteReview = async (r: AdminReview) => {
+    try {
+      const { body } = await apiJson<string>(`/api/admin/evaluations/${r.id}`, { method: 'DELETE', skipAuthHandler: true });
+      if (body?.success) {
+        setSelectedReview(null);
+        showToast(body.message || 'Đã xóa đánh giá.');
+        const rows = await loadReviews();
+        // Xóa dòng cuối của trang > 1 thì lùi về trang trước cho khỏi trắng bảng.
+        if (rows && rows.length === 0 && reviewsPage > 1) {
+          const prev = reviewsPage - 1;
+          setReviewsPage(prev);
+          await loadReviews({ page: prev });
+        }
+      } else setReviewsError(apiErr(body, 'Không xóa được đánh giá.'));
+    } catch { setReviewsError('Không thể kết nối đến máy chủ.'); }
+  };
+
+  /** Chuyển trang đánh giá (phân trang server-side — tải lại đúng trang đó). */
+  const goReviewsPage = (p: number) => { setReviewsPage(p); void loadReviews({ page: p }); };
+
   const activatePromo = async (p: Promotion) => {
     try {
       const { body } = await apiJson<string>(`/api/admin/promotions/${p.id}/activate`, { method: 'POST', skipAuthHandler: true, body: JSON.stringify({}) });
@@ -1124,11 +1238,14 @@ export default function AdminPage() {
     else if (tab === 'customers') downloadCsv('khach-hang.csv',
       ['Họ tên', 'Email', 'Hạng', 'Chi tiêu 12 tháng', 'Điểm', 'Số đơn', 'Trạng thái'],
       customers.map(c => [c.fullName, c.email, TIER_LABELS[c.membershipTier ?? ''] ?? c.membershipTier ?? '', c.totalSpent12m ?? 0, c.availablePoints ?? 0, c.orderCount ?? 0, c.isLocked ? 'Đã khóa' : 'Bình thường']));
+    else if (tab === 'reviews') downloadCsv('danh-gia.csv',
+      ['Sản phẩm', 'Khách hàng', 'Sao', 'Nội dung', 'Ngày'],
+      reviews.map(r => [r.productName ?? '—', r.userName ?? '—', r.rating, r.comment ?? '', fmtDate(r.createdAt)]));
     else if (tab === 'returns') downloadCsv('tra-hang.csv',
       ['Mã đơn', 'Sản phẩm', 'Số lượng', 'Lý do', 'Trạng thái', 'Hoàn tiền'],
       returnsList.map(r => [r.orderDisplayCode ?? r.orderId, r.productName, r.quantity, r.reason, r.status, r.refundAmount ?? '']));
   };
-  const canExport = ['orders', 'products', 'categories', 'promotions', 'customers', 'returns'].includes(tab);
+  const canExport = ['orders', 'products', 'categories', 'promotions', 'customers', 'reviews', 'returns'].includes(tab);
 
   // Nút "+ Thêm mới" giờ nằm ở toolbar trái của từng mục có tạo mới
   // (Sản phẩm / Danh mục / Khuyến mãi) — giữ nguyên testid cũ của 3 nút đó.
@@ -1918,6 +2035,73 @@ export default function AdminPage() {
                       ))}</ul>
                     )}
                     </div>
+                  </SparkModal>
+                )}
+              </section>
+            )}
+
+            {tab === 'reviews' && (
+              <section data-testid="admin-reviews-section">
+                <div className="sa-toolbar">
+                  {/* Không có nút Thêm mới: admin không tạo đánh giá (đánh giá là của khách). */}
+                  <div className="sa-toolbar-right">
+                    <input className="sa-input" placeholder="Tìm tên sản phẩm / khách hàng / nội dung" value={reviewSearch} onChange={e => setReviewSearch(e.target.value)} data-testid="admin-review-search" aria-label="Tìm đánh giá" />
+                    <select className="sa-input" value={reviewRatingFilter} onChange={e => setReviewRatingFilter(e.target.value)} data-testid="admin-review-rating-filter" aria-label="Lọc theo số sao">
+                      <option value="">Tất cả số sao</option>
+                      <option value="5">5 sao</option>
+                      <option value="4">4 sao</option>
+                      <option value="3">3 sao</option>
+                      <option value="2">2 sao</option>
+                      <option value="1">1 sao</option>
+                    </select>
+                    <button type="button" onClick={() => { setReviewsPage(1); void loadReviews({ page: 1 }); }} className="sa-btn" data-testid="admin-reviews-search-btn">Tìm</button>
+                    <button type="button" className="sa-icon-btn" title="Đặt lại bộ lọc" aria-label="Đặt lại bộ lọc" onClick={resetReviews} data-testid="admin-reviews-reset-btn">↺</button>
+                    <button type="button" className="sa-icon-btn" title="Làm mới" aria-label="Làm mới" onClick={() => void loadReviews()} data-testid="admin-reviews-refresh-btn">⟳</button>
+                    <button type="button" onClick={() => exportCurrentTab()} className="sa-btn sa-btn-ghost" data-testid="admin-reviews-export-btn">⬇ Export</button>
+                  </div>
+                </div>
+                {reviewsLoading && <p>Đang tải đánh giá...</p>}
+                {reviewsError && <p className="sa-error">{reviewsError}</p>}
+                {!reviewsLoading && reviews.length === 0 && !reviewsError && <p>Chưa có đánh giá nào.</p>}
+                {reviews.length > 0 && (
+                  <div className="sa-table-wrap">
+                    <table>
+                      <thead><tr><th>Sản phẩm</th><th>Khách hàng</th><th>Sao</th><th>Nội dung</th><th>Ngày</th><th>Thao tác</th></tr></thead>
+                      <tbody>
+                        {reviews.map(r => (
+                          <tr key={r.id} onClick={() => setSelectedReview(r)} style={{ cursor: 'pointer' }}>
+                            <td><strong>{r.productName ?? '—'}</strong></td>
+                            <td>{r.userName ?? '—'}</td>
+                            <td><span aria-label={`${r.rating} trên 5 sao`}>{reviewStars(r.rating)} ({r.rating}/5)</span></td>
+                            <td>{shortComment(r.comment)}</td>
+                            <td>{fmtDate(r.createdAt)}</td>
+                            <td className="sa-actions" onClick={e => e.stopPropagation()}>
+                              <button type="button" className="sa-icon-btn" title="Xem chi tiết đánh giá" aria-label={`Xem đánh giá của ${r.userName ?? 'khách hàng'}`} onClick={() => setSelectedReview(r)}>👁</button>
+                              <button type="button" className="sa-icon-btn sa-icon-danger" title="Xóa đánh giá" aria-label={`Xóa đánh giá của ${r.userName ?? 'khách hàng'}`} onClick={() => requestDeleteReview(r)}>🗑</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {reviews.length > 0 && (
+                  <SaPagination page={reviewsPage} totalPages={reviewsTotalPages} total={reviewsTotalForPager} testid="admin-reviews-pagination" onPage={goReviewsPage} />
+                )}
+                {selectedReview && (
+                  <SparkModal
+                    testid="admin-review-detail-modal"
+                    title={`Đánh giá — ${selectedReview.productName ?? 'Sản phẩm'}`}
+                    onClose={() => setSelectedReview(null)}
+                    footer={(
+                      <button type="button" className="sa-btn sa-btn-danger" onClick={() => requestDeleteReview(selectedReview)} data-testid="admin-review-delete-btn">Xóa đánh giá</button>
+                    )}
+                  >
+                    <KvRow label="Sản phẩm" value={selectedReview.productName ?? '—'} />
+                    <KvRow label="Khách hàng" value={selectedReview.userName ?? '—'} />
+                    <KvRow label="Số sao" value={`${reviewStars(selectedReview.rating)} (${selectedReview.rating}/5)`} />
+                    <KvRow label="Nội dung" value={selectedReview.comment ?? '—'} />
+                    <KvRow label="Ngày tạo" value={fmtDate(selectedReview.createdAt)} />
                   </SparkModal>
                 )}
               </section>

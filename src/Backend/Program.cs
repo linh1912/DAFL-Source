@@ -1667,6 +1667,34 @@ app.MapGet("/api/admin/audit-log", async (string? action, Guid? actorId, DateTim
 .WithSummary("Admin xem AuditLog (lọc theo người/hành động/ngày; không sửa/xóa được)")
 .WithTags("Admin - Quản trị");
 
+// --- Đánh giá sản phẩm (admin, đợt 16): chỉ SuperAdmin; xóa là xóa cứng ---
+app.MapGet("/api/admin/evaluations", async (Guid? productId, int? rating, string? search, int? page, int? pageSize, HttpContext httpContext, AppDbContext dbContext, IMediator mediator) =>
+{
+    var (_, error) = await AdminGuard.RequireSuperAdminAsync(httpContext, dbContext);
+    if (error != null) return error;
+    var result = await mediator.Send(new ListEvaluationsQuery(productId, rating, search, page ?? 1, pageSize ?? 10));
+    return Results.Ok(result);
+})
+.WithName("AdminListEvaluations")
+.WithSummary("Admin xem đánh giá sản phẩm (lọc theo sản phẩm/số sao/từ khóa)")
+.WithTags("Admin - Quản trị");
+
+app.MapDelete("/api/admin/evaluations/{id:guid}", async (Guid id, HttpContext httpContext, AppDbContext dbContext, IMediator mediator) =>
+{
+    var (admin, error) = await AdminGuard.RequireSuperAdminAsync(httpContext, dbContext);
+    if (error != null) return error;
+    var result = await mediator.Send(new DeleteEvaluationCommand(id));
+    if (result.Success)
+    {
+        await AdminGuard.WriteAuditAsync(dbContext, admin!, "ADMIN_DELETE_EVALUATION", "Evaluation", id.ToString(),
+            null, null, AdminGuard.ClientIp(httpContext));
+    }
+    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+})
+.WithName("AdminDeleteEvaluation")
+.WithSummary("Admin xóa cứng đánh giá (tính lại Rating/ReviewCount của sản phẩm)")
+.WithTags("Admin - Quản trị");
+
 // --- Trả hàng / hoàn tiền (admin) ---
 app.MapGet("/api/admin/returns", async (string? status, HttpContext httpContext, AppDbContext dbContext, IMediator mediator) =>
 {

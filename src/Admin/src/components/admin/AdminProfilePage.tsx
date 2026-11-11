@@ -1,6 +1,6 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
-import { PHONE_FORMAT_MSG, PHONE_RE, REQUIRED_MSG, passwordPolicyError } from './formUtils';
+import { PHONE_FORMAT_MSG, PHONE_RE, REQUIRED_MSG, formatDateTimeVN, passwordPolicyError } from './formUtils';
 import { FieldError, Req } from './FormControls';
 import type { FormSaveResult } from './AdminForms';
 
@@ -32,11 +32,8 @@ export interface AdminProfileData {
   createdAt?: string | null; lastLoginAt?: string | null;
 }
 
-const fmtDate = (s?: string | null) => {
-  if (!s) return '—';
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? String(s) : d.toLocaleString('vi-VN');
-};
+/** Ngày giờ chuẩn admin (đợt 26): dd/mm/yyyy HH:mm, không kèm giây. */
+const fmtDate = (s?: string | null) => formatDateTimeVN(s ?? '');
 
 const AVATAR_COLORS = ['#051c12', '#0e7490', '#b45309', '#be185d', '#4d7c0f', '#1d4ed8', '#7c3aed', '#9f1239'];
 const avatarColor = (name: string) => {
@@ -300,7 +297,6 @@ export default function AdminProfilePage({ profile, onSaveProfile, onChangePassw
       <div className="sa-form-page-head">
         <div className="sa-form-head-text">
           <h3>Hồ sơ quản trị</h3>
-          <p>Thông tin tài khoản quản trị hệ thống.</p>
         </div>
         <button type="button" className="sa-btn sa-btn-ghost" data-testid="admin-profile-back-btn" onClick={onBack}>
           <ArrowLeft size={16} strokeWidth={2} style={{ verticalAlign: '-2px' }} /> Quay lại
@@ -313,7 +309,7 @@ export default function AdminProfilePage({ profile, onSaveProfile, onChangePassw
         <div className="sa-profile-head-info">
           <h2>{profile.fullName}</h2>
           <p>{profile.email}</p>
-          <p><span className="sa-pill sa-pill-green"><span className="sa-dot" aria-hidden="true" />{roleLabel}</span></p>
+          <p><span className="sa-pill sa-pill-green">{roleLabel}</span></p>
           <p>
             <span data-testid="admin-profile-joined-at">Tham gia từ: {fmtDate(profile.createdAt)}</span>
             {' — '}

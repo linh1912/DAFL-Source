@@ -1,0 +1,414 @@
+/**
+ * promo-value.css — Khối "Giá trị giảm" trong form Thêm mới / Chỉnh sửa
+ * khuyến mãi (đợt 24). CHỈ style khối này (section mang class .pv-card trong
+ * AdminForms.tsx); không đụng layout chung của admin.
+ *
+ * LƯU Ý THỨ TỰ LOAD: file này được import từ PromoPages.tsx, mà AdminPage.tsx
+ * import PromoPages (dòng 13) TRƯỚC khi import AdminPage.css (dòng 25), nên
+ * CSS ở đây load TRƯỚC AdminPage.css. Mọi override rule gốc đều dùng độ đặc
+ * hiệu cao hơn (tiền tố .spark-admin .pv-card ...) để thắng bất kể thứ tự.
+ *
+ * Token: xanh lá #166534 (dùng chung --sa-primary), nền card trắng, viền #e2e9e3, bo 12px.
+ * Dark: admin HIỆN KHÔNG có cơ chế dark mode (không data-theme, không toggle,
+ * không prefers-color-scheme trong src/Admin — chỉ shop mới có). Khối này vẫn
+ * định nghĩa biến dark qua @media (prefers-color-scheme: dark) để sẵn sàng
+ * khi admin có dark mode; xem ghi chú cuối file.
+ */
+
+/* ---------- Biến màu của khối (light mặc định) ---------- */
+.pv-card {
+  --pv-green: var(--sa-primary, #166534);
+  --pv-green-strong: #14532d;
+  --pv-green-soft: #e7f3ea;
+  --pv-green-bg: #ecf8ef;
+  --pv-ring: rgba(22, 101, 52, 0.15);
+  --pv-border: #e2e9e3;
+  --pv-card-border: #d4ded7;
+  --pv-input-border: #cdd8cf;
+  --pv-card-bg: #ffffff;
+  --pv-input-bg: #ffffff;
+  --pv-text: #111827;
+  --pv-title: #6b7280;
+  --pv-label: #374151;
+  --pv-muted: #6b7280;
+  --pv-addon-bg: #f1f5f2;
+  --pv-addon-text: #475569;
+  --pv-addon-border: #cdd8cf;
+  --pv-error: #b42318;
+  --pv-error-ring: rgba(180, 35, 24, 0.15);
+  --pv-preview-bg: #e7f3ea;
+  --pv-preview-muted-bg: #f3f5f3;
+  --pv-divider: #e2e9e3;
+  --pv-radio-border: #9aa79e;
+}
+
+/* ---------- Card chứa cả khối ---------- */
+.spark-admin .sa-form-section.pv-card {
+  background: var(--pv-card-bg);
+  border: 1px solid var(--pv-border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.spark-admin .pv-card .sa-form-section-title {
+  margin-bottom: 16px;
+  color: var(--pv-title);
+}
+
+/* ---------- Tiêu đề bước (13px, đậm 500) ---------- */
+.spark-admin .pv-card .pv-step-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--pv-label);
+  margin-bottom: 8px;
+}
+
+/* ---------- Bước 1: 3 thẻ loại giảm ---------- */
+.pv-type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pv-type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: left;
+  padding: 16px;
+  border: 1.5px solid var(--pv-card-border);
+  border-radius: 12px;
+  background: var(--pv-card-bg);
+  color: var(--pv-text);
+  cursor: pointer;
+  font: inherit;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.pv-type-card:hover:not(:disabled) {
+  border-color: var(--pv-green);
+}
+
+.pv-type-card-selected {
+  border-color: var(--pv-green);
+  background: var(--pv-green-bg);
+  box-shadow: 0 0 0 3px var(--pv-ring);
+}
+
+.pv-type-card:focus-visible {
+  outline: 2px solid var(--pv-green);
+  outline-offset: 2px;
+}
+
+.pv-type-card:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Hàng trên của thẻ: icon trái, radio phải. */
+.pv-type-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.pv-type-icon {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--pv-green-soft);
+  color: var(--pv-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.pv-type-card-selected .pv-type-icon {
+  background: var(--pv-green-strong);
+  color: #ffffff;
+}
+
+.pv-type-radio {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 9px;
+  border-radius: 50%;
+  border: 2px solid var(--pv-radio-border);
+  background: var(--pv-card-bg);
+  box-sizing: border-box;
+  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+
+.pv-type-card-selected .pv-type-radio {
+  border-color: var(--pv-green);
+  background: var(--pv-green);
+  box-shadow: inset 0 0 0 3px var(--pv-card-bg);
+}
+
+.pv-type-name {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--pv-text);
+}
+
+.pv-type-desc {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--pv-muted);
+  margin-top: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---------- Ngăn cách 2 bước ---------- */
+.pv-step-divider {
+  height: 1px;
+  background: var(--pv-divider);
+  border: 0;
+  margin: 20px 0;
+}
+
+/* ---------- Bước 2: lưới ô mức giảm ---------- */
+/* key={discountType} ở JSX remount khối này mỗi lần đổi loại -> fade 150ms;
+   state giữ nguyên nên giá trị đã nhập của các ô còn dùng được không mất. */
+.pv-amounts {
+  animation: pv-fade-in 150ms ease;
+}
+
+@keyframes pv-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.pv-amounts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* "Số lượt dùng tối đa" tách hàng riêng, rộng nửa chiều ngang. */
+.pv-maxuses-row {
+  margin-top: 16px;
+}
+
+.pv-maxuses-row .pv-field {
+  max-width: calc(50% - 8px);
+}
+
+/* ---------- Ô nhập tiền / phần trăm (input-group) ---------- */
+/* Ghi đè .sa-money-wrap gốc (input 38px + hậu tố ₫/% absolute nổi trên ô):
+   cả nhóm thành khung 38px bo 8px, addon 44px cố định bên phải. Tiền tố
+   .spark-admin .pv-card ... (độ đặc hiệu cao hơn rule gốc) để thắng dù file
+   này load trước AdminPage.css. */
+.spark-admin .pv-card .sa-money-wrap {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  height: 38px;
+  margin-bottom: 0;
+  border: 1.5px solid var(--pv-input-border);
+  border-radius: 8px;
+  background: var(--pv-input-bg);
+  overflow: hidden;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.spark-admin .pv-card .sa-money-wrap:focus-within {
+  border-color: var(--pv-green);
+  box-shadow: 0 0 0 3px var(--pv-ring);
+  outline: none;
+}
+
+.spark-admin .pv-card .sa-money-wrap .sa-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  height: 100%;
+  padding: 0 12px;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent;
+  color: var(--pv-text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  box-shadow: none;
+}
+
+/* .sa-input-error:focus gốc có box-shadow đỏ !important trên input — tắt ở
+   input, ring đỏ chuyển lên cả nhóm (xem .pv-field-error bên dưới). */
+.spark-admin .pv-card .sa-money-wrap .sa-input:focus {
+  box-shadow: none !important;
+  outline: none;
+}
+
+.spark-admin .pv-card .sa-money-suffix {
+  position: static;
+  flex: 0 0 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  border-left: 1.5px solid var(--pv-addon-border);
+  background: var(--pv-addon-bg);
+  color: var(--pv-addon-text);
+  font-size: 14px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.spark-admin .pv-card .sa-money-wrap:focus-within .sa-money-suffix {
+  border-left-color: var(--pv-green);
+  background: var(--pv-green-soft);
+  color: var(--pv-green);
+}
+
+/* ---------- Lỗi validate: viền đỏ lên cả nhóm + text 12.5px ---------- */
+.spark-admin .pv-card .pv-field-error .sa-money-wrap {
+  border-color: var(--pv-error);
+}
+
+.spark-admin .pv-card .pv-field-error .sa-money-wrap:focus-within {
+  border-color: var(--pv-error);
+  box-shadow: 0 0 0 3px var(--pv-error-ring);
+}
+
+.spark-admin .pv-card .sa-field-error {
+  color: var(--pv-error);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/* ---------- Dải xem trước cuối card ---------- */
+.pv-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 20px 0 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--pv-preview-bg);
+  color: var(--pv-text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.pv-preview svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--pv-green);
+}
+
+.pv-preview strong {
+  font-weight: 600;
+}
+
+.pv-preview-muted {
+  background: var(--pv-preview-muted-bg);
+  color: var(--pv-muted);
+}
+
+.pv-preview-muted svg {
+  color: var(--pv-muted);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 960px) {
+  /* Card full chiều rộng sẵn có (không max-width); chỉ gọn padding. */
+  .spark-admin .sa-form-section.pv-card {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .pv-type-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pv-amounts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pv-maxuses-row .pv-field {
+    max-width: none;
+  }
+}
+
+/* ---------- Tôn trọng prefers-reduced-motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .pv-amounts {
+    animation: none;
+  }
+
+  .pv-type-card,
+  .pv-type-icon,
+  .pv-type-radio,
+  .spark-admin .pv-card .sa-money-wrap {
+    transition: none;
+  }
+}
+
+/* ---------- Dark (chuẩn bị sẵn — xem ghi chú cuối file) ---------- */
+@media (prefers-color-scheme: dark) {
+  .pv-card {
+    --pv-green: #86efac;
+    --pv-green-strong: #166534;
+    --pv-green-soft: #1c2b21;
+    --pv-green-bg: #14261a;
+    --pv-ring: rgba(134, 239, 172, 0.25);
+    --pv-border: #2a3f31;
+    --pv-card-border: #33473a;
+    --pv-input-border: #3a4f41;
+    --pv-card-bg: #122019;
+    --pv-input-bg: #16281d;
+    --pv-text: #e7f0e9;
+    --pv-title: #9db3a5;
+    --pv-label: #c3d2c7;
+    --pv-muted: #9db3a5;
+    --pv-addon-bg: #1e3325;
+    --pv-addon-text: #b9cdc0;
+    --pv-addon-border: #3a4f41;
+    --pv-error: #fda29b;
+    --pv-error-ring: rgba(253, 162, 155, 0.25);
+    --pv-preview-bg: #1c2b21;
+    --pv-preview-muted-bg: #1a2620;
+    --pv-divider: #2a3f31;
+    --pv-radio-border: #5c7263;
+  }
+
+  /* Ghi chú FreeShip dùng màu nền --sa-success-bg (xanh nhạt) ở light;
+     ở dark phải đổi theo, nếu không sẽ thành ô sáng chói trong card tối. */
+  .spark-admin .pv-card .sa-promo-freeship-note {
+    background: var(--pv-preview-bg);
+    border-color: var(--pv-green);
+    color: var(--pv-text);
+  }
+}
+
+/**
+ * GHI CHÚ DARK MODE (kết quả kiểm tra đợt 24):
+ * - Admin KHÔNG có cơ chế dark mode: grep toàn src/Admin không có data-theme,
+ *   prefers-color-scheme, class dark hay toggle dark nào (chỉ có 1 class tên
+ *   "sa-badge--darkred" không liên quan). Chỉ shop (src/Frontend) mới có
+ *   [data-theme="dark"] + công tắc đổi theme. Vì vậy khối này KHÔNG tự gắn
+ *   dark mode cho cả admin, và cũng không thêm công tắc nào.
+ * - Các màu của khối đi qua biến --pv-*; khối @media (prefers-color-scheme:
+ *   dark) trên chỉ định nghĩa lại các biến đó. Hệ quả thực tế hôm nay: trên
+ *   máy người dùng bật dark ở cấp hệ điều hành, RIÊNG card "Giá trị giảm"
+ *   sẽ tối theo trong khi toàn bộ admin còn lại vẫn sáng — lệch tông, dù
+ *   vẫn đọc được (mọi chữ/label trong card đều dùng biến nên đổi theo).
+ *   Đây là trạng thái "sẵn sàng, chưa kích hoạt đồng bộ": để dark hoạt động
+ *   đúng, admin cần một cơ chế chung (vd [data-theme="dark"] ở root như
+ *   shop) rồi đổi media query trên thành selector theo theme đó.
+ */

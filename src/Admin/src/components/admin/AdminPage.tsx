@@ -4,7 +4,7 @@ import { apiJson, clearToken } from '../../../../Shared/utils/api';
 import type { NotificationItem } from '../../../../Shared/types';
 import { CategoryForm, CustomerForm, ProductForm, PromoForm, DISCOUNT_TYPE_LABEL } from './AdminForms';
 import type { CategorySavePayload, CustomerSavePayload, FormSaveResult, ProductSavePayload, PromoSavePayload } from './AdminForms';
-import { REQUIRED_MSG, duplicateFieldOf } from './formUtils';
+import { REQUIRED_MSG, duplicateFieldOf, formatDateTimeVN } from './formUtils';
 import { StatusSwitch } from './FormControls';
 import AdminProfilePage from './AdminProfilePage';
 import OrderDetailPage from './OrderDetailPage';
@@ -127,11 +127,9 @@ const fmtMoney = (n?: number | null) => `${(n ?? 0).toLocaleString('vi-VN')}₫`
  *  nên chỉ lọc client-side mới làm được. */
 const foldVietnamese = (s?: string | null): string =>
   (s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
-const fmtDate = (s?: string | null) => {
-  if (!s) return '—';
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? String(s) : d.toLocaleString('vi-VN');
-};
+// Đợt 26 — ngày-giờ dd/mm/yyyy HH:mm (dùng sẵn formatDateTimeVN của formUtils;
+// toLocaleString cũ kèm giây, vd "09/11/2026, 17:18:22").
+const fmtDate = (s?: string | null) => formatDateTimeVN(s ?? '');
 /** Ngày dạng dd/mm/yyyy + giờ HH:mm (2 dòng trong bảng). */
 const fmtDateShort = (s?: string | null): string => {
   if (!s) return '—';
@@ -235,22 +233,12 @@ const avatarColor = (name: string) => {
 };
 const avatarInitial = (name: string) => (name?.trim()?.[0] ?? '?').toUpperCase();
 
-/** Pill trạng thái đơn: xanh lá = đã thanh toán/hoàn tất, cam = đang xử lý,
- *  đỏ = đã hủy/hết hạn, tím = yêu cầu trả hàng. Nhãn lấy từ ORDER_STATUS_LABELS. */
-const statusPillClass = (s: string | number | undefined | null) => {
-  const n = statusName(s);
-  if (['Paid', 'Delivered', 'Completed'].includes(n)) return 'sa-pill sa-pill-green';
-  if (['Cancelled', 'Expired'].includes(n)) return 'sa-pill sa-pill-red';
-  if (n === 'ReturnRequested') return 'sa-pill sa-pill-purple';
-  if (n === 'Shipping') return 'sa-pill sa-pill-blue';
-  return 'sa-pill sa-pill-amber';
-};
-
-/** Đợt 21 — màu pill CHỈ cho bảng danh sách Đơn hàng (theo prompt):
- *  Chờ xác nhận vàng (Pending + Paid), Đã xác nhận xanh dương, Đang giao tím
- *  chàm, Hoàn thành xanh lá, Đã hủy xám, Hết hạn thanh toán đỏ; các trạng thái
- *  BE còn lại giữ màu hợp lý: Preparing xanh dương nhạt (sky), Delivered xanh
- *  lá, Yêu cầu trả hàng cam. Nhãn pill vẫn lấy từ statusLabel BE (không đổi). */
+/* Đợt 26 — MAP PILL DUY NHẤT cho trạng thái đơn (đã gộp, xóa statusPillClass
+ *  cũ: Paid xanh lá / Cancelled đỏ — mâu thuẫn với map này): Chờ xác nhận
+ *  vàng (Pending + Paid), Đã xác nhận xanh dương, Đang giao tím chàm, Hoàn
+ *  thành xanh lá, Đã hủy xám, Hết hạn thanh toán đỏ; Preparing xanh dương
+ *  nhạt (sky), Delivered xanh lá, Yêu cầu trả hàng cam. Nhãn pill lấy từ
+ *  statusLabel (ORDER_STATUS_LABELS), không đổi. */
 const orderListPillClass = (s: string | number | undefined | null): string => {
   const n = statusName(s);
   if (n === 'Pending' || n === 'Paid') return 'sa-pill sa-pill-amber';
@@ -345,17 +333,17 @@ const defaultOpenGroups = (t: Tab): Record<string, boolean> => {
   return open;
 };
 const NAV_BY_KEY: Record<Tab, (typeof NAV)[number]> = Object.fromEntries(NAV.map(i => [i.key, i])) as Record<Tab, (typeof NAV)[number]>;
-const TAB_META: Record<Tab, { title: string; desc: string }> = {
-  dashboard: { title: 'Tổng quan', desc: 'Doanh thu, đơn hàng và hoạt động của sàn hôm nay.' },
-  orders: { title: 'Đơn hàng', desc: 'Theo dõi và xử lý đơn hàng của khách.' },
-  products: { title: 'Sản phẩm', desc: 'Danh sách sản phẩm đang bán trên sàn.' },
-  categories: { title: 'Danh mục', desc: 'Quản lý danh mục sản phẩm.' },
-  promotions: { title: 'Khuyến mãi', desc: 'Voucher và chương trình giảm giá.' },
-  customers: { title: 'Khách hàng', desc: 'Tài khoản khách hàng và lịch sử mua hàng.' },
-  reviews: { title: 'Đánh giá', desc: 'Đánh giá của khách hàng về sản phẩm.' },
-  membership: { title: 'Hội viên', desc: 'Cấu hình hạng hội viên và điều chỉnh điểm.' },
-  returns: { title: 'Trả hàng', desc: 'Yêu cầu trả hàng của khách hàng.' },
-  logs: { title: 'Nhật ký hệ thống', desc: 'Lịch sử thao tác quản trị (audit log).' },
+const TAB_META: Record<Tab, { title: string }> = {
+  dashboard: { title: 'Tổng quan' },
+  orders: { title: 'Đơn hàng' },
+  products: { title: 'Sản phẩm' },
+  categories: { title: 'Danh mục' },
+  promotions: { title: 'Khuyến mãi' },
+  customers: { title: 'Khách hàng' },
+  reviews: { title: 'Đánh giá' },
+  membership: { title: 'Hội viên' },
+  returns: { title: 'Trả hàng' },
+  logs: { title: 'Nhật ký hệ thống' },
 };
 
 export default function AdminPage() {
@@ -577,8 +565,8 @@ export default function AdminPage() {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [orderSearch, setOrderSearch] = useState('');
-  // Đợt 21 — từ khóa đã debounce 120ms: bảng chỉ lọc lại khi người dùng ngừng
-  // gõ 120ms (lọc client-side, không gọi API mỗi phím).
+  // Đợt 21 — từ khóa đã debounce 300ms: bảng chỉ lọc lại khi người dùng ngừng
+  // gõ 300ms (lọc client-side, không gọi API mỗi phím).
   const [orderSearchDebounced, setOrderSearchDebounced] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState('');
   // (Đợt 21) State/hàm chi tiết đơn đã chuyển sang OrderDetailPage.tsx
@@ -589,8 +577,8 @@ export default function AdminPage() {
   const [productsLoading, setProductsLoading] = useState(false);
   const [productsError, setProductsError] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState('');
-  // Đợt 21 — từ khóa SP đã debounce 120ms (như đơn hàng): bảng chỉ lọc lại
-  // khi người dùng ngừng gõ 120ms (lọc client-side, không gọi API mỗi phím).
+  // Đợt 21 — từ khóa SP đã debounce 300ms (như đơn hàng): bảng chỉ lọc lại
+  // khi người dùng ngừng gõ 300ms (lọc client-side, không gọi API mỗi phím).
   const [productSearchDebounced, setProductSearchDebounced] = useState('');
   const [productCatFilter, setProductCatFilter] = useState('');
   // Đợt 21 — form Thêm/Sửa SP là trang full page (/products/new, /products/:code/edit)
@@ -603,8 +591,8 @@ export default function AdminPage() {
   const [catsLoading, setCatsLoading] = useState(false);
   const [catsError, setCatsError] = useState<string | null>(null);
   const [catSearch, setCatSearch] = useState('');
-  // Đợt 21 — từ khóa đã debounce 120ms (như đơn hàng): bảng chỉ lọc lại khi
-  // người dùng ngừng gõ 120ms (lọc client-side, không gọi API mỗi phím).
+  // Đợt 21 — từ khóa đã debounce 300ms (như đơn hàng): bảng chỉ lọc lại khi
+  // người dùng ngừng gõ 300ms (lọc client-side, không gọi API mỗi phím).
   const [catSearchDebounced, setCatSearchDebounced] = useState('');
   const [catStatusFilter, setCatStatusFilter] = useState('');
   // Đợt 21 — resolve :code → AdminCategory cho các trang con DM (chi tiết/sửa).
@@ -685,8 +673,8 @@ export default function AdminPage() {
   const [returnsError, setReturnsError] = useState<string | null>(null);
   const [returnStatusFilter, setReturnStatusFilter] = useState('');
   const [returnSearch, setReturnSearch] = useState('');
-  // Đợt 21 — từ khóa đã debounce 120ms (như đơn hàng): bảng chỉ lọc lại khi
-  // người dùng ngừng gõ 120ms (lọc client-side, không gọi API mỗi phím).
+  // Đợt 21 — từ khóa đã debounce 300ms (như đơn hàng): bảng chỉ lọc lại khi
+  // người dùng ngừng gõ 300ms (lọc client-side, không gọi API mỗi phím).
   const [returnSearchDebounced, setReturnSearchDebounced] = useState('');
   const [returnResolved, setReturnResolved] = useState<ReturnReq | null>(null);
   const [returnResolveError, setReturnResolveError] = useState<string | null>(null);
@@ -1167,27 +1155,27 @@ export default function AdminPage() {
     void loadNewReviewsCount();
   }, [gate, loadDashboard, loadReturns, loadNewReviewsCount]);
 
-  // Đợt 21 — debounce 120ms cho ô tìm đơn (lọc client-side, không gọi API).
+  // Đợt 21 — debounce 300ms cho ô tìm đơn (lọc client-side, không gọi API).
   useEffect(() => {
-    const t = setTimeout(() => setOrderSearchDebounced(orderSearch), 120);
+    const t = setTimeout(() => setOrderSearchDebounced(orderSearch), 300);
     return () => clearTimeout(t);
   }, [orderSearch]);
 
-  // Đợt 21 — debounce 120ms cho ô tìm SP (lọc client-side theo tên/mã,
+  // Đợt 21 — debounce 300ms cho ô tìm SP (lọc client-side theo tên/mã,
   // không gọi API mỗi phím; xem filteredProducts).
   useEffect(() => {
-    const t = setTimeout(() => setProductSearchDebounced(productSearch), 120);
+    const t = setTimeout(() => setProductSearchDebounced(productSearch), 300);
     return () => clearTimeout(t);
   }, [productSearch]);
 
-  // Đợt 21 — debounce 120ms cho ô tìm DM + ô tìm trả hàng (lọc client-side,
+  // Đợt 21 — debounce 300ms cho ô tìm DM + ô tìm trả hàng (lọc client-side,
   // không gọi API mỗi phím; xem filteredCategories / filteredReturns).
   useEffect(() => {
-    const t = setTimeout(() => setCatSearchDebounced(catSearch), 120);
+    const t = setTimeout(() => setCatSearchDebounced(catSearch), 300);
     return () => clearTimeout(t);
   }, [catSearch]);
   useEffect(() => {
-    const t = setTimeout(() => setReturnSearchDebounced(returnSearch), 120);
+    const t = setTimeout(() => setReturnSearchDebounced(returnSearch), 300);
     return () => clearTimeout(t);
   }, [returnSearch]);
 
@@ -1203,20 +1191,25 @@ export default function AdminPage() {
 
   // Đợt 21 — tìm/lọc KH + đánh giá TỰ ĐỘNG (không cần bấm Tìm/Enter):
   // ngừng gõ 300ms (debounce) hoặc đổi dropdown hạng/sao thì tải lại
-  // server-side. Bỏ qua lần chạy đầu (mount) để không tải trùng với tải lười
-  // theo tab; chỉ chạy khi đang ở đúng tab/trang con đó.
-  // Lưu ý: loadCustomers/loadReviews là useCallback phụ thuộc vào
-  // customerSearch/reviewSearch nên identity đổi theo MỖI phím gõ — nếu đưa
-  // loader vào deps của effect này thì mỗi phím gõ lại kích effect (tải lại
-  // với từ khóa debounce CŨ, bảng nhấp nháy skeleton, debounce coi như mất
-  // tác dụng). Vì vậy effect gọi loader qua ref, deps chỉ gồm giá trị đã
-  // debounce + bộ lọc + vị trí; loader luôn nhận overrides đầy đủ nên không
-  // dính state cũ trong closure.
+  // server-side. BUG #2 (đợt 24/25/26) — dropdown trạng thái KM cũng tự
+  // động theo cùng pattern này (xem effect promoStatusFilter bên dưới):
+  // trước đây đổi dropdown KM xong phải bấm nút Tìm mới tải lại, nút Tìm
+  // đã bỏ nên dropdown chết hẳn. Bỏ qua lần chạy đầu (mount) để không tải
+  // trùng với tải lười theo tab; chỉ chạy khi đang ở đúng tab/trang con đó.
+  // Lưu ý: loadCustomers/loadReviews/loadPromos là useCallback phụ thuộc vào
+  // customerSearch/reviewSearch/promoStatusFilter nên identity đổi theo MỖI
+  // phím gõ / lần đổi dropdown — nếu đưa loader vào deps của effect này thì
+  // mỗi phím gõ lại kích effect (tải lại với từ khóa debounce CŨ, bảng nhấp
+  // nháy skeleton, debounce coi như mất tác dụng). Vì vậy effect gọi loader
+  // qua ref, deps chỉ gồm giá trị đã debounce + bộ lọc + vị trí; loader luôn
+  // nhận overrides đầy đủ nên không dính state cũ trong closure.
   const loadCustomersRef = useRef(loadCustomers);
   loadCustomersRef.current = loadCustomers;
   const loadReviewsRef = useRef(loadReviews);
   loadReviewsRef.current = loadReviews;
-  const autoSearchInitRef = useRef({ customers: false, reviews: false });
+  const loadPromosRef = useRef(loadPromos);
+  loadPromosRef.current = loadPromos;
+  const autoSearchInitRef = useRef({ customers: false, reviews: false, promos: false });
   useEffect(() => {
     if (!autoSearchInitRef.current.customers) { autoSearchInitRef.current.customers = true; return; }
     if (gate !== 'ok' || (tab !== 'customers' && !isCustomerRoute)) return;
@@ -1229,6 +1222,21 @@ export default function AdminPage() {
     setReviewsPage(1);
     void loadReviewsRef.current({ search: reviewSearchDebounced, rating: reviewRatingFilter, page: 1 });
   }, [reviewSearchDebounced, reviewRatingFilter, gate, tab, isReviewRoute]);
+  // BUG #2 (đợt 24/25/26) — dropdown trạng thái KM CHẾT: đổi dropdown chỉ
+  // setPromoStatusFilter (ô select ở toolbar KM) mà không có effect nào gọi loadPromos()
+  // — trước đây đổi xong bấm nút Tìm (PageToolbar onSearch) mới tải lại, nút
+  // Tìm đã bỏ ở đợt 24/26 nên đổi dropdown không tải gì cả; filteredPromos
+  // cũng chỉ lọc client-side theo promoSearch (không lọc status), nên bảng
+  // đứng yên. Nay đổi dropdown thì tự tải lại server-side với status mới,
+  // cùng pattern KH/đánh giá ở trên (ref + bỏ qua lần chạy đầu + về trang 1).
+  // Ô tìm KM vẫn lọc client-side ngay khi gõ (filteredPromos) nên promoSearch
+  // KHÔNG nằm trong deps ở đây — gõ tìm không gọi API.
+  useEffect(() => {
+    if (!autoSearchInitRef.current.promos) { autoSearchInitRef.current.promos = true; return; }
+    if (gate !== 'ok' || (tab !== 'promotions' && !isPromoRoute)) return;
+    setPromosPage(1);
+    void loadPromosRef.current({ status: promoStatusFilter });
+  }, [promoStatusFilter, gate, tab, isPromoRoute]);
 
   // Đổi bộ lọc/tìm kiếm thì quay về trang 1 (phân trang client-side).
   useEffect(() => { setOrdersPage(1); }, [orderSearchDebounced, orderStatusFilter]);
@@ -1241,17 +1249,24 @@ export default function AdminPage() {
   useEffect(() => { setAuditPage(1); }, [auditSearch, auditDateFrom, auditDateTo]);
 
   // ---------- Nút "Đặt lại" ở toolbar từng mục: xóa sạch bộ lọc/tìm kiếm về mặc định.
-  // Mục lọc ở server (khách hàng/khuyến mãi): tải lại luôn với bộ lọc đã xóa
-  // (loader nhận overrides để không dính state cũ trong closure). Mục lọc
-  // client-side (đơn hàng từ đợt 21, sản phẩm, danh mục...) thì chỉ cần xóa
-  // state — bảng tự lọc lại trên dữ liệu đã tải.
+  // Mục lọc ở server (khách hàng/đánh giá/khuyến mãi): tải lại với bộ lọc đã
+  // xóa — qua effect tự động (loader nhận overrides để không dính state cũ
+  // trong closure). Mục lọc client-side (đơn hàng từ đợt 21, sản phẩm,
+  // danh mục...) thì chỉ cần xóa state — bảng tự lọc lại trên dữ liệu đã tải.
   // Đợt 21 — đơn hàng lọc client-side nên Đặt lại chỉ xóa state, không tải lại
-  // (dữ liệu đã tải đủ 100 đơn); các mục lọc server (khách hàng/khuyến mãi)
-  // vẫn tải lại với bộ lọc đã xóa.
+  // (dữ liệu đã tải đủ 100 đơn); các mục lọc server (khách hàng/đánh giá,
+  // và khuyến mãi từ BUG #2) tải lại với bộ lọc đã xóa — qua effect tự động,
+  // không gọi loader trực tiếp (xem resetPromos/resetCustomers/resetReviews).
   const resetOrders = () => { setOrderSearch(''); setOrderSearchDebounced(''); setOrderStatusFilter(''); setOrdersPage(1); };
   const resetProducts = () => { setProductSearch(''); setProductSearchDebounced(''); setProductCatFilter(''); setProductStatusFilter(''); setProductsPage(1); };
   const resetCategories = () => { setCatSearch(''); setCatSearchDebounced(''); setCatStatusFilter(''); setCategoriesPage(1); };
-  const resetPromos = () => { setPromoSearch(''); setPromoStatusFilter(''); setPromosPage(1); void loadPromos({ status: '' }); };
+  // BUG #2 — KM nay lọc TỰ ĐỘNG như KH/đánh giá: Đặt lại chỉ xóa state,
+  // effect promoStatusFilter tự tải lại với status '' (không gọi loader trực
+  // tiếp để tránh tải trùng 2 lần) — trừ khi status vốn đã '' thì effect
+  // không kích (filter không đổi) nên vẫn gọi loader trực tiếp 1 lần để tải
+  // lại danh sách đầy đủ (toolbar KM không có resetDisabled như các mục khác,
+  // nút Đặt lại bấm được cả khi chưa có bộ lọc nào).
+  const resetPromos = () => { const hadStatus = promoStatusFilter !== ''; setPromoSearch(''); setPromoStatusFilter(''); setPromosPage(1); if (!hadStatus) void loadPromos({ status: '' }); };
   // Đợt 21 — KH/đánh giá tìm/lọc TỰ ĐỘNG (debounce 300ms): Đặt lại chỉ xóa
   // state, effect tự động tải lại với bộ lọc đã xóa (không gọi loader trực
   // tiếp để tránh tải trùng 2 lần).
@@ -1461,7 +1476,7 @@ export default function AdminPage() {
   );
   // Đợt 21 — lọc trả hàng TỰ ĐỘNG (không cần bấm Tìm): trạng thái lọc
   // client-side trên danh sách đã tải (như DM/đơn), từ khóa lọc sau debounce
-  // 120ms, tìm không dấu. (Trước đợt 21, dropdown chỉ có tác dụng khi bấm
+  // 300ms, tìm không dấu. (Trước đợt 21, dropdown chỉ có tác dụng khi bấm
   // nút Tìm gọi lại API; nút Tìm đã bỏ nên trạng thái PHẢI lọc client-side
   // ở đây, nếu không dropdown sẽ chết.)
   const filteredReturns = returnsList.filter(r => {
@@ -1861,13 +1876,24 @@ export default function AdminPage() {
   };
 
   /** Đóng form: nếu đã sửa (dirty) thì hỏi "chưa lưu" qua ConfirmDialog có sẵn
-   *  (nút Ở lại / Thoát); chưa sửa thì đóng luôn. */
+   *  (nút Ở lại / Rời trang); chưa sửa thì đóng luôn. */
   /** Về danh sách SP (đợt 21): route /admin + state.tab='products' (mở lại
    *  đúng tab SP). Dùng cho breadcrumb, nút Quay lại, nút Hủy ở trang form. */
   const backToProductList = () => navigate('/admin', { state: { tab: 'products' } });
+  /** Đợt 26 — Quay lại dùng chung cho các trang CHI TIẾT: có lịch sử thì
+   *  history.back() (vd từ danh sách vào chi tiết, hoặc từ chi tiết sang
+   *  trang con), không có lịch sử (vào thẳng URL) thì về danh sách của tab. */
+  const goBackOrList = (tab: Tab) => {
+    if (window.history.length > 1) window.history.back();
+    else navigate('/admin', { state: { tab } });
+  };
+  const backToProductDetail = () => goBackOrList('products');
+  const backToPromoDetail = () => goBackOrList('promotions');
+  const backToReturnDetail = () => goBackOrList('returns');
+  const backToReviewDetail = () => goBackOrList('reviews');
   /** Đóng trang form SP (đợt 21, thay requestCloseProduct của Drawer cũ):
    *  chưa sửa thì về danh sách luôn; đã sửa (dirty) thì hỏi "chưa lưu" qua
-   *  ConfirmDialog (đúng 2 nút [Ở lại] + [Thoát]) rồi mới về danh sách. */
+   *  ConfirmDialog (đúng 2 nút [Ở lại] + [Rời trang]) rồi mới về danh sách. */
   const closeProductPage = async (dirty: boolean) => {
     if (!dirty) { backToProductList(); return; }
     const { confirmed } = await confirmAction({
@@ -1884,7 +1910,7 @@ export default function AdminPage() {
   const backToCategoryList = () => navigate('/admin', { state: { tab: 'categories' } });
   /** Đóng trang form DM (đợt 21, thay requestCloseCategory của Drawer cũ):
    *  chưa sửa thì về danh sách luôn; đã sửa (dirty) thì hỏi "chưa lưu" qua
-   *  ConfirmDialog (đúng 2 nút [Ở lại] + [Thoát]) rồi mới về danh sách. */
+   *  ConfirmDialog (đúng 2 nút [Ở lại] + [Rời trang]) rồi mới về danh sách. */
   const closeCategoryPage = async (dirty: boolean) => {
     if (!dirty) { backToCategoryList(); return; }
     const { confirmed } = await confirmAction({
@@ -1908,7 +1934,7 @@ export default function AdminPage() {
   const backToPromoList = () => navigate('/admin', { state: { tab: 'promotions' } });
   /** Đóng trang form KM (đợt 21, thay requestClosePromo của Drawer cũ):
    *  chưa sửa thì về danh sách luôn; đã sửa (dirty) thì hỏi "chưa lưu" qua
-   *  ConfirmDialog (đúng 2 nút [Ở lại] + [Thoát]) rồi mới về danh sách. */
+   *  ConfirmDialog (đúng 2 nút [Ở lại] + [Rời trang]) rồi mới về danh sách. */
   const closePromoPage = async (dirty: boolean) => {
     if (!dirty) { backToPromoList(); return; }
     const { confirmed } = await confirmAction({
@@ -1925,7 +1951,7 @@ export default function AdminPage() {
   const backToCustomerList = () => navigate('/admin', { state: { tab: 'customers' } });
   /** Đóng trang form KH (đợt 21, thay requestCloseCustomer của Drawer cũ):
    *  chưa sửa thì về danh sách luôn; đã sửa (dirty) thì hỏi "chưa lưu" qua
-   *  ConfirmDialog (đúng 2 nút [Ở lại] + [Thoát]) rồi mới về danh sách. */
+   *  ConfirmDialog (đúng 2 nút [Ở lại] + [Rời trang]) rồi mới về danh sách. */
   const closeCustomerPage = async (dirty: boolean) => {
     if (!dirty) { backToCustomerList(); return; }
     const { confirmed } = await confirmAction({
@@ -2535,7 +2561,7 @@ export default function AdminPage() {
 
 
   const meta = profileView
-    ? { title: 'Hồ sơ quản trị', desc: 'Thông tin tài khoản quản trị hệ thống.' }
+    ? { title: 'Hồ sơ quản trị' }
     : TAB_META[tab];
   // Đợt 21: đang ở trang chi tiết đơn (/orders/:code) thì mục Đơn hàng active;
   // đang ở trang con KM (/promotions/...) thì mục Khuyến mãi active;
@@ -2807,7 +2833,6 @@ export default function AdminPage() {
             <div className="sa-pagehead">
               <div>
                 <h1>{meta.title}</h1>
-                <p>{meta.desc}</p>
               </div>
             </div>
           )}
@@ -2874,7 +2899,7 @@ export default function AdminPage() {
               ) : (
                 <PromoDetailPage
                   promo={promoResolved}
-                  onBackToList={backToPromoList}
+                  onBackToList={backToPromoDetail}
                   onEdit={() => openPromoEdit(promoResolved)}
                 />
               )
@@ -2889,7 +2914,7 @@ export default function AdminPage() {
                   <button type="button" className="sa-btn" onClick={backToPromoList}>Về danh sách khuyến mãi</button>
                 </section>
               ) : (
-                <PromoUsagesPage promo={promoResolved} onBackToList={backToPromoList} />
+                <PromoUsagesPage promo={promoResolved} onBackToList={backToPromoDetail} />
               )
             )}
             {/* Đợt 21: các trang con Sản phẩm full page — thay nội dung tab,
@@ -2944,7 +2969,7 @@ export default function AdminPage() {
               ) : (
                 <ProductDetailPage
                   product={productResolved}
-                  onBackToList={backToProductList}
+                  onBackToList={backToProductDetail}
                   onEdit={() => openProductEdit(productResolved)}
                 />
               )
@@ -3078,7 +3103,7 @@ export default function AdminPage() {
                 <ReturnDetailPage
                   key={returnResolved.id}
                   ret={returnResolved}
-                  onBackToList={backToReturnList}
+                  onBackToList={backToReturnDetail}
                   onResolve={(r, approve, reason) => void resolveReturn(r, approve, reason)}
                   onRecordRefund={r => { setRefundTarget(r); setRefundTxCode(''); setRefundError(null); }}
                 />
@@ -3099,7 +3124,7 @@ export default function AdminPage() {
                 <ReviewDetailPage
                   key={reviewResolved.id}
                   review={reviewResolved}
-                  onBackToList={backToReviewList}
+                  onBackToList={backToReviewDetail}
                   onDelete={r => void requestDeleteReview(r)}
                 />
               )
@@ -3135,10 +3160,8 @@ export default function AdminPage() {
                     onSearchChange={setOrderSearch}
                     searchPlaceholder="Tìm mã đơn, tên khách, email..."
                     onReset={resetOrders}
-                    hideSearchButton
                     showSearchClear
                     onClearSearch={() => { setOrderSearch(''); setOrderSearchDebounced(''); }}
-                    resetLabel="Đặt lại bộ lọc"
                     resetDisabled={!orderSearch.trim() && !orderStatusFilter}
                     filters={(
                       <select
@@ -3187,7 +3210,7 @@ export default function AdminPage() {
                                   <span className="sa-user-cell-names"><strong>{o.customerName}</strong><small>{o.customerEmail}</small></span>
                                 </span>
                               </td>
-                              <td><span className={orderListPillClass(o.status)}><span className="sa-dot" aria-hidden="true" /><span>{o.statusLabel ?? statusLabel(o.status)}</span></span></td>
+                              <td><span className={orderListPillClass(o.status)}>{o.statusLabel ?? statusLabel(o.status)}</span></td>
                               <td><span className="sa-orders-pay-badge">{o.paymentMethod}</span></td>
                               <td className="sa-cell-money"><span className="sa-money">{fmtMoney(o.totalAmount)}</span></td>
                               <td><DateCell value={o.createdAt} /></td>
@@ -3222,21 +3245,18 @@ export default function AdminPage() {
                     searchValue={productSearch}
                     onSearchChange={setProductSearch}
                     searchPlaceholder="Tìm tên hoặc mã sản phẩm..."
-                    onSearch={() => setProductsPage(1)}
                     onReset={resetProducts}
-                    hideSearchButton
                     showSearchClear
                     onClearSearch={() => { setProductSearch(''); setProductSearchDebounced(''); }}
-                    resetLabel="Đặt lại bộ lọc"
                     resetDisabled={!productsHasFilter}
                     filters={(
                       <>
-                        <select className="sa-input sa-filter-select" value={productCatFilter} onChange={e => setProductCatFilter(e.target.value)} aria-label="Lọc danh mục">
-                          <option value="">Tất cả danh mục</option>
+                        <select className={`sa-input sa-filter-select${productCatFilter === '' ? ' sa-filter-select--placeholder' : ''}`} value={productCatFilter} onChange={e => setProductCatFilter(e.target.value)} aria-label="Lọc danh mục">
+                          <option value="">Danh mục</option>
                           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
-                        <select className="sa-input sa-filter-select" value={productStatusFilter} onChange={e => setProductStatusFilter(e.target.value)} data-testid="admin-status-filter" aria-label="Lọc trạng thái sản phẩm">
-                          <option value="">Tất cả</option>
+                        <select className={`sa-input sa-filter-select${productStatusFilter === '' ? ' sa-filter-select--placeholder' : ''}`} value={productStatusFilter} onChange={e => setProductStatusFilter(e.target.value)} data-testid="admin-status-filter" aria-label="Lọc trạng thái sản phẩm">
+                          <option value="">Trạng thái</option>
                           <option value="true">Đang hoạt động</option>
                           <option value="false">Ngừng hoạt động</option>
                         </select>
@@ -3251,8 +3271,13 @@ export default function AdminPage() {
                     <p className="sa-error">{productsError}</p>
                   ) : filteredProducts.length === 0 ? (
                     <EmptyState
-                      title={productSearch.trim() || productCatFilter || productStatusFilter ? 'Không tìm thấy sản phẩm' : 'Chưa có sản phẩm nào'}
-                      desc={productSearch.trim() || productCatFilter || productStatusFilter ? 'Thử đổi từ khóa hoặc bộ lọc khác.' : 'Thêm sản phẩm mới để bắt đầu bán hàng.'}
+                      title={productsHasFilter ? 'Không tìm thấy sản phẩm' : 'Chưa có sản phẩm nào'}
+                      desc={productsHasFilter ? 'Thử đổi từ khóa hoặc bộ lọc khác.' : 'Thêm sản phẩm mới để bắt đầu bán hàng.'}
+                      action={productsHasFilter ? (
+                        <button type="button" className="sa-btn sa-btn-ghost" data-testid="admin-products-clear-filters-btn" onClick={resetProducts}>
+                          Xóa bộ lọc
+                        </button>
+                      ) : undefined}
                     />
                   ) : (
                     <div className="sa-table-wrap">
@@ -3322,7 +3347,7 @@ export default function AdminPage() {
             {!profileView && !orderCode && !onEntitySubPage && tab === 'categories' && (
               <section className="sa-list-section">
                 <div className="sa-list-card">
-                  {/* Đợt 21 — tìm/lọc DM TỰ ĐỘNG: gõ là lọc (debounce 120ms,
+                  {/* Đợt 21 — tìm/lọc DM TỰ ĐỘNG: gõ là lọc (debounce 300ms,
                     * tìm không dấu), không cần bấm Tìm/Enter — như đơn hàng. */}
                   <PageToolbar
                     testidPrefix="categories"
@@ -3330,14 +3355,12 @@ export default function AdminPage() {
                     onSearchChange={setCatSearch}
                     searchPlaceholder="Tìm tên, slug danh mục..."
                     onReset={resetCategories}
-                    hideSearchButton
                     showSearchClear
                     onClearSearch={() => { setCatSearch(''); setCatSearchDebounced(''); }}
-                    resetLabel="Đặt lại bộ lọc"
                     resetDisabled={!catSearch.trim() && !catStatusFilter}
                     filters={(
-                      <select className="sa-input sa-filter-select" value={catStatusFilter} onChange={e => setCatStatusFilter(e.target.value)} data-testid="admin-status-filter" aria-label="Lọc trạng thái danh mục">
-                        <option value="">Tất cả</option>
+                      <select className={`sa-input sa-filter-select${catStatusFilter === '' ? ' sa-filter-select--placeholder' : ''}`} value={catStatusFilter} onChange={e => setCatStatusFilter(e.target.value)} data-testid="admin-status-filter" aria-label="Lọc trạng thái danh mục">
+                        <option value="">Trạng thái</option>
                         <option value="true">Hoạt động</option>
                         <option value="false">Ngừng hoạt động</option>
                       </select>
@@ -3411,11 +3434,10 @@ export default function AdminPage() {
                     searchValue={promoSearch}
                     onSearchChange={setPromoSearch}
                     searchPlaceholder="Tìm mã, mô tả khuyến mãi..."
-                    onSearch={() => void loadPromos()}
                     onReset={resetPromos}
                     filters={(
-                      <select className="sa-input sa-filter-select" value={promoStatusFilter} onChange={e => setPromoStatusFilter(e.target.value)} data-testid="admin-status-filter" aria-label="Lọc trạng thái voucher">
-                        <option value="">Tất cả trạng thái</option>
+                      <select className={`sa-input sa-filter-select${promoStatusFilter === '' ? ' sa-filter-select--placeholder' : ''}`} value={promoStatusFilter} onChange={e => setPromoStatusFilter(e.target.value)} data-testid="admin-status-filter" aria-label="Lọc trạng thái voucher">
+                        <option value="">Trạng thái</option>
                         <option value="Draft">Nháp</option>
                         <option value="Active">Đang hoạt động</option>
                         <option value="Disabled">Tạm ngưng</option>
@@ -3433,6 +3455,11 @@ export default function AdminPage() {
                     <EmptyState
                       title={promoSearch.trim() || promoStatusFilter ? 'Không tìm thấy khuyến mãi' : 'Chưa có khuyến mãi nào'}
                       desc={promoSearch.trim() || promoStatusFilter ? 'Thử đổi từ khóa hoặc bộ lọc khác.' : 'Tạo khuyến mãi để thu hút khách hàng.'}
+                      action={promoSearch.trim() || promoStatusFilter ? (
+                        <button type="button" className="sa-btn sa-btn-ghost" data-testid="admin-promos-clear-filters-btn" onClick={resetPromos}>
+                          Xóa bộ lọc
+                        </button>
+                      ) : undefined}
                     />
                   ) : (
                     <div className="sa-table-wrap">
@@ -3548,22 +3575,20 @@ export default function AdminPage() {
                     onSearchChange={setCustomerSearch}
                     searchPlaceholder="Tìm email, tên, SĐT..."
                     onReset={resetCustomers}
-                    hideSearchButton
                     showSearchClear
                     onClearSearch={() => { setCustomerSearch(''); setCustomerSearchDebounced(''); }}
-                    resetLabel="Đặt lại bộ lọc"
                     resetDisabled={!customerSearch.trim() && !customerTierFilter && !customerStatusFilter}
                     filters={(
                       <>
-                        <select className="sa-input sa-filter-select" value={customerTierFilter} onChange={e => setCustomerTierFilter(e.target.value)} aria-label="Lọc hạng">
-                          <option value="">Tất cả hạng</option>
+                        <select className={`sa-input sa-filter-select${customerTierFilter === '' ? ' sa-filter-select--placeholder' : ''}`} value={customerTierFilter} onChange={e => setCustomerTierFilter(e.target.value)} aria-label="Lọc hạng">
+                          <option value="">Hạng</option>
                           <option value="Member">Thường</option>
                           <option value="Silver">Bạc</option>
                           <option value="Gold">Vàng</option>
                           <option value="Diamond">Kim cương</option>
                         </select>
-                        <select className="sa-input sa-filter-select" value={customerStatusFilter} onChange={e => setCustomerStatusFilter(e.target.value)} data-testid="admin-status-filter" aria-label="Lọc trạng thái khách hàng">
-                          <option value="">Tất cả</option>
+                        <select className={`sa-input sa-filter-select${customerStatusFilter === '' ? ' sa-filter-select--placeholder' : ''}`} value={customerStatusFilter} onChange={e => setCustomerStatusFilter(e.target.value)} data-testid="admin-status-filter" aria-label="Lọc trạng thái khách hàng">
+                          <option value="">Trạng thái</option>
                           <option value="active">Hoạt động</option>
                           <option value="locked">Đã khoá</option>
                         </select>
@@ -3640,14 +3665,12 @@ export default function AdminPage() {
                     onSearchChange={setReviewSearch}
                     searchPlaceholder="Tìm tên sản phẩm, khách hàng, nội dung..."
                     onReset={resetReviews}
-                    hideSearchButton
                     showSearchClear
                     onClearSearch={() => { setReviewSearch(''); setReviewSearchDebounced(''); }}
-                    resetLabel="Đặt lại bộ lọc"
                     resetDisabled={!reviewSearch.trim() && !reviewRatingFilter}
                     filters={(
-                      <select className="sa-input sa-filter-select" value={reviewRatingFilter} onChange={e => setReviewRatingFilter(e.target.value)} data-testid="admin-review-rating-filter" aria-label="Lọc theo số sao">
-                        <option value="">Tất cả số sao</option>
+                      <select className={`sa-input sa-filter-select${reviewRatingFilter === '' ? ' sa-filter-select--placeholder' : ''}`} value={reviewRatingFilter} onChange={e => setReviewRatingFilter(e.target.value)} data-testid="admin-review-rating-filter" aria-label="Lọc theo số sao">
+                        <option value="">Số sao</option>
                         <option value="5">5 sao</option>
                         <option value="4">4 sao</option>
                         <option value="3">3 sao</option>
@@ -3704,8 +3727,8 @@ export default function AdminPage() {
                 <div className="sa-list-card">
                   <div className="sa-toolbar">
                     <div className="sa-toolbar-right">
-                      <button type="button" className="sa-icon-btn" title="Đặt lại cấu hình (hủy thay đổi chưa lưu)" aria-label="Đặt lại cấu hình" onClick={resetMembers} data-testid="admin-members-reset-btn"><RotateCcw size={16} strokeWidth={2} /></button>
-                      <button type="button" className="sa-icon-btn" title="Làm mới" aria-label="Làm mới" onClick={() => void loadTiers()} data-testid="admin-members-refresh-btn">⟳</button>
+                      <button type="button" className="sa-page-toolbar-icon-btn" title="Đặt lại cấu hình (hủy thay đổi chưa lưu)" aria-label="Đặt lại cấu hình" onClick={resetMembers} data-testid="admin-members-reset-btn"><RotateCcw size={18} strokeWidth={2} /></button>
+                      <button type="button" className="sa-page-toolbar-icon-btn" title="Làm mới" aria-label="Làm mới" onClick={() => void loadTiers()} data-testid="admin-members-refresh-btn"><RotateCcw size={18} strokeWidth={2} /></button>
                     </div>
                   </div>
                   {tiersLoading ? (
@@ -3771,7 +3794,7 @@ export default function AdminPage() {
               <section className="sa-list-section">
                 <div className="sa-list-card">
                   {/* Đợt 21 — tìm/lọc trả hàng TỰ ĐỘNG: gõ là lọc (debounce
-                    * 120ms, tìm không dấu, client-side), không cần bấm Tìm/Enter.
+                    * 300ms, tìm không dấu, client-side), không cần bấm Tìm/Enter.
                     * Danh sách chỉ đổi điều hướng (bấm dòng → trang chi tiết
                     * full page), không đổi cột/lọc. */}
                   <PageToolbar
@@ -3780,14 +3803,12 @@ export default function AdminPage() {
                     onSearchChange={setReturnSearch}
                     searchPlaceholder="Tìm mã đơn, sản phẩm, lý do..."
                     onReset={resetReturns}
-                    hideSearchButton
                     showSearchClear
                     onClearSearch={() => { setReturnSearch(''); setReturnSearchDebounced(''); }}
-                    resetLabel="Đặt lại bộ lọc"
                     resetDisabled={!returnSearch.trim() && !returnStatusFilter}
                     filters={(
-                      <select className="sa-input sa-filter-select" value={returnStatusFilter} onChange={e => setReturnStatusFilter(e.target.value)} aria-label="Lọc trạng thái trả hàng">
-                        <option value="">Tất cả trạng thái</option>
+                      <select className={`sa-input sa-filter-select${returnStatusFilter === '' ? ' sa-filter-select--placeholder' : ''}`} value={returnStatusFilter} onChange={e => setReturnStatusFilter(e.target.value)} aria-label="Lọc trạng thái trả hàng">
+                        <option value="">Trạng thái</option>
                         <option value="Pending">Chờ duyệt</option>
                         <option value="Approved">Đã duyệt</option>
                         <option value="Rejected">Đã từ chối</option>
@@ -3855,12 +3876,11 @@ export default function AdminPage() {
                     searchValue={auditSearch}
                     onSearchChange={setAuditSearch}
                     searchPlaceholder="Tìm người thực hiện, hành động..."
-                    onSearch={() => { setAuditDateFrom(auditDateFromInput); setAuditDateTo(auditDateToInput); setAuditPage(1); }}
                     onReset={resetAudit}
                     filters={(
                       <>
-                        <input type="date" className="sa-input sa-filter-date" value={auditDateFromInput} onChange={e => setAuditDateFromInput(e.target.value)} aria-label="Từ ngày" data-testid="admin-log-date-from" />
-                        <input type="date" className="sa-input sa-filter-date" value={auditDateToInput} onChange={e => setAuditDateToInput(e.target.value)} aria-label="Đến ngày" data-testid="admin-log-date-to" />
+                        <input type="date" className="sa-input sa-filter-date" value={auditDateFromInput} onChange={e => { setAuditDateFromInput(e.target.value); setAuditDateFrom(e.target.value); }} aria-label="Từ ngày" data-testid="admin-log-date-from" />
+                        <input type="date" className="sa-input sa-filter-date" value={auditDateToInput} onChange={e => { setAuditDateToInput(e.target.value); setAuditDateTo(e.target.value); }} aria-label="Đến ngày" data-testid="admin-log-date-to" />
                       </>
                     )}
                   />

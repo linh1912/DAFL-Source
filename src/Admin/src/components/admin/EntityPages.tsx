@@ -27,6 +27,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Star } from 'lucide-react';
 import { Badge } from './shared';
 import { fmt, messages, shortName } from './messages.vi';
+import { formatDateTimeVN } from './formUtils';
 
 // ---------- Kiểu dữ liệu (khớp DTO ở AdminPage) ----------
 export interface ReturnDetailRow {
@@ -66,22 +67,23 @@ export const returnStatusTone = (v: string): 'yellow' | 'green' | 'red' | 'gray'
   v === 'Approved' ? 'green' : v === 'Rejected' ? 'red' : v === 'Pending' ? 'yellow' : 'gray';
 
 const fmtMoney = (n?: number | null) => `${(n ?? 0).toLocaleString('vi-VN')}₫`;
-const fmtDate = (s?: string | null) => {
-  if (!s) return '—';
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? String(s) : d.toLocaleString('vi-VN');
-};
+// Đợt 26 — ngày-giờ dd/mm/yyyy HH:mm (dùng sẵn formatDateTimeVN; toLocaleString cũ kèm giây).
+const fmtDate = (s?: string | null) => formatDateTimeVN(s ?? '');
 
 /** Breadcrumb "Quản lý ... > <trang hiện tại>" — dấu ">" như trang Sản phẩm
  *  (đợt 21); bấm mục đầu về danh sách. */
+/** Breadcrumb "Quản lý ... > <trang hiện tại>" — chữ thường (đợt 26): mục đầu
+ *  là <span>, không còn là nút. Prop onBackToList giữ lại vì nút "Quay lại"
+ *  ở header trang chi tiết vẫn dùng nó. */
 export function EntityBreadcrumb({ root, current, onBackToList }: {
   root: string;
   current: string;
   onBackToList: () => void;
 }) {
+  void onBackToList;
   return (
     <nav className="sa-breadcrumb" aria-label="Breadcrumb" data-testid="admin-entity-breadcrumb">
-      <button type="button" className="sa-breadcrumb-link" onClick={onBackToList}>{root}</button>
+      <span className="sa-breadcrumb-link">{root}</span>
       <span aria-hidden="true">&gt;</span>
       <span aria-current="page">{current}</span>
     </nav>
@@ -173,7 +175,7 @@ export function ReturnDetailPage({ ret, onBackToList, onResolve, onRecordRefund 
   return (
     <section className="sa-promo-page" data-testid="admin-return-detail-page">
       <EntityBreadcrumb root="Trả hàng" current={displayCode} onBackToList={onBackToList} />
-      <div className="sa-promo-page-head">
+      <div className="sa-promo-page-head sa-page-sticky-head">
         <div className="sa-promo-page-head-text">
           <h2 data-testid="admin-return-detail-title">
             Chi tiết trả hàng {displayCode}{' '}
@@ -184,6 +186,9 @@ export function ReturnDetailPage({ ret, onBackToList, onResolve, onRecordRefund 
           <p>{ret.productName} × {ret.quantity} · {fmtDate(ret.createdAt)}</p>
         </div>
         <div className="sa-promo-page-head-actions">
+          <button type="button" className="sa-btn sa-btn-ghost" data-testid="admin-return-detail-back-btn" onClick={onBackToList}>
+            <ArrowLeft size={16} strokeWidth={2} aria-hidden="true" /> Quay lại
+          </button>
           <button
             type="button"
             className="sa-btn sa-btn-danger-ghost"
@@ -315,7 +320,7 @@ export function ReviewDetailPage({ review, onBackToList, onDelete }: {
   return (
     <section className="sa-promo-page" data-testid="admin-review-detail-page">
       <EntityBreadcrumb root="Đánh giá" current={review.productName ?? 'Sản phẩm'} onBackToList={onBackToList} />
-      <div className="sa-promo-page-head">
+      <div className="sa-promo-page-head sa-page-sticky-head">
         <div className="sa-promo-page-head-text">
           <h2 data-testid="admin-review-detail-title">Đánh giá — {review.productName ?? 'Sản phẩm'}</h2>
           <p>{review.userName ?? '—'} · {fmtDate(review.createdAt)}</p>

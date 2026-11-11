@@ -41,6 +41,7 @@ import { apiJson } from '../../../../Shared/utils/api';
 import { Badge } from './shared';
 import { fmt, messages } from './messages.vi';
 import { notify } from './notify';
+import { confirmAction } from './ConfirmDialog';
 import './order-detail.css';
 
 // ---------- DTO (tên field theo đúng record C# — JSON camelCase) ----------
@@ -205,9 +206,29 @@ export default function OrderDetailPage({ onDataChanged }: { onDataChanged?: () 
   const [statusError, setStatusError] = useState<string | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
 
-  const backToList = useCallback(() => {
-    navigate('/admin', { state: { tab: 'orders' } });
-  }, [navigate]);
+  /** Đợt 26 — Quay lại: có lịch sử thì history.back(), không có (vào thẳng
+   *  URL) thì về danh sách đơn. Nếu panel Đổi trạng thái / Hủy đơn đang mở
+   *  và đã nhập nội dung thì hỏi "Hủy các thay đổi?" (chuỗi discardForm dùng
+   *  chung của worker A, không tự định nghĩa chuỗi mới); chưa nhập gì thì về thẳng. */
+  const goBack = useCallback(async () => {
+    const dirty =
+      (statusPanelOpen && (nextStatus !== '' || shipCarrier.trim() !== '' || shipTracking.trim() !== '' || statusNote.trim() !== '')) ||
+      (cancelPanelOpen && cancelReason.trim() !== '');
+    if (dirty) {
+      const { confirmed } = await confirmAction({
+        title: messages.confirm.discardForm.title,
+        message: messages.confirm.discardForm.message,
+        confirmText: messages.confirm.discardForm.confirmText,
+        cancelText: 'Ở lại',
+        variant: 'warning',
+      });
+      if (!confirmed) return;
+      setStatusPanelOpen(false);
+      setCancelPanelOpen(false);
+    }
+    if (window.history.length > 1) window.history.back();
+    else navigate('/admin', { state: { tab: 'orders' } });
+  }, [navigate, statusPanelOpen, cancelPanelOpen, nextStatus, shipCarrier, shipTracking, statusNote, cancelReason]);
 
   const loadDetail = useCallback(async () => {
     if (!code) {
@@ -270,13 +291,11 @@ export default function OrderDetailPage({ onDataChanged }: { onDataChanged?: () 
   if (error || !data) {
     return (
       <div className="od-page" data-testid="admin-order-detail">
-        <nav className="od-breadcrumb" aria-label="Breadcrumb">
-          <button type="button" className="od-breadcrumb-back" data-testid="admin-order-detail-back" onClick={backToList}>
-            <ArrowLeft size={16} strokeWidth={2} aria-hidden="true" /> Đơn hàng
-          </button>
+        <nav className="od-breadcrumb" aria-label="Breadcrumb" data-testid="admin-order-detail-breadcrumb">
+          <span className="od-breadcrumb-link">Đơn hàng</span>
         </nav>
         <p className="sa-error" data-testid="admin-order-detail-error">{error ?? 'Không tải được chi tiết đơn.'}</p>
-        <button type="button" className="sa-btn sa-btn-ghost" data-testid="admin-order-detail-back-to-list" onClick={backToList}>
+        <button type="button" className="sa-btn sa-btn-ghost" data-testid="admin-order-detail-back-to-list" onClick={() => void goBack()}>
           Về danh sách đơn
         </button>
       </div>
@@ -376,15 +395,13 @@ export default function OrderDetailPage({ onDataChanged }: { onDataChanged?: () 
 
   return (
     <div className="od-page" data-testid="admin-order-detail">
-      <nav className="od-breadcrumb" aria-label="Breadcrumb">
-        <button type="button" className="od-breadcrumb-back" data-testid="admin-order-detail-back" onClick={backToList}>
-          <ArrowLeft size={16} strokeWidth={2} aria-hidden="true" /> Đơn hàng
-        </button>
+      <nav className="od-breadcrumb" aria-label="Breadcrumb" data-testid="admin-order-detail-breadcrumb">
+        <span className="od-breadcrumb-link">Đơn hàng</span>
         <span aria-hidden="true">/</span>
         <span className="od-breadcrumb-current">{displayCode}</span>
       </nav>
 
-      <header className="od-header">
+      <header className="od-header sa-page-sticky-head">
         <div className="od-header-main">
           <h1 data-testid="admin-order-detail-title">
             Đơn {displayCode}{' '}
@@ -395,6 +412,14 @@ export default function OrderDetailPage({ onDataChanged }: { onDataChanged?: () 
           </p>
         </div>
         <div className="od-header-actions">
+          <button
+            type="button"
+            className="sa-btn sa-btn-ghost"
+            data-testid="admin-order-detail-back-btn"
+            onClick={() => void goBack()}
+          >
+            <ArrowLeft size={16} strokeWidth={2} aria-hidden="true" /> Quay lại
+          </button>
           <button
             type="button"
             className="sa-btn sa-btn-danger-ghost"

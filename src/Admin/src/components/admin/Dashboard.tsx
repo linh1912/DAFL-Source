@@ -48,6 +48,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { RotateCcw } from 'lucide-react';
 import { apiJson } from '../../../../Shared/utils/api';
 import { notifyHttpError } from './notify';
 import { Badge, EmptyState } from './shared';
@@ -939,7 +940,6 @@ export function AdminDashboard(props: AdminDashboardProps) {
       <div className="db-head">
         <div className="db-head-titles">
           <h1 className="db-title">Tổng quan</h1>
-          <p className="db-sub">Tình hình kinh doanh của cửa hàng</p>
         </div>
         <div className="db-head-actions">
           <div className="db-segmented" role="group" aria-label="Khoảng thời gian">
@@ -965,7 +965,7 @@ export function AdminDashboard(props: AdminDashboardProps) {
             title="Làm mới"
             disabled={refreshing}
           >
-            <span aria-hidden="true" className={refreshing ? 'db-spin' : ''}>⟳</span>
+            <span aria-hidden="true" className={refreshing ? 'db-spin' : ''}><RotateCcw size={16} strokeWidth={2} /></span>
           </button>
           <span className="db-updated" data-testid="admin-dashboard-updated-at">
             {updatedAt ? `Cập nhật lúc ${formatTimeVn(updatedAt)}` : 'Chưa cập nhật'}

@@ -6,16 +6,21 @@
  * ============================================================ */
 
 .spark-admin {
-  --sa-green-dark: #051c12;
-  --sa-green: #65a30d;
+  --sa-green-dark: #166534;
+  --sa-green: #166534;
   --sa-green-bright: #b4f105;
-  --sa-lime: #c6f432;
-  --sa-sidebar-bg: #0b1f17;
-  --sa-page-bg: #f5f7fa;
-  --sa-card-border: #e5e7eb;
+  --sa-lime: #bff53c;
+  --sa-sidebar-bg: #0e2a1f;
+  --sa-page-bg: #f2f6f2;
+  --sa-card-border: #e2e9e3;
   --sa-text: #111827;
   --sa-muted: #6b7280;
-  --sa-danger: #dc2626;
+  --sa-danger: #b42318;
+  --sa-primary: #166534;
+  --sa-primary-hover: #14532d;
+  --sa-input-border: #cdd8cf;
+  --sa-focus-ring: 0 0 0 3px rgba(22,101,52,.15);
+  --sa-shadow-card: 0 1px 2px rgba(0,0,0,.04);
   /* Đợt 21 — danh sách Đơn hàng (KHÔNG có dark mode trong admin: chỉ có các
      biến sáng này; style mới dùng biến/token, không hard-code màu lẻ trừ
      các màu pill đã có sẵn trong hệ pill). */
@@ -25,7 +30,7 @@
   min-height: 100vh;
   background: var(--sa-page-bg);
   color: var(--sa-text);
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 1rem;
   text-align: left;
 }
@@ -37,18 +42,17 @@
 }
 
 /* ---------- Sidebar TỐI (đợt 23, ĐẢO NGƯỢC đợt 22 sáng: bỏ toàn bộ
-   style sáng #FFFFFF/11px-uppercase/#15803D; nền gradient tối đợt 20
-   #0E2A1F→#0B1F17→#081811 được GIỮ, chỉ sửa những gì spec đợt 23 liệt kê.
+   style sáng #FFFFFF/11px-uppercase/#15803D; nền phẳng #0E2A1F (đợt 26 bỏ gradient đợt 20), chỉ sửa những gì spec đợt 23 liệt kê.
    Một font duy nhất Inter cho toàn bộ menu (cha + con + Tổng quan + chân
    sidebar — rule .sa-sidebar * bên dưới ép font, không trộn font).
-   Tiêu đề nhóm 15px/600 #e6f0ea (tương phản 13.15–15.68 trên nền gradient,
+   Tiêu đề nhóm 15px/600 #e6f0ea (tương phản 13.15–15.68 trên nền tối phẳng,
    WCAG AA); menu con 14px/500 #b9cdc0 (9.17–10.93, WCAG AA); active nền
    xanh đậm + chữ lime #bff53c + thanh lime 3px; badge giữ cam sáng;
    KHÔNG còn chế độ thu về cột icon) ---------- */
 .spark-admin .sa-sidebar {
   width: 256px;
   flex-shrink: 0;
-  background: linear-gradient(180deg, #0e2a1f 0%, #0b1f17 55%, #081811 100%);
+  background: #0E2A1F;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   color: #d7e5db;
   display: flex;
@@ -87,7 +91,7 @@
 .spark-admin .sa-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
   height: 64px;
   min-height: 64px;
@@ -98,7 +102,7 @@
   color: #f2f7f3;
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0;
   white-space: nowrap;
   text-align: left;
@@ -115,7 +119,7 @@
   width: 36px;
   height: 36px;
   flex-shrink: 0;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #16a34a;
   color: #fff;
   display: inline-flex;
@@ -169,7 +173,7 @@
 /* Ngắt nhóm 14px (đợt 23 §2: 12–16px): Tổng quan cách nhóm đầu 14px,
    nhóm cách nhóm 14px, một nhịp duy nhất. */
 .spark-admin .sa-nav-group {
-  margin-top: 14px;
+  margin-top: 16px;
 }
 .spark-admin .sa-nav-overview {
   margin-bottom: 0;
@@ -257,7 +261,7 @@
   font-size: 14px;
   font-weight: 500;
   line-height: 20px;
-  letter-spacing: -0.005em;
+  letter-spacing: 0;
   padding: 8px 12px;
   margin-bottom: 4px;
   border: none;
@@ -266,7 +270,7 @@
   color: #b9cdc0;
   cursor: pointer;
   position: relative;
-  transition: background-color 180ms ease-out, color 180ms ease-out, transform 180ms ease-out, box-shadow 180ms ease-out;
+  transition: background-color 180ms ease-out, color 180ms ease-out;
 }
 .spark-admin .sa-nav-btn:last-child {
   margin-bottom: 0;
@@ -277,23 +281,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  transition: transform 180ms ease-out;
 }
 .spark-admin .sa-nav-btn:hover {
   background: rgba(255, 255, 255, 0.06);
   color: #e6f0ea;
 }
-.spark-admin .sa-nav-btn:hover .sa-nav-label {
-  transform: translateX(2px);
-}
 .spark-admin .sa-nav-btn:active {
   background: rgba(255, 255, 255, 0.1);
-  transform: scale(0.99);
 }
 /* Mục menu đang focus: KHÔNG dùng viền xanh mặc định của trình duyệt (bấm
    chuột không hiện viền — sửa 18.1). Chỉ hiện vòng sáng khi đi bằng bàn phím:
    viền lime #bff53c (đợt 23: xanh lá đậm #15803D chìm trên nền tối nên đổi
-   sang lime; tương phản 11.93–14.22 trên nền gradient, nhìn rõ). */
+   sang lime; tương phản 11.93–14.22 trên nền tối phẳng, nhìn rõ). */
 .spark-admin .sa-nav-btn:focus {
   outline: none;
 }
@@ -313,9 +312,6 @@
 }
 .spark-admin .sa-nav-btn.sa-active:hover {
   background: rgba(22, 163, 74, 0.22);
-}
-.spark-admin .sa-nav-btn.sa-active:hover .sa-nav-label {
-  transform: none;
 }
 .spark-admin .sa-nav-btn::before {
   content: '';
@@ -377,7 +373,7 @@
 .spark-admin .sa-sidebar-user-card {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
   min-width: 0;
   padding: 10px 12px;
@@ -435,7 +431,7 @@
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: #0e2a1f;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--sa-shadow-card, 0 1px 2px rgba(0,0,0,.04));
 }
 .spark-admin .sa-sidebar-user-menu button {
   display: block;
@@ -473,7 +469,7 @@
   border-radius: 50%;
   background: var(--sa-green-dark);
   color: #fff;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.95rem;
   display: inline-flex;
   align-items: center;
@@ -504,10 +500,7 @@
     transition: none !important;
     animation: none !important;
   }
-  .spark-admin .sa-nav-btn:active {
-    transform: none;
   }
-}
 
 /* ---------- Khung chính + Topbar ---------- */
 .spark-admin .sa-main {
@@ -533,7 +526,7 @@
   flex-shrink: 0;
   width: 38px;
   height: 38px;
-  border-radius: 50%;
+  border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
   color: #374151;
@@ -577,8 +570,8 @@
   max-width: 86vw;
   background: #fff;
   border: 1px solid var(--sa-card-border);
-  border-radius: 16px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+  border-radius: 12px;
+  box-shadow: var(--sa-shadow-card, 0 1px 2px rgba(0,0,0,.04));
   z-index: 50;
   overflow: hidden;
 }
@@ -590,7 +583,7 @@
   gap: 8px;
   padding: 12px 14px;
   border-bottom: 1px solid #f1f5f9;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.95rem;
 }
 
@@ -618,7 +611,7 @@
 }
 
 .spark-admin .sa-notif-title {
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: 2px;
 }
 
@@ -695,7 +688,7 @@
 
 /* ---------- Nội dung: tràn full màn hình (không giới hạn 1240px) ---------- */
 .spark-admin .sa-content {
-  padding: 22px 28px 40px;
+  padding: 24px 24px 40px;
   width: 100%;
   max-width: none;
   margin: 0;
@@ -719,12 +712,13 @@
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .spark-admin .sa-pagehead h1 {
-  font-size: 1.7rem;
-  font-weight: 800;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 32px;
   color: var(--sa-text);
   margin: 0 0 4px;
 }
@@ -732,7 +726,7 @@
 .spark-admin .sa-pagehead p {
   margin: 0;
   color: var(--sa-muted);
-  font-size: 0.92rem;
+  font-size: 13px;
 }
 
 .spark-admin .sa-error {
@@ -747,32 +741,58 @@
 
 /* ---------- Nút / form ---------- */
 .spark-admin .sa-btn {
-  font-size: 0.95rem;
-  padding: 0.55rem 1rem;
-  border-radius: 999px;
-  border: 1px solid var(--sa-green-dark);
-  background: var(--sa-green-dark);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid var(--sa-primary, #166534);
+  background: var(--sa-primary, #166534);
   color: #fff;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
   cursor: pointer;
   white-space: nowrap;
 }
 
 .spark-admin .sa-btn:hover {
-  background: #0e3a22;
+  background: var(--sa-primary-hover, #14532d);
 }
 
 .spark-admin .sa-btn:disabled {
-  opacity: 0.55;
+  opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* Loading: spinner thay chữ, nút không đổi kích thước. */
+.spark-admin .sa-btn--loading {
+  pointer-events: none;
+}
+.spark-admin .sa-btn-spinner {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: sa-spin 700ms linear infinite;
+}
+@keyframes sa-spin {
+  to { transform: rotate(360deg); }
 }
 
 .spark-admin .sa-btn-ghost {
   background: #fff;
-  color: var(--sa-green-dark);
+  color: var(--sa-text);
+  border-color: var(--sa-input-border, #cdd8cf);
 }
 
 .spark-admin .sa-btn-ghost:hover {
-  background: #f7fee7;
+  background: #f9fafb;
 }
 
 .spark-admin .sa-btn-danger {
@@ -781,7 +801,7 @@
 }
 
 .spark-admin .sa-btn-danger:hover {
-  background: #b91c1c;
+  background: #7f1d1d;
 }
 
 .spark-admin .sa-btn-danger-ghost {
@@ -797,19 +817,40 @@
 .spark-admin .sa-input,
 .spark-admin select.sa-input,
 .spark-admin textarea.sa-input {
-  font-size: 0.95rem;
-  padding: 0.55rem 0.7rem;
-  border: 1px solid #d1d5db;
-  border-radius: 12px;
+  height: 38px;
+  font-size: 14px;
+  padding: 0 12px;
+  border: 1px solid var(--sa-input-border, #cdd8cf);
+  border-radius: 8px;
   width: 100%;
   box-sizing: border-box;
   background: #fff;
+  color: var(--sa-text);
+}
+.spark-admin textarea.sa-input {
+  height: auto;
+  min-height: 38px;
+  padding: 8px 12px;
 }
 
 .spark-admin .sa-input:focus {
   outline: none;
-  border-color: var(--sa-green);
-  box-shadow: 0 0 0 3px rgba(180, 241, 5, 0.35);
+  border-color: var(--sa-primary, #166534);
+  box-shadow: var(--sa-focus-ring, 0 0 0 3px rgba(22, 101, 52, 0.15));
+}
+/* Dropdown tùy biến: chevron nhỏ bên phải, cùng cao 38px / bo 8px / viền. */
+.spark-admin select.sa-input,
+.spark-admin select.sa-filter-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 32px;
+}
+/* Option đầu (nhãn mặc định ngắn) hiển thị màu nhạt, như mọi select lọc. */
+.spark-admin .sa-filter-select--placeholder {
+  color: #9ca3af;
 }
 
 .spark-admin .sa-field {
@@ -819,8 +860,8 @@
 
 .spark-admin .sa-field > span {
   display: block;
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   color: #374151;
   margin-bottom: 6px;
 }
@@ -854,15 +895,16 @@
 .spark-admin .sa-card {
   background: #fff;
   border: 1px solid var(--sa-card-border);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 1rem 1.1rem;
   margin-bottom: 1rem;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.06);
+  box-shadow: var(--sa-shadow-card, 0 1px 2px rgba(0,0,0,.04));
 }
 
 .spark-admin .sa-card h3 {
   margin: 0 0 0.75rem;
-  font-size: 1.15rem;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .spark-admin .sa-card h4 {
@@ -906,11 +948,11 @@
   background: var(--sa-green-dark);
   border-color: var(--sa-green-dark);
   color: #fff;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .spark-admin .sa-btn-add:hover {
-  background: #0e3a22;
+  background: var(--sa-primary-hover, #14532d);
 }
 
 /* ---------- Phân trang bảng admin (10 dòng/trang, client-side) ---------- */
@@ -931,16 +973,16 @@
 
 .spark-admin .sa-pagination-btns {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
   flex-wrap: wrap;
 }
 
 .spark-admin .sa-page-btn {
-  min-width: 34px;
-  height: 34px;
+  min-width: 32px;
+  height: 32px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: 8px;
   border: 1px solid var(--sa-card-border);
   background: #fff;
   color: #374151;
@@ -962,15 +1004,15 @@
   background: var(--sa-green-dark);
   border-color: var(--sa-green-dark);
   color: #fff;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .spark-admin .sa-table-wrap {
   overflow-x: auto;
   background: #fff;
   border: 1px solid var(--sa-card-border);
-  border-radius: 16px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.06);
+  border-radius: 12px;
+  box-shadow: var(--sa-shadow-card, 0 1px 2px rgba(0,0,0,.04));
 }
 
 .spark-admin .sa-table-wrap > table {
@@ -983,11 +1025,9 @@
   text-align: left;
   padding: 0.7rem 0.9rem;
   border-bottom: 1px solid var(--sa-card-border);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 12.5px;
   color: var(--sa-muted);
-  font-weight: 700;
+  font-weight: 500;
   white-space: nowrap;
   background: #fafafa;
 }
@@ -995,7 +1035,8 @@
 .spark-admin .sa-table-wrap > table td {
   padding: 0.75rem 0.9rem;
   border-bottom: 1px solid #f1f5f9;
-  font-size: 0.92rem;
+  font-size: 14px;
+  font-weight: 400;
   vertical-align: middle;
 }
 
@@ -1014,7 +1055,7 @@
 .spark-admin .sa-user-cell {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
 }
 
@@ -1033,74 +1074,72 @@
 }
 
 .spark-admin .sa-money {
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
 }
 
 .spark-admin .sa-code {
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-/* Pill trạng thái: chấm tròn + nhãn tiếng Việt */
-.spark-admin .sa-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
 }
 
-.spark-admin .sa-pill .sa-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: currentColor;
-  flex-shrink: 0;
+/* Pill trạng thái (đợt 26: không chấm tròn) */
+/* Badge/pill một kiểu duy nhất (đợt 26): nền nhạt, chữ 600, cao 24px,
+   bo 999px, KHÔNG chấm tròn. Bộ màu: green #166534, amber #b45309,
+   red #b42318, blue #1d4ed8, purple #7c3aed, gray #4b5563,
+   orange #c2410c, sky #0369a1. */
+.spark-admin .sa-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+  white-space: nowrap;
 }
 
 .spark-admin .sa-pill-green {
-  background: #dcfce7;
+  background: #ecf8ef;
   color: #166534;
 }
 
 .spark-admin .sa-pill-amber {
   background: #fef3c7;
-  color: #92400e;
+  color: #b45309;
 }
 
 .spark-admin .sa-pill-red {
-  background: #fee2e2;
-  color: #991b1b;
+  background: #fef3f2;
+  color: #b42318;
 }
 
 .spark-admin .sa-pill-blue {
   background: #dbeafe;
-  color: #1e40af;
+  color: #1d4ed8;
 }
 
 .spark-admin .sa-pill-purple {
-  background: #ede9fe;
-  color: #5b21b6;
+  background: #f3e8ff;
+  color: #7c3aed;
 }
 
 .spark-admin .sa-pill-gray {
-  background: #f1f5f9;
-  color: #475569;
+  background: #f3f4f6;
+  color: #4b5563;
 }
-
 /* Nút icon tròn cho thao tác */
 .spark-admin .sa-actions {
   white-space: nowrap;
 }
 
 .spark-admin .sa-icon-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   border: 1px solid var(--sa-card-border);
   background: #fff;
   color: #374151;
@@ -1140,9 +1179,9 @@
 .spark-admin .sa-stat {
   background: #fff;
   border: 1px solid var(--sa-card-border);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 1rem 1.1rem;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.06);
+  box-shadow: var(--sa-shadow-card, 0 1px 2px rgba(0,0,0,.04));
 }
 
 .spark-admin .sa-stat-label {
@@ -1152,7 +1191,7 @@
 
 .spark-admin .sa-stat-value {
   font-size: 1.9rem;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--sa-green-dark);
   margin-top: 2px;
 }
@@ -1193,9 +1232,9 @@
 .spark-admin .sa-gate-card {
   background: #fff;
   border: 1px solid var(--sa-card-border);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 2rem;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--sa-shadow-card, 0 1px 2px rgba(0,0,0,.04));
   text-align: center;
 }
 
@@ -1230,10 +1269,10 @@
 .spark-admin .sa-gate-steps {
   background: #fff;
   border: 1px solid var(--sa-card-border);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 1.5rem 2rem;
   margin-top: 1rem;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--sa-shadow-card, 0 1px 2px rgba(0,0,0,.04));
   text-align: left;
 }
 
@@ -1284,11 +1323,12 @@
 
 .spark-admin .sa-modal {
   background: #fff;
-  border-radius: 16px;
+  border: 1px solid var(--sa-card-border);
+  border-radius: 12px;
   width: 640px;
   max-width: 100%;
-  box-shadow: 0 24px 64px rgba(5, 28, 18, 0.35), 0 4px 16px rgba(5, 28, 18, 0.2);
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  box-shadow: var(--sa-shadow-card, 0 1px 2px rgba(0,0,0,.04));
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
 .spark-admin .sa-modal-head {
@@ -1302,18 +1342,18 @@
 .spark-admin .sa-modal-head h3 {
   margin: 0;
   font-size: 1.25rem;
-  font-weight: 800;
+  font-weight: 600;
   color: #051c12;
 }
 
 .spark-admin .sa-modal-close {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border-radius: 50%;
+  border-radius: 8px;
   border: 1px solid var(--sa-card-border);
   background: #fff;
   color: #374151;
@@ -1359,7 +1399,7 @@
 .spark-admin .sa-kv {
   display: grid;
   grid-template-columns: 170px 1fr;
-  gap: 4px 14px;
+  gap: 4px 16px;
   padding: 8px 0;
   border-bottom: 1px solid #f1f5f9;
 }
@@ -1383,7 +1423,7 @@
   width: 44px;
   height: 44px;
   flex-shrink: 0;
-  border-radius: 10px;
+  border-radius: 8px;
   object-fit: cover;
   background: #f1f5f9;
 }
@@ -1408,10 +1448,10 @@
     top: 0;
     bottom: 0;
     width: 280px;
-    border-radius: 0 16px 16px 0;
+    border-radius: 0 12px 12px 0;
     transform: translateX(-105%);
     transition: transform 200ms ease-out;
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+    box-shadow: var(--sa-shadow-card, 0 1px 2px rgba(0,0,0,.04));
   }
 
   .spark-admin.sa-drawer-open .sa-sidebar {
@@ -1493,7 +1533,7 @@
   display: flex;
   flex-direction: column;
   animation: sa-slide-in-right 200ms ease;
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
 /* Modal lớn (danh mục / khuyến mãi): max-width 560px. */
@@ -1525,7 +1565,7 @@
 .spark-admin .sa-form-head-text h3 {
   margin: 0;
   font-size: 1.25rem;
-  font-weight: 800;
+  font-weight: 600;
   color: #051c12;
 }
 
@@ -1560,22 +1600,20 @@
 .spark-admin .sa-form-section { margin-bottom: 1.25rem; }
 .spark-admin .sa-form-section-title {
   margin: 0 0 0.75rem;
-  font-size: 0.85rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #6b7280;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--sa-text);
 }
 
 .spark-admin .sa-field-label {
   display: block;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   color: #374151;
   margin-bottom: 6px;
 }
 
-.spark-admin .sa-req { color: #dc2626; }
+.spark-admin .sa-req { color: var(--sa-danger); }
 
 .spark-admin .sa-field-meta {
   display: flex;
@@ -1601,17 +1639,17 @@
   margin: 4px 0 0;
 }
 
-.spark-admin .sa-input-error { border-color: #dc2626 !important; }
-.spark-admin .sa-input-error:focus { box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2) !important; }
+.spark-admin .sa-input-error { border-color: var(--sa-danger) !important; }
+.spark-admin .sa-input-error:focus { box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.15) !important; }
 
-/* Ô tiền tệ: input cao 40px bo 8px + hậu tố ₫. */
+/* Ô tiền tệ: input cao 38px bo 8px + hậu tố ₫. */
 .spark-admin .sa-money-wrap {
   position: relative;
   display: flex;
   align-items: center;
 }
 
-.spark-admin .sa-money-wrap .sa-input { height: 40px; border-radius: 8px; padding-right: 2rem; }
+.spark-admin .sa-money-wrap .sa-input { height: 38px; border-radius: 8px; padding-right: 2rem; }
 .spark-admin .sa-money-suffix {
   position: absolute;
   right: 12px;
@@ -1620,13 +1658,14 @@
   pointer-events: none;
 }
 
-/* Input trong form mới: cao 40px bo 8px. */
-.spark-admin .sa-form-body .sa-input { min-height: 40px; border-radius: 8px; }
+/* Input trong form mới: cao 38px bo 8px. */
+.spark-admin .sa-form-body .sa-input { min-height: 38px; border-radius: 8px; }
 
 /* Nút +/- tồn kho. */
 .spark-admin .sa-stepper { display: flex; align-items: stretch; gap: 0; }
 .spark-admin .sa-stepper-btn {
-  width: 40px;
+  width: 38px;
+  height: 38px;
   flex-shrink: 0;
   border: 1px solid #d1d5db;
   background: #f9fafb;
@@ -1643,7 +1682,7 @@
 .spark-admin .sa-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   background: none;
   border: none;
   padding: 4px 0;
@@ -1683,7 +1722,7 @@
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  height: 40px;
+  height: 38px;
   text-align: left;
   cursor: pointer;
   color: #111827;
@@ -1698,7 +1737,7 @@
   background: #fff;
   border: 1px solid #d1d5db;
   border-radius: 12px;
-  box-shadow: 0 12px 32px rgba(5, 28, 18, 0.2);
+  box-shadow: var(--sa-shadow-card, 0 1px 2px rgba(0,0,0,.04));
   padding: 8px;
   max-height: 260px;
   overflow-y: auto;
@@ -1716,7 +1755,7 @@
   font-size: 0.95rem;
 }
 .spark-admin .sa-picker-option:hover { background: #f7fee7; }
-.spark-admin .sa-picker-selected { background: #f7fee7; font-weight: 700; }
+.spark-admin .sa-picker-selected { background: #f7fee7; font-weight: 600; }
 .spark-admin .sa-picker-empty { padding: 8px 10px; color: var(--sa-muted); font-size: 0.9rem; }
 
 /* Dropzone upload ảnh. */
@@ -1751,14 +1790,14 @@
 .spark-admin .sa-thumbs {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
   margin-top: 12px;
 }
 .spark-admin .sa-thumb-item {
   position: relative;
   width: 96px;
   height: 96px;
-  border-radius: 10px;
+  border-radius: 8px;
   overflow: hidden;
   border: 1px solid #e5e7eb;
   background: #f1f5f9;
@@ -1775,7 +1814,7 @@
   background: rgba(5, 28, 18, 0.85);
   color: #fff;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   text-align: center;
 }
 .spark-admin .sa-thumb-actions {
@@ -1804,7 +1843,7 @@
   padding: 6px;
   background: rgba(255, 255, 255, 0.92);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 600;
   text-align: center;
   color: #374151;
 }
@@ -1825,7 +1864,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   padding: 6px;
   background: rgba(255, 255, 255, 0.92);
   text-align: center;
@@ -1864,7 +1903,7 @@
   white-space: nowrap;
 }
 .spark-admin .sa-segmented-btn + .sa-segmented-btn { border-left: 1px solid #d1d5db; }
-.spark-admin .sa-segmented-active { background: var(--sa-green-dark); color: #fff; font-weight: 700; }
+.spark-admin .sa-segmented-active { background: var(--sa-green-dark); color: #fff; font-weight: 600; }
 .spark-admin .sa-segmented-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 .spark-admin .sa-segmented-btn:disabled.sa-segmented-active { opacity: 1; }
 
@@ -1872,17 +1911,6 @@
 .spark-admin .sa-code-row .sa-input { flex: 1; text-transform: uppercase; }
 
 /* Badge % giảm. */
-.spark-admin .sa-discount-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #fee2e2;
-  color: #b91c1c;
-  font-size: 0.8rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
 /* Preview thẻ sản phẩm realtime. */
 .spark-admin .sa-product-preview {
   display: flex;
@@ -1897,7 +1925,7 @@
   width: 72px;
   height: 72px;
   flex-shrink: 0;
-  border-radius: 10px;
+  border-radius: 8px;
   object-fit: cover;
   background: #e5e7eb;
 }
@@ -1916,7 +1944,7 @@
   z-index: 200;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   max-width: min(420px, calc(100vw - 40px));
   padding: 12px 16px;
   border-radius: 12px;
@@ -1924,7 +1952,7 @@
   color: #fff;
   font-size: 0.95rem;
   font-weight: 600;
-  box-shadow: 0 12px 32px rgba(5, 28, 18, 0.35);
+  box-shadow: var(--sa-shadow-card, 0 1px 2px rgba(0,0,0,.04));
   animation: sa-toast-in 200ms ease;
 }
 .spark-admin .sa-toast button {
@@ -1950,7 +1978,7 @@
     width: 100%;
     height: 95vh;
     max-height: 95vh;
-    border-radius: 16px 16px 0 0;
+    border-radius: 12px 12px 0 0;
   }
   .spark-admin .sa-form-overlay { padding: 0; align-items: flex-end; }
   .spark-admin .sa-form-body .sa-form-grid { grid-template-columns: 1fr; }
@@ -1961,10 +1989,10 @@
 .spark-admin .sa-form-page {
   background: #fff;
   border: 1px solid var(--sa-card-border);
-  border-radius: 16px;
-  padding: 24px 28px;
+  border-radius: 12px;
+  padding: 24px;
   max-width: 1180px;
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 .spark-admin .sa-form-page-head {
   display: flex;
@@ -1977,8 +2005,9 @@
 }
 .spark-admin .sa-form-page-head .sa-form-head-text h3 {
   margin: 0;
-  font-size: 1.5rem;
-  font-weight: 800;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 32px;
   color: #051c12;
 }
 .spark-admin .sa-form-page-head .sa-form-head-text p {
@@ -2082,8 +2111,8 @@
 .spark-admin .sa-list-card {
   background: #fff;
   border: 1px solid var(--sa-card-border);
-  border-radius: 16px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.06);
+  border-radius: 12px;
+  box-shadow: var(--sa-shadow-card, 0 1px 2px rgba(0,0,0,.04));
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -2092,7 +2121,7 @@
 }
 .spark-admin .sa-list-card h3 {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
 }
 .spark-admin .sa-list-card .sa-table-wrap {
@@ -2104,7 +2133,8 @@
 /* ---------- Tiêu đề trang ---------- */
 .spark-admin .sa-pagehead h1 {
   font-size: 24px;
-  font-weight: 700;
+  font-weight: 600;
+  line-height: 32px;
   margin: 0;
 }
 .spark-admin .sa-pagehead p {
@@ -2121,7 +2151,7 @@
 }
 
 .spark-admin .sa-form-page-head .sa-form-head-text h3 {
-  font-weight: 700;
+  font-weight: 600;
 }
 
 /* Sao đánh giá (icon Lucide Star): sao đầy vàng, sao rỗng viền xám. */
@@ -2145,19 +2175,19 @@
 }
 /* ---------- PageToolbar: dropdown lọc + ô ngày trong toolbar ---------- */
 .spark-admin .sa-page-toolbar .sa-filter-select {
-  height: 40px;
+  height: 38px;
   max-width: 220px;
 }
 .spark-admin .sa-page-toolbar .sa-filter-date {
-  height: 40px;
+  height: 38px;
   width: 160px;
   max-width: 160px;
 }
 
 /* ---------- Bảng: tiêu đề cột 12px, tiền phải + đậm, ngày 2 dòng ---------- */
 .spark-admin .sa-table-wrap > table th {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 500;
 }
 .spark-admin .sa-table-wrap > table td {
   font-size: 14px;
@@ -2185,8 +2215,8 @@
   display: inline-block;
   padding: 1px 6px;
   border-radius: 999px;
-  background: #fee2e2;
-  color: #dc2626;
+  background: #fef3f2;
+  color: #b42318;
   font-size: 12px;
   font-weight: 600;
   line-height: 18px;
@@ -2213,7 +2243,7 @@
   border: 1.5px dashed #d1d5db;
   border-radius: 8px;
   background: #fff;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 13px;
   white-space: nowrap;
 }
@@ -2344,15 +2374,14 @@
 }
 
 .spark-admin .sa-orders-card {
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
-/* Header bảng: nền xám xanh nhạt, chữ 11.5px in hoa, letter-spacing, muted. */
+/* Header bảng: nền xám xanh nhạt, chữ 12.5px/500, muted, không in hoa. */
 .spark-admin .sa-orders-card .sa-table-wrap > table th {
   background: var(--sa-orders-header-bg);
-  font-size: 11.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 12.5px;
+  font-weight: 500;
   color: var(--sa-muted);
   padding: 12px 16px;
 }
@@ -2477,8 +2506,9 @@
 }
 .spark-admin .sa-promo-page-head-text h2 {
   margin: 0 0 4px;
-  font-size: 1.5rem;
-  font-weight: 800;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 32px;
   color: var(--sa-text);
 }
 .spark-admin .sa-promo-page-head-text p {
@@ -2495,7 +2525,7 @@
 .spark-admin .sa-promo-page-head-actions .sa-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 /* Form KM full page: các section dùng .sa-form-section có sẵn; khoảng cách
@@ -2515,7 +2545,7 @@
 .spark-admin .sa-radio-card {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
   text-align: left;
   background: var(--sa-surface);
   border: 1.5px solid var(--sa-card-border);
@@ -2592,8 +2622,8 @@
 }
 .spark-admin .sa-promo-detail-card h3 {
   margin: 0;
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--sa-text);
 }
 .spark-admin .sa-promo-kv {
@@ -2637,8 +2667,8 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--sa-text);
 }
 .spark-admin .sa-promo-usages-date .sa-input { min-width: 170px; }
@@ -2682,8 +2712,9 @@
 }
 .spark-admin .sa-product-page-head-text h2 {
   margin: 0 0 4px;
-  font-size: 1.5rem;
-  font-weight: 800;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 32px;
   color: var(--sa-text);
 }
 .spark-admin .sa-product-page-head-text p {
@@ -2700,7 +2731,7 @@
 .spark-admin .sa-product-page-head-actions .sa-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 .spark-admin .sa-product-page-form {
   display: flex;
@@ -2714,8 +2745,8 @@
 }
 .spark-admin .sa-product-detail-card h3 {
   margin: 0;
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--sa-text);
 }
 .spark-admin .sa-product-kv {
@@ -2762,7 +2793,7 @@
  * ========================================================================== */
 .spark-admin .sa-entity-panel {
   border: 1px solid var(--sa-card-border);
-  border-radius: 16px;
+  border-radius: 12px;
   background: #fff;
   padding: 16px 20px;
   display: flex;
@@ -2776,7 +2807,7 @@
 .spark-admin .sa-entity-panel h2 {
   margin: 0;
   font-size: 1.1rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--sa-text);
 }
 .spark-admin .sa-entity-panel-sub {
@@ -2788,15 +2819,15 @@
 .spark-admin .sa-entity-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 0.95rem;
-  font-weight: 600;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
   max-width: 420px;
   color: var(--sa-text);
 }
 .spark-admin .sa-entity-panel-actions {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   justify-content: flex-end;
 }
 @media (max-width: 640px) {
@@ -2805,5 +2836,30 @@
   }
   .spark-admin .sa-entity-panel-actions .sa-btn {
     width: 100%;
+  }
+}
+
+/* ---------- Đợt 26: thanh sticky đầu trang chi tiết/form ----------
+   position sticky, nền trắng, viền dưới mảnh; dưới 600px các nút trong bar
+   xuống hàng chia đều chiều ngang, giữ thứ tự. Áp cho header trang chi tiết
+   SP/KM/Trả/Đánh giá/Đơn (class này) — header form do worker A gắn. */
+.spark-admin .sa-page-sticky-head {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #fff;
+  border-bottom: 1px solid var(--sa-card-border);
+  padding: 12px 0;
+}
+@media (max-width: 600px) {
+  .spark-admin .sa-page-sticky-head .sa-promo-page-head-actions,
+  .spark-admin .sa-page-sticky-head .sa-product-page-head-actions,
+  .spark-admin .sa-page-sticky-head .od-header-actions {
+    width: 100%;
+  }
+  .spark-admin .sa-page-sticky-head .sa-promo-page-head-actions .sa-btn,
+  .spark-admin .sa-page-sticky-head .sa-product-page-head-actions .sa-btn,
+  .spark-admin .sa-page-sticky-head .od-header-actions .sa-btn {
+    flex: 1;
   }
 }

@@ -81,7 +81,7 @@ export function MoneyInput({ id, value, onChange, testid, errorId, disabled, pla
   error?: boolean;
 }) {
   return (
-    <span className="sa-money-wrap">
+    <span className={`sa-money-wrap${error ? ' sa-money-wrap-error' : ''}`}>
       <input
         id={id}
         className={`sa-input sa-money-input${readOnly ? ' sa-view-input' : ''}${error ? ' sa-input-error' : ''}`}
@@ -179,7 +179,7 @@ export function CategoryPicker({ value, categories, onChange, testid, errorId, p
 
 export interface UploadImageItem {
   id: string;
-  /** URL ảnh đã upload xong (hoặc URL tay nhập / ảnh cũ). */
+  /** URL ảnh đã upload xong (hoặc ảnh cũ). */
   url: string;
   /** Preview local (object URL) trong lúc chờ upload; mặc định = url. */
   previewUrl: string;
@@ -217,8 +217,6 @@ export function ImageUploader({ prefix, images, onChange, multiple, max }: Image
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragIndexRef = useRef<number | null>(null);
   const [dragOver, setDragOver] = useState(false);
-  const [linkOpen, setLinkOpen] = useState(false);
-  const [linkUrl, setLinkUrl] = useState('');
   const [dropError, setDropError] = useState<string | null>(null);
   const imagesRef = useRef(images);
   imagesRef.current = images;
@@ -289,17 +287,6 @@ export function ImageUploader({ prefix, images, onChange, multiple, max }: Image
     const [picked] = next.splice(index, 1);
     next.unshift(picked);
     onChange(next);
-  };
-
-  const addLink = () => {
-    const url = linkUrl.trim();
-    if (!url) return;
-    if (!/^https?:\/\/.+/i.test(url)) { setDropError('Link ảnh phải bắt đầu bằng http:// hoặc https://.'); return; }
-    if (imagesRef.current.length >= maxImages) { setDropError(`Tối đa ${maxImages} ảnh.`); return; }
-    setDropError(null);
-    onChange([...imagesRef.current, imageItemFromUrl(url)]);
-    setLinkUrl('');
-    setLinkOpen(false);
   };
 
   const thumbTestid = (i: number) => (multiple ? `${prefix}-thumb-${i}` : `${prefix}-thumb`);
@@ -422,28 +409,6 @@ export function ImageUploader({ prefix, images, onChange, multiple, max }: Image
             </div>
           ))}
         </div>
-      )}
-      <button
-        type="button"
-        className="sa-link-btn"
-        data-testid={`${prefix}-link-toggle`}
-        onClick={() => setLinkOpen(v => !v)}
-      >
-        Hoặc dán link ảnh
-      </button>
-      {linkOpen && (
-        <span className="sa-link-row">
-          <input
-            className="sa-input"
-            placeholder="https://..."
-            value={linkUrl}
-            data-testid={`${prefix}-url-input`}
-            aria-label="Link ảnh"
-            onChange={e => setLinkUrl(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addLink(); } }}
-          />
-          <button type="button" className="sa-btn sa-btn-ghost" onClick={addLink}>Thêm</button>
-        </span>
       )}
     </div>
   );

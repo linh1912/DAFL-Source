@@ -12,10 +12,10 @@
   --db-muted: var(--sa-text-muted, #6b7280);
   --db-border: var(--sa-border, #e5e7eb);
   --db-surface: var(--sa-surface, #ffffff);
-  --db-primary: var(--sa-primary, #051c12);
-  --db-accent: var(--sa-accent, #b4f105);
-  --db-success: var(--sa-success, #15803d);
-  --db-danger: var(--sa-danger, #dc2626);
+  --db-primary: var(--sa-primary, #166534);
+  --db-accent: var(--sa-accent, #bff53c);
+  --db-success: var(--sa-success, #166534);
+  --db-danger: var(--sa-danger, #b42318);
   --db-info: var(--sa-info, #1d4ed8);
   --db-radius: var(--sa-radius-md, 12px);
 
@@ -47,15 +47,7 @@
   margin: 0;
   font-size: 24px;
   line-height: 32px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.sa-dashboard .db-sub {
-  margin: 4px 0 0;
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--db-muted);
+  font-weight: 600;
 }
 
 .sa-dashboard .db-head-actions {
@@ -126,8 +118,8 @@
 
 /* Nút icon Làm mới 40×40 */
 .sa-dashboard .db-icon-btn {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -211,6 +203,7 @@
   font-size: 13px;
   font-weight: 600;
   line-height: 20px;
+  height: 38px;
   padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
@@ -292,7 +285,7 @@
   margin: 0;
   font-size: 15px;
   line-height: 22px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .sa-dashboard .db-card-tools {
@@ -345,7 +338,7 @@
 
 .sa-dashboard .db-kpi:hover {
   border-color: #d1d5db;
-  box-shadow: 0 2px 8px rgba(17, 24, 39, 0.06);
+  box-shadow: var(--sa-shadow-card, 0 1px 2px rgba(0,0,0,.04));
 }
 
 .sa-dashboard .db-kpi-label {
@@ -358,8 +351,7 @@
 .sa-dashboard .db-kpi-value {
   font-size: 28px;
   line-height: 36px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-weight: 600;
 }
 
 .sa-dashboard .db-kpi-sub {
@@ -467,7 +459,7 @@
   background: #ffffff;
   border: 1px solid var(--db-border);
   border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.12);
+  box-shadow: var(--sa-shadow-card, 0 1px 2px rgba(0,0,0,.04)); border: 1px solid var(--db-border);
   padding: 10px 12px;
   font-size: 13px;
   line-height: 20px;
@@ -475,7 +467,7 @@
 
 .sa-dashboard .db-tooltip-title {
   margin: 0 0 4px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .sa-dashboard .db-tooltip p {
@@ -488,7 +480,7 @@
 
 .sa-dashboard .db-donut-total {
   font-size: 28px;
-  font-weight: 700;
+  font-weight: 600;
   fill: var(--db-text);
 }
 
@@ -543,7 +535,7 @@
 }
 
 .sa-dashboard .db-donut-legend-count {
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .sa-dashboard .db-donut-legend-pct {
@@ -652,7 +644,7 @@
 }
 
 .sa-dashboard .db-money {
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .sa-dashboard .db-code {
@@ -687,7 +679,7 @@
   justify-content: center;
   color: #ffffff;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .sa-dashboard .db-customer-info {
@@ -766,7 +758,7 @@
   align-items: center;
   justify-content: center;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .sa-dashboard .db-rank--top {
@@ -789,7 +781,7 @@
   justify-content: center;
   color: #ffffff;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .sa-dashboard .db-top-info {
@@ -874,7 +866,7 @@
 }
 
 .sa-dashboard .db-plain-count {
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .sa-dashboard .db-plain-pct {
@@ -939,7 +931,7 @@
 .sa-dashboard .db-promo-code {
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   background: #f3f4f6;
   border: 1px dashed #d1d5db;
   border-radius: 6px;

@@ -57,6 +57,12 @@ export const messages = {
         title: 'Đổi trạng thái sản phẩm thành công!',
         desc: "Sản phẩm '{tên}' đã được cập nhật trạng thái.",
       },
+      /** Đợt 24/25/26 — form SP dùng chung một toast thành công, không nêu
+       *  tên SP (added/updated cũ giữ lại để tương thích). */
+      saved: {
+        title: 'Đã lưu sản phẩm',
+        desc: 'Sản phẩm đã được lưu.',
+      },
       duplicateName: {
         title: 'Tên sản phẩm đã tồn tại',
         desc: 'Vui lòng dùng tên khác.',
@@ -248,6 +254,14 @@ export const messages = {
       failed: {
         title: 'Tải ảnh thất bại',
         desc: "Không thể tải '{tên file}' lên. Vui lòng thử lại.",
+      },
+    },
+    /** Đợt 24/25/26 — toast khi bấm Lưu mà form còn lỗi validate (hiện kèm
+     *  lỗi đỏ dưới từng ô + focus ô lỗi đầu). */
+    form: {
+      invalid: {
+        title: 'Vui lòng kiểm tra lại các trường bắt buộc',
+        desc: 'Một số trường chưa hợp lệ. Vui lòng kiểm tra lại các trường được đánh dấu.',
       },
     },
   },
@@ -497,9 +511,9 @@ export const messages = {
       confirmText: 'Xác nhận trừ điểm',
     },
     discardForm: {
-      title: 'Thoát mà chưa lưu?',
+      title: 'Hủy các thay đổi?',
       message: 'Các thay đổi bạn vừa nhập sẽ bị mất.',
-      confirmText: 'Thoát',
+      confirmText: 'Rời trang',
     },
     /** G3 — đăng xuất (nút trong menu tài khoản, AdminPage). */
     logout: {

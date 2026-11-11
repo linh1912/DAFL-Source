@@ -366,7 +366,9 @@ describe('AdminPage', () => {
     // Footer view ở header sticky của trang ([Đóng] + [Chỉnh sửa]), không còn .fs-foot.
     const footerBtns = within(screen.getByTestId('admin-category-detail-page')).getAllByRole('button')
       .filter(b => b.closest('.sa-promo-page-head-actions'));
-    expect(footerBtns).toHaveLength(2);
+    // Đợt 25/26: header sticky có thêm nút [← Quay lại] đầu tiên.
+    expect(footerBtns).toHaveLength(3);
+    expect(screen.getByTestId('admin-category-form-back-btn')).toHaveTextContent('Quay lại');
     expect(screen.getByTestId('admin-category-cancel-btn')).toHaveTextContent('Đóng');
     expect(screen.getByTestId('admin-category-edit-btn')).toHaveTextContent('Chỉnh sửa');
     expect(screen.queryByTestId('admin-category-save-btn')).toBeNull();
@@ -477,7 +479,7 @@ describe('AdminPage', () => {
     expect(document.querySelector('.sa-breadcrumb, [class*="breadcrumb"]')).toBeNull();
   });
 
-  it('Toolbar Sản phẩm (đợt 21): PageToolbar lọc ngay — tìm trái, Đặt lại bộ lọc (chữ, disable khi chưa lọc)/+ Thêm mới phải, KHÔNG nút Tìm, KHÔNG Export', async () => {
+  it('Toolbar Sản phẩm (đợt 21 + đợt 24/26): PageToolbar lọc ngay — tìm trái, Đặt lại bộ lọc (chỉ icon, disable khi chưa lọc)/+ Thêm mới phải, KHÔNG nút Tìm, KHÔNG Export', async () => {
     mockFetchAdmin(urlStr => {
       if (urlStr.includes('/api/products') || urlStr.includes('/api/admin/products')) return mkProducts(1);
       if (urlStr.includes('/api/admin/categories')) return mkCategories(1);
@@ -500,21 +502,25 @@ describe('AdminPage', () => {
     // Nút Thêm mới là phần tử cuối cùng của nhóm phải.
     expect(right!.lastElementChild).toBe(addBtn);
     // Ô tìm ở nhóm trái, placeholder tìm theo tên hoặc mã; KHÔNG còn nút icon Tìm
-    // (lọc áp dụng ngay khi gõ/đổi dropdown, debounce 120ms).
+    // (lọc áp dụng ngay khi gõ/đổi dropdown, debounce 300ms).
     const searchInput = screen.getByTestId('products-search-input');
     expect(searchInput.closest('.sa-page-toolbar-left')).not.toBeNull();
     expect(searchInput).toHaveAttribute('placeholder', 'Tìm tên hoặc mã sản phẩm...');
     expect(screen.queryByTestId('products-search-btn')).toBeNull();
-    // Chưa gõ thì không có nút × xóa nhanh; nút Đặt lại là nút chữ, disable khi chưa lọc.
+    // Chưa gõ thì không có nút × xóa nhanh; nút Đặt lại đợt 24/26 chỉ còn icon
+    // RotateCcw 38px (không còn chữ) — tooltip + aria-label "Đặt lại bộ lọc", disable khi chưa lọc.
     expect(screen.queryByTestId('products-search-clear-btn')).toBeNull();
     const resetBtn = screen.getByTestId('products-reset-btn');
-    expect(resetBtn).toHaveTextContent('Đặt lại bộ lọc');
+    expect(resetBtn).toHaveTextContent('');
+    expect(resetBtn).toHaveAttribute('aria-label', 'Đặt lại bộ lọc');
+    expect(resetBtn).toHaveAttribute('title', 'Đặt lại bộ lọc');
+    expect(resetBtn.querySelector('svg.lucide-rotate-ccw')).not.toBeNull();
     expect(resetBtn).toBeDisabled();
     expect(resetBtn.closest('.sa-page-toolbar-right')).not.toBeNull();
-    // Dropdown Trạng thái mặc định "Tất cả" (Tất cả / Đang hoạt động / Ngừng hoạt động).
+    // Dropdown Trạng thái mặc định "Trạng thái" (Trạng thái / Đang hoạt động / Ngừng hoạt động).
     const statusFilter = screen.getByTestId('admin-status-filter');
     expect(statusFilter).toHaveValue('');
-    expect(within(statusFilter).getByText('Tất cả')).toBeInTheDocument();
+    expect(within(statusFilter).getByText('Trạng thái')).toBeInTheDocument();
     expect(within(statusFilter).getByText('Đang hoạt động')).toBeInTheDocument();
     expect(within(statusFilter).getByText('Ngừng hoạt động')).toBeInTheDocument();
     // BỎ HẲN Export (đợt 18): không còn nút Export nào, không còn nút Làm mới riêng.
@@ -524,7 +530,7 @@ describe('AdminPage', () => {
     expect(screen.getByTestId('admin-products-pagination')).toBeInTheDocument();
   });
 
-  it('Toolbar (đợt 21): toolbar SP không nút icon Tìm/Đặt lại — chỉ icon Lucide Search trong ô tìm, KHÔNG còn emoji 🔍/↺ trong toolbar admin', async () => {
+  it('Toolbar (đợt 21 + đợt 24/26): toolbar SP không nút icon Tìm — chỉ icon Lucide Search trong ô tìm + icon RotateCcw ở nút Đặt lại, KHÔNG còn emoji 🔍/↺ trong toolbar admin', async () => {
     mockFetchAdmin(urlStr => {
       if (urlStr.includes('/api/products') || urlStr.includes('/api/admin/products')) return mkProducts(1);
       if (urlStr.includes('/api/admin/categories')) return mkCategories(1);
@@ -543,11 +549,13 @@ describe('AdminPage', () => {
     // Không còn ký tự emoji trong toàn bộ toolbar.
     expect(toolbar.textContent).not.toContain('🔍');
     expect(toolbar.textContent).not.toContain('↺');
-    // Đợt 21: toolbar SP lọc ngay nên KHÔNG còn nút icon Tìm (Search) hay
-    // nút icon Đặt lại (RotateCcw) — nút Đặt lại là nút chữ.
+    // Đợt 24/26: toolbar SP lọc ngay nên KHÔNG còn nút icon Tìm (Search);
+    // nút Đặt lại CHỈ còn icon RotateCcw (không còn chữ "Đặt lại bộ lọc").
     expect(screen.queryByTestId('products-search-btn')).toBeNull();
-    expect(toolbar.querySelector('svg.lucide-rotate-ccw')).toBeNull();
-    expect(screen.getByTestId('products-reset-btn')).toHaveTextContent('Đặt lại bộ lọc');
+    expect(toolbar.querySelector('svg.lucide-rotate-ccw')).not.toBeNull();
+    const resetBtn = screen.getByTestId('products-reset-btn');
+    expect(resetBtn).toHaveTextContent('');
+    expect(resetBtn).toHaveAttribute('aria-label', 'Đặt lại bộ lọc');
     // Icon kính lúp trong ô tìm vẫn là Lucide Search.
     const inputIcon = document.querySelector('.sa-page-toolbar-search-icon svg.lucide-search');
     expect(inputIcon).not.toBeNull();
@@ -579,7 +587,7 @@ describe('AdminPage', () => {
     expect(screen.getByText('Son lì MAC')).toBeInTheDocument();
     expect(screen.getByText('Kem dưỡng A')).toBeInTheDocument();
 
-    // (a) Tìm theo tên (không dấu, debounce 120ms): 'son' khớp 2 SP Son, không khớp Kem.
+    // (a) Tìm theo tên (không dấu, debounce 300ms): 'son' khớp 2 SP Son, không khớp Kem.
     fireEvent.change(screen.getByTestId('products-search-input'), { target: { value: 'son' } });
     await waitFor(() => {
       expect(screen.queryByText('Kem dưỡng A')).toBeNull();
@@ -724,6 +732,8 @@ describe('AdminPage', () => {
     expect(screen.getByTestId('admin-product-stock-error')).toHaveTextContent('Vui lòng bổ sung thông tin bắt buộc.');
     expect(screen.getByTestId('admin-product-create-page')).toBeInTheDocument();
     expect(calledWith('/api/admin/products', 'POST')).toBe(false);
+    // Lưu thiếu trường còn hiện toast cảnh báo chung (đợt 25).
+    expect(screen.getByText('Vui lòng kiểm tra lại các trường bắt buộc')).toBeInTheDocument();
 
     // Điền đủ trường hợp lệ → lưu thành công: POST + toast + về danh sách.
     fireEvent.change(screen.getByTestId('admin-product-name-input'), { target: { value: 'Son kem test' } });
@@ -733,15 +743,17 @@ describe('AdminPage', () => {
     await waitFor(() => {
       expect(calledWith('/api/admin/products', 'POST')).toBe(true);
     });
+    // Đợt 25/26: toast lưu chung "Đã lưu sản phẩm" (không nêu tên); dùng
+    // getByText vì toast cảnh báo lúc lưu thiếu vẫn còn trong host.
     await waitFor(() => {
-      expect(screen.getByTestId('admin-toast-title')).toHaveTextContent('Đã thêm sản phẩm');
+      expect(screen.getByText('Đã lưu sản phẩm')).toBeInTheDocument();
     });
     await waitFor(() => {
       expect(screen.getByTestId('products-add-btn')).toBeInTheDocument();
     });
   });
 
-  it('Toolbar Đơn hàng (đợt 21): không nút Thêm mới/Tìm; ô tìm + nút × khi gõ + dropdown "Trạng thái" + nút chữ "Đặt lại bộ lọc" (disable khi chưa lọc) + số kết quả, KHÔNG Export', async () => {
+  it('Toolbar Đơn hàng (đợt 21 + đợt 24/26): không nút Thêm mới/Tìm; ô tìm + nút × khi gõ + dropdown "Trạng thái" + nút Đặt lại chỉ icon (disable khi chưa lọc) + số kết quả, KHÔNG Export', async () => {
     mockFetchAdmin(urlStr => {
       if (urlStr.includes('/api/admin/orders')) return mkOrders(1);
       return undefined;
@@ -760,9 +772,11 @@ describe('AdminPage', () => {
     expect(screen.getByTestId('orders-search-input').closest('.sa-page-toolbar-left')).not.toBeNull();
     // Không còn nút icon Tìm kiếm (lọc áp dụng ngay khi gõ/đổi dropdown).
     expect(screen.queryByTestId('orders-search-btn')).toBeNull();
-    // Nút Đặt lại là nút chữ, disable khi chưa có từ khóa/trạng thái.
+    // Nút Đặt lại đợt 24/26 chỉ còn icon RotateCcw, disable khi chưa có từ khóa/trạng thái.
     const resetBtn = screen.getByTestId('orders-reset-btn');
-    expect(resetBtn).toHaveTextContent('Đặt lại bộ lọc');
+    expect(resetBtn).toHaveTextContent('');
+    expect(resetBtn).toHaveAttribute('aria-label', 'Đặt lại bộ lọc');
+    expect(resetBtn.querySelector('svg.lucide-rotate-ccw')).not.toBeNull();
     expect(resetBtn).toBeDisabled();
     expect(resetBtn.closest('.sa-page-toolbar-right')).not.toBeNull();
     // Chưa gõ thì không có nút × xóa nhanh; số kết quả "1 / 1 đơn".
@@ -867,7 +881,7 @@ describe('AdminPage', () => {
     fireEvent.click(screen.getByTestId('admin-nav-orders'));
   };
 
-  it('Lọc trạng thái đơn (đợt 21): dropdown 7 lựa chọn "Trạng thái" + 6 nhóm; "Chờ xác nhận" gộp Pending+Paid, pill có chấm + màu đúng', async () => {
+  it('Lọc trạng thái đơn (đợt 21 + đợt 26): dropdown 7 lựa chọn "Trạng thái" + 6 nhóm; "Chờ xác nhận" gộp Pending+Paid, pill KHÔNG chấm + màu đúng', async () => {
     mockFetchAdmin(urlStr => {
       if (urlStr.includes('/api/admin/orders')) return mkOrdersMixed();
       return undefined;
@@ -881,14 +895,14 @@ describe('AdminPage', () => {
     const options = within(screen.getByTestId('admin-order-status-filter')).getAllByRole('option').map(o => o.textContent);
     expect(options).toEqual(['Trạng thái', 'Chờ xác nhận', 'Đã xác nhận', 'Đang giao', 'Hoàn thành', 'Đã hủy', 'Hết hạn thanh toán']);
     expect(screen.getByTestId('admin-orders-result-count')).toHaveTextContent('4 / 4 đơn');
-    // Pill trạng thái có chấm tròn; PayOS hiện badge viền. (Scope vào bảng để
-    // không dính option "Chờ xác nhận" trong dropdown lọc.)
+    // Pill trạng thái KHÔNG còn chấm tròn (đợt 26); PayOS hiện badge viền.
+    // (Scope vào bảng để không dính option "Chờ xác nhận" trong dropdown lọc.)
     const awaitingPills = Array.from(document.querySelectorAll('.sa-orders-table-wrap .sa-pill'))
       .filter(p => p.textContent === 'Chờ xác nhận');
     expect(awaitingPills).toHaveLength(2);
     awaitingPills.forEach(p => {
       expect(p).toHaveClass('sa-pill-amber');
-      expect(p!.querySelector('.sa-dot')).not.toBeNull();
+      expect(p!.querySelector('.sa-dot')).toBeNull();
     });
     expect(screen.getByText('PayOS')).toHaveClass('sa-orders-pay-badge');
 
@@ -909,7 +923,7 @@ describe('AdminPage', () => {
     expect(screen.getByTestId('admin-orders-result-count')).toHaveTextContent('1 / 4 đơn');
   });
 
-  it('Tìm đơn (đợt 21): gõ "nguyen" (không dấu) khớp "Nguyễn Văn A"; debounce 120ms nên bảng chưa đổi ngay; nút × xóa nhanh khôi phục', async () => {
+  it('Tìm đơn (đợt 21 + đợt 24/26): gõ "nguyen" (không dấu) khớp "Nguyễn Văn A"; debounce 300ms nên bảng chưa đổi ngay; nút × xóa nhanh khôi phục', async () => {
     mockFetchAdmin(urlStr => {
       if (urlStr.includes('/api/admin/orders')) return mkOrdersMixed();
       return undefined;
@@ -925,7 +939,7 @@ describe('AdminPage', () => {
     expect(screen.getByTestId('admin-orders-result-count')).toHaveTextContent('4 / 4 đơn');
     // Nút × đã hiện ngay khi có chữ (không chờ debounce).
     expect(screen.getByTestId('orders-search-clear-btn')).toBeInTheDocument();
-    // Sau 120ms: chỉ còn đơn khớp không dấu.
+    // Sau 300ms: chỉ còn đơn khớp không dấu.
     await waitFor(() => {
       expect(screen.queryByText('Trần Thị B')).toBeNull();
     });
@@ -951,7 +965,7 @@ describe('AdminPage', () => {
     });
     const input = screen.getByTestId('orders-search-input');
     fireEvent.change(input, { target: { value: 'DH-1003' } });
-    // Chờ đơn KHÔNG khớp biến mất (debounce 120ms) — không chờ 'Lê Văn C'
+    // Chờ đơn KHÔNG khớp biến mất (debounce 300ms) — không chờ 'Lê Văn C'
     // vì đơn này đã hiện sẵn trước khi lọc.
     await waitFor(() => {
       expect(screen.queryByText('Nguyễn Văn A')).toBeNull();
@@ -1130,7 +1144,9 @@ describe('AdminPage', () => {
     // "Kích hoạt ngay sau khi tạo" (tạo mới mặc định Nháp).
     expect(screen.queryByTestId('admin-promo-generate-code-btn')).toBeNull();
     expect(screen.queryByTestId('admin-promo-status-toggle')).toBeNull();
-    expect(screen.getByTestId('admin-promo-status-text')).toHaveTextContent('Nháp');
+    // Đợt 24/26: trang tạo KM không còn dòng trạng thái (mới tạo mặc định Nháp
+    // ở BE, không hiện toggle/text trạng thái trên form full page).
+    expect(screen.queryByTestId('admin-promo-status-text')).toBeNull();
     // Danh sách đã bị thay bằng trang form (không còn trong DOM).
     expect(screen.queryByText('Chưa có khuyến mãi nào')).toBeNull();
     expect(screen.queryByTestId('admin-form-back-btn')).toBeNull();
@@ -1203,10 +1219,12 @@ describe('AdminPage', () => {
       expect(screen.getByText('SP trả 01')).toBeInTheDocument();
     });
     expect(screen.getByTestId('returns-search-input')).toBeInTheDocument();
-    // Đợt 21: tìm/lọc TỰ ĐỘNG (debounce 120ms) nên KHÔNG còn nút icon Tìm;
-    // nút Đặt lại là nút chữ "Đặt lại bộ lọc".
+    // Đợt 21: tìm/lọc TỰ ĐỘNG (debounce 300ms) nên KHÔNG còn nút icon Tìm;
+    // nút Đặt lại đợt 24/26 chỉ còn icon RotateCcw.
     expect(screen.queryByTestId('returns-search-btn')).toBeNull();
-    expect(screen.getByTestId('returns-reset-btn')).toHaveTextContent('Đặt lại bộ lọc');
+    const returnsResetBtn = screen.getByTestId('returns-reset-btn');
+    expect(returnsResetBtn).toHaveTextContent('');
+    expect(returnsResetBtn).toHaveAttribute('aria-label', 'Đặt lại bộ lọc');
     expect(screen.queryByTestId('returns-refresh-btn')).toBeNull();
     expect(screen.queryByRole('button', { name: /Export/ })).toBeNull();
     // Trang Trả hàng không còn chứa bảng nhật ký nữa.
@@ -1223,7 +1241,7 @@ describe('AdminPage', () => {
     expect(screen.getByText('SP trả 11')).toBeInTheDocument();
   });
 
-  it('Nhật ký hệ thống (đợt 18): PageToolbar Tìm/Đặt lại + phân trang riêng bảng nhật ký', async () => {
+  it('Nhật ký hệ thống (đợt 18 + đợt 24/26): PageToolbar Đặt lại (chỉ icon, không nút Tìm) + phân trang riêng bảng nhật ký', async () => {
     mockFetchAdmin(urlStr => {
       if (urlStr.includes('/api/admin/audit-log')) return mkAudit(12);
       return undefined;
@@ -1238,8 +1256,11 @@ describe('AdminPage', () => {
       expect(screen.getByText('Cập nhật đơn DH-2000')).toBeInTheDocument();
     });
     expect(screen.getByTestId('logs-search-input')).toBeInTheDocument();
-    expect(screen.getByTestId('logs-search-btn')).toBeInTheDocument();
-    expect(screen.getByTestId('logs-reset-btn')).toBeInTheDocument();
+    // Đợt 24/26: KHÔNG còn nút Tìm (lọc tự động); nút Đặt lại chỉ còn icon.
+    expect(screen.queryByTestId('logs-search-btn')).toBeNull();
+    const logsResetBtn = screen.getByTestId('logs-reset-btn');
+    expect(logsResetBtn).toHaveTextContent('');
+    expect(logsResetBtn).toHaveAttribute('aria-label', 'Đặt lại bộ lọc');
     expect(screen.queryByTestId('logs-refresh-btn')).toBeNull();
     expect(screen.queryByRole('button', { name: /Export/ })).toBeNull();
     // Trang Nhật ký không còn chứa bảng trả hàng nữa.
@@ -1298,7 +1319,9 @@ describe('AdminPage', () => {
     // Footer view ở header sticky của trang ([Đóng] + [Chỉnh sửa]), không còn .fs-foot.
     const footerBtns = within(screen.getByTestId('admin-customer-detail-page')).getAllByRole('button')
       .filter(b => b.closest('.sa-promo-page-head-actions'));
-    expect(footerBtns).toHaveLength(2);
+    // Đợt 25/26: header sticky có thêm nút [← Quay lại] đầu tiên.
+    expect(footerBtns).toHaveLength(3);
+    expect(screen.getByTestId('admin-customer-form-back-btn')).toHaveTextContent('Quay lại');
     expect(screen.getByTestId('admin-customer-cancel-btn')).toHaveTextContent('Đóng');
     expect(screen.getByTestId('admin-customer-edit-btn')).toHaveTextContent('Chỉnh sửa');
     // Bấm [Chỉnh sửa] sang TRANG edit giữ dữ liệu, Mã KH + Email vẫn disable.
@@ -1312,7 +1335,7 @@ describe('AdminPage', () => {
     expect(screen.getByTestId('admin-customer-email-input')).toBeDisabled();
   });
 
-  it('Nhật ký (đợt 18): lọc theo khoảng ngày (bấm Tìm ở toolbar) chỉ giữ các dòng trong khoảng', async () => {
+  it('Nhật ký (đợt 18 + đợt 24/26): lọc theo khoảng ngày (đổi ngày ở toolbar, lọc ngay không cần bấm Tìm) chỉ giữ các dòng trong khoảng', async () => {
     const auditRows = [
       { id: 'a1', actorEmail: 'admin@dafl.vn', action: 'Xóa sản phẩm SP-01', entityType: 'Product', entityId: 'p1', createdAt: '2026-11-01T10:00:00Z' },
       { id: 'a2', actorEmail: 'admin@dafl.vn', action: 'Cập nhật đơn DH-2001', entityType: 'Order', entityId: 'o1', createdAt: '2026-11-05T10:00:00Z' },
@@ -1333,17 +1356,16 @@ describe('AdminPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Xóa sản phẩm SP-01')).toBeInTheDocument();
     });
-    // Chưa bấm Tìm: cả 4 dòng đều hiện (ô ngày chỉ là bản nháp).
+    // Chưa nhập khoảng ngày: cả 4 dòng đều hiện.
     expect(screen.getByText('Duyệt trả hàng TH-01')).toBeInTheDocument();
     expect(screen.getByTestId('admin-log-date-from')).toBeInTheDocument();
     expect(screen.getByTestId('admin-log-date-to')).toBeInTheDocument();
 
-    // Bấm nút Tìm ở toolbar Nhật ký (admin-log-filter-btn đã BỎ đợt 18):
-    // khoảng ngày Từ/Đến chỉ áp dụng khi bấm Tìm/Enter.
+    // Đợt 24/26: khoảng ngày Từ/Đến áp dụng NGAY khi đổi (không còn nút Tìm).
+    expect(screen.queryByTestId('logs-search-btn')).toBeNull();
+    expect(screen.queryByTestId('admin-log-filter-btn')).toBeNull();
     fireEvent.change(screen.getByTestId('admin-log-date-from'), { target: { value: '2026-11-05' } });
     fireEvent.change(screen.getByTestId('admin-log-date-to'), { target: { value: '2026-11-08' } });
-    expect(screen.queryByTestId('admin-log-filter-btn')).toBeNull();
-    fireEvent.click(screen.getByTestId('logs-search-btn'));
 
     await waitFor(() => {
       expect(screen.queryByText('Xóa sản phẩm SP-01')).toBeNull();
@@ -1461,7 +1483,7 @@ describe('AdminPage', () => {
     // Nháp + Đang chạy đều có toggle (Nháp tắt, Đang chạy bật); mọi dòng đều có
     // icon Lượt sử dụng (History); không còn nút chữ "Lượt dùng".
     const statusOptions = Array.from(screen.getByTestId('admin-status-filter').querySelectorAll('option')).map(o => o.textContent);
-    expect(statusOptions).toEqual(['Tất cả trạng thái', 'Nháp', 'Đang hoạt động', 'Tạm ngưng', 'Đã hết hạn']);
+    expect(statusOptions).toEqual(['Trạng thái', 'Nháp', 'Đang hoạt động', 'Tạm ngưng', 'Đã hết hạn']);
     expect(screen.getAllByText('Phần trăm').length).toBeGreaterThan(0);
     expect(screen.getByTestId('admin-promo-status-switch-promo-draft')).toHaveAttribute('aria-checked', 'false');
     expect(screen.getByTestId('admin-promo-status-switch-promo-active')).toHaveAttribute('aria-checked', 'true');
@@ -1626,7 +1648,10 @@ describe('AdminPage', () => {
     expect(freeship).toHaveAttribute('aria-checked', 'true');
     expect(percent).toHaveAttribute('aria-checked', 'false');
     expect(screen.queryByTestId('admin-promo-value-input')).toBeNull();
-    expect(screen.getByTestId('admin-promo-value-freeship-note')).toHaveTextContent('không cần nhập giá trị');
+    // Đợt 24 giai đoạn 1: FreeShip không còn ghi chú dưới ô (đã bỏ text phụ);
+    // dải xem trước realtime hiện "Miễn phí vận chuyển cho mọi đơn hàng".
+    expect(screen.queryByTestId('admin-promo-value-freeship-note')).toBeNull();
+    expect(screen.getByTestId('admin-promo-value-preview')).toHaveTextContent('Miễn phí vận chuyển cho mọi đơn hàng');
 
     fireEvent.change(screen.getByTestId('admin-promo-code-input'), { target: { value: 'FREESHIP1' } });
     fireEvent.click(screen.getByTestId('admin-promo-save-btn'));
@@ -1976,15 +2001,18 @@ describe('AdminPage', () => {
     expect(fileInput).toHaveAttribute('type', 'file');
     expect(fileInput).not.toHaveStyle('display: none');
     expect(dropzone).toContainElement(fileInput);
-    // Bộ đếm tên, toggle trạng thái, preview realtime, nút +/- tồn kho, link dán URL.
-    expect(screen.getByTestId('admin-product-name-count')).toHaveTextContent('0/120');
-    expect(screen.getByTestId('admin-product-status-toggle')).toBeInTheDocument();
+    // Đợt 25/26: KHÔNG còn bộ đếm tên (0/120) hay dán link ảnh; toggle trạng thái
+    // hiện "Đang bán"; preview realtime + nút +/- tồn kho vẫn có; dropzone giữ
+    // dòng định dạng (ngoại lệ được giữ) + input file thật.
+    expect(screen.queryByTestId('admin-product-name-count')).toBeNull();
+    expect(screen.getByTestId('admin-product-name-input')).toHaveAttribute('maxLength', '120');
+    expect(screen.getByTestId('admin-product-status-toggle')).toHaveTextContent('Đang bán');
     expect(screen.getByTestId('admin-product-preview')).toBeInTheDocument();
     expect(screen.getByTestId('admin-product-stock-minus-btn')).toBeInTheDocument();
     expect(screen.getByTestId('admin-product-stock-plus-btn')).toBeInTheDocument();
-    expect(screen.getByTestId('admin-product-image-link-toggle')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('admin-product-image-link-toggle'));
-    expect(screen.getByTestId('admin-product-image-url-input')).toBeInTheDocument();
+    expect(screen.queryByTestId('admin-product-image-link-toggle')).toBeNull();
+    expect(screen.queryByTestId('admin-product-image-url-input')).toBeNull();
+    expect(screen.getByText('PNG, JPG, WEBP – tối đa 5MB – tối đa 8 ảnh')).toBeInTheDocument();
   });
 
   it('Form Sản phẩm: Lưu khi trống hiện lỗi từng ô (tên/giá/danh mục), không gọi POST, form vẫn mở', async () => {
@@ -2017,22 +2045,26 @@ describe('AdminPage', () => {
     expect(calledWith('/api/admin/products', 'POST')).toBe(false);
   });
 
-  it('Form Sản phẩm: gõ giá bán + giá gốc tự hiện "Giảm 20%" + tiền định dạng dấu chấm + +/- tồn kho', async () => {
+  it('Form Sản phẩm (đợt 25/26): gõ giá bán + giá gốc tự hiện chip "-20%" + tiền định dạng dấu chấm + +/- tồn kho + nhãn trạng thái kho', async () => {
     await openProductAddForm();
     fireEvent.change(screen.getByTestId('admin-product-price-input'), { target: { value: '200000' } });
     fireEvent.change(screen.getByTestId('admin-product-original-price-input'), { target: { value: '250000' } });
     await waitFor(() => {
-      expect(screen.getByTestId('admin-product-discount-badge')).toHaveTextContent('Giảm 20%');
+      expect(screen.getByTestId('admin-product-discount-badge')).toHaveTextContent('-20%');
     });
     expect(screen.getByTestId('admin-product-price-input')).toHaveValue('200.000');
     expect(screen.getByTestId('admin-product-original-price-input')).toHaveValue('250.000');
     fireEvent.change(screen.getByTestId('admin-product-name-input'), { target: { value: 'Son kem' } });
-    expect(screen.getByTestId('admin-product-name-count')).toHaveTextContent('7/120');
+    expect(screen.queryByTestId('admin-product-name-count')).toBeNull();
     expect(screen.getByTestId('admin-product-preview')).toHaveTextContent('Son kem');
+    // Nhãn trạng thái kho (đợt 25): chưa nhập thì chưa hiện; 1 → Sắp hết hàng; 0 → Hết hàng.
+    expect(screen.queryByTestId('admin-product-stock-status')).toBeNull();
     fireEvent.click(screen.getByTestId('admin-product-stock-plus-btn'));
     expect(screen.getByTestId('admin-product-stock-input')).toHaveValue('1');
+    expect(screen.getByTestId('admin-product-stock-status')).toHaveTextContent('Sắp hết hàng');
     fireEvent.click(screen.getByTestId('admin-product-stock-minus-btn'));
     expect(screen.getByTestId('admin-product-stock-input')).toHaveValue('0');
+    expect(screen.getByTestId('admin-product-stock-status')).toHaveTextContent('Hết hàng');
     fireEvent.click(screen.getByTestId('admin-product-stock-minus-btn'));
     expect(screen.getByTestId('admin-product-stock-input')).toHaveValue('0');
   });
@@ -2060,8 +2092,8 @@ describe('AdminPage', () => {
     expect(body.imageUrls).toEqual([]);
     expect(body.imageUrl).toBe('');
     await waitFor(() => {
-      expect(screen.getByTestId('admin-toast-title')).toHaveTextContent('Đã thêm sản phẩm');
-      expect(screen.getByTestId('admin-toast-desc')).toHaveTextContent("Sản phẩm 'Son kem mới' đã được thêm vào danh sách.");
+      expect(screen.getByTestId('admin-toast-title')).toHaveTextContent('Đã lưu sản phẩm');
+      expect(screen.getByTestId('admin-toast-desc')).toHaveTextContent('Sản phẩm đã được lưu.');
     });
     // Lưu xong về danh sách SP (không còn trang form trong DOM).
     await waitFor(() => {
@@ -2070,17 +2102,17 @@ describe('AdminPage', () => {
     expect(screen.queryByTestId('admin-product-form')).toBeNull();
   });
 
-  it('Form Sản phẩm (đợt 21): đã sửa mà bấm Hủy thì hỏi "Thoát mà chưa lưu?" — [Ở lại] + [Thoát], đúng 2 nút', async () => {
+  it('Form Sản phẩm (đợt 21 + đợt 25/26): đã sửa mà bấm Hủy thì hỏi "Hủy các thay đổi?" — [Ở lại] + [Rời trang], đúng 2 nút', async () => {
     await openProductAddForm();
     fireEvent.change(screen.getByTestId('admin-product-name-input'), { target: { value: 'Son mới' } });
     fireEvent.click(screen.getByTestId('admin-product-cancel-btn'));
     await waitFor(() => {
       expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument();
     });
-    expect(screen.getByTestId('confirm-dialog-title')).toHaveTextContent('Thoát mà chưa lưu?');
+    expect(screen.getByTestId('confirm-dialog-title')).toHaveTextContent('Hủy các thay đổi?');
     expect(screen.getByTestId('confirm-dialog-message')).toHaveTextContent('Các thay đổi bạn vừa nhập sẽ bị mất.');
     expect(screen.getByTestId('confirm-dialog-cancel-btn')).toHaveTextContent('Ở lại');
-    expect(screen.getByTestId('confirm-dialog-confirm-btn')).toHaveTextContent('Thoát');
+    expect(screen.getByTestId('confirm-dialog-confirm-btn')).toHaveTextContent('Rời trang');
     expect(within(screen.getByTestId('confirm-dialog')).getAllByRole('button')).toHaveLength(2);
     fireEvent.click(screen.getByTestId('confirm-dialog-cancel-btn'));
     await waitFor(() => {
@@ -2109,28 +2141,24 @@ describe('AdminPage', () => {
     expect(screen.getByTestId('products-add-btn')).toBeInTheDocument();
   });
 
-  it('Form Sản phẩm: dán link ảnh thêm thumbnail, đặt ảnh chính đổi thứ tự, xóa ảnh', async () => {
+  it('Form Sản phẩm (đợt 25/26): KHÔNG còn dán link ảnh — chỉ upload file qua dropzone (input file thật + dòng định dạng)', async () => {
     await openProductAddForm();
-    const form = screen.getByTestId('admin-product-form');
-    fireEvent.click(screen.getByTestId('admin-product-image-link-toggle'));
-    fireEvent.change(screen.getByTestId('admin-product-image-url-input'), { target: { value: 'https://example.com/a.jpg' } });
-    fireEvent.click(within(form).getByText('Thêm'));
-    fireEvent.click(screen.getByTestId('admin-product-image-link-toggle'));
-    fireEvent.change(screen.getByTestId('admin-product-image-url-input'), { target: { value: 'https://example.com/b.jpg' } });
-    fireEvent.click(within(form).getByText('Thêm'));
-    await waitFor(() => {
-      expect(screen.getByTestId('admin-product-image-thumb-0')).toBeInTheDocument();
-    });
-    expect(screen.getByTestId('admin-product-image-thumb-1')).toBeInTheDocument();
-    expect(screen.getByText('Ảnh chính')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('admin-product-image-set-main-btn-1'));
-    expect(within(screen.getByTestId('admin-product-image-thumb-0')).getByRole('img')).toHaveAttribute('src', 'https://example.com/b.jpg');
-    fireEvent.click(screen.getByTestId('admin-product-image-remove-btn-0'));
-    expect(screen.queryByTestId('admin-product-image-thumb-1')).toBeNull();
-    expect(screen.getByTestId('admin-product-image-thumb-0')).toBeInTheDocument();
+    const dropzone = screen.getByTestId('admin-product-image-dropzone');
+    expect(dropzone).toBeInTheDocument();
+    expect(screen.queryByTestId('admin-product-image-link-toggle')).toBeNull();
+    expect(screen.queryByTestId('admin-product-image-url-input')).toBeNull();
+    // Input file thật (visually-hidden, không display:none) + dòng định dạng (ngoại lệ được giữ).
+    const fileInput = screen.getByTestId('admin-product-image-input');
+    expect(fileInput).toHaveAttribute('type', 'file');
+    expect(fileInput).not.toHaveStyle('display: none');
+    expect(dropzone).toContainElement(fileInput);
+    expect(screen.getByText('PNG, JPG, WEBP – tối đa 5MB – tối đa 8 ảnh')).toBeInTheDocument();
+    // Chưa chọn file thì chưa có thumbnail nào (đặt ảnh chính / đổi thứ tự /
+    // xóa ảnh kiểm chứng bằng Selenium với upload thật — xem AdminProductImageTest).
+    expect(screen.queryByTestId('admin-product-image-thumb-0')).toBeNull();
   });
 
-  it('Form Danh mục: slug tự sinh từ tên, sửa tay slug thì dừng tự sinh; lưu gọi POST kèm slug + iconUrl', async () => {
+  it('Form Danh mục (đợt 25/26): slug tự sinh từ tên, sửa tay slug thì dừng tự sinh; lưu gọi POST kèm slug, iconUrl rỗng (đã bỏ dán link icon)', async () => {
     mockFetchAdmin(urlStr => {
       if (urlStr.includes('/api/admin/categories')) return mkCategories(1);
       return undefined;
@@ -2152,12 +2180,10 @@ describe('AdminPage', () => {
     fireEvent.change(screen.getByTestId('admin-category-slug-input'), { target: { value: 'son-moi-rieng' } });
     fireEvent.change(screen.getByTestId('admin-category-name-input'), { target: { value: 'Son Môi Khác' } });
     expect(screen.getByTestId('admin-category-slug-input')).toHaveValue('son-moi-rieng');
-    fireEvent.click(screen.getByTestId('admin-category-image-link-toggle'));
-    fireEvent.change(screen.getByTestId('admin-category-image-url-input'), { target: { value: 'https://example.com/cat.jpg' } });
-    fireEvent.click(within(screen.getByTestId('admin-category-form')).getByText('Thêm'));
-    await waitFor(() => {
-      expect(screen.getByTestId('admin-category-image-thumb')).toBeInTheDocument();
-    });
+    // Đợt 25/26: KHÔNG còn dán link icon (chỉ upload file qua dropzone).
+    expect(screen.queryByTestId('admin-category-image-link-toggle')).toBeNull();
+    expect(screen.queryByTestId('admin-category-image-url-input')).toBeNull();
+    expect(screen.getByTestId('admin-category-image-dropzone')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('admin-category-save-btn'));
     await waitFor(() => {
       expect(calledWith('/api/admin/categories', 'POST')).toBe(true);
@@ -2166,7 +2192,8 @@ describe('AdminPage', () => {
     expect(postCall).toBeDefined();
     const body = JSON.parse(String((postCall as [unknown, { body: string }])[1].body));
     expect(body.slug).toBe('son-moi-rieng');
-    expect(body.iconUrl).toBe('https://example.com/cat.jpg');
+    // saveCategory map iconUrl rỗng → null (AdminPage.tsx: iconUrl || null).
+    expect(body.iconUrl).toBeNull();
     await waitFor(() => {
       expect(screen.getByTestId('admin-toast-title')).toHaveTextContent('Đã thêm danh mục');
       expect(screen.getByTestId('admin-toast-desc')).toHaveTextContent("Danh mục 'Son Môi Khác' đã được tạo.");
@@ -2226,7 +2253,7 @@ describe('AdminPage', () => {
     });
   });
 
-  it('Danh mục (đợt 21): tìm TỰ ĐỘNG debounce 120ms, tìm không dấu + số kết quả + empty state + nút Đặt lại', async () => {
+  it('Danh mục (đợt 21 + đợt 24/26): tìm TỰ ĐỘNG debounce 300ms, tìm không dấu + số kết quả + empty state + nút Đặt lại (chỉ icon)', async () => {
     const cats = [
       { id: 'c1', name: 'Son môi', slug: 'son-moi', description: '', isActive: true, sortOrder: 1, productCount: 2 },
       { id: 'c2', name: 'Kem dưỡng', slug: 'kem-duong', description: '', isActive: true, sortOrder: 2, productCount: 1 },
@@ -2244,12 +2271,14 @@ describe('AdminPage', () => {
       expect(screen.getByText('Son môi')).toBeInTheDocument();
     });
     expect(screen.getByTestId('admin-categories-result-count')).toHaveTextContent('2 / 2 danh mục');
-    // Nút icon Tìm đã bỏ (tìm tự động); nút Đặt lại là nút chữ, disable khi chưa lọc.
+    // Nút icon Tìm đã bỏ (tìm tự động); nút Đặt lại đợt 24/26 chỉ còn icon, disable khi chưa lọc.
     expect(screen.queryByTestId('categories-search-btn')).toBeNull();
-    expect(screen.getByTestId('categories-reset-btn')).toHaveTextContent('Đặt lại bộ lọc');
-    expect(screen.getByTestId('categories-reset-btn')).toBeDisabled();
+    const catResetBtn = screen.getByTestId('categories-reset-btn');
+    expect(catResetBtn).toHaveTextContent('');
+    expect(catResetBtn).toHaveAttribute('aria-label', 'Đặt lại bộ lọc');
+    expect(catResetBtn).toBeDisabled();
 
-    // Gõ "son moi" (không dấu) → chưa đủ 120ms thì bảng chưa đổi.
+    // Gõ "son moi" (không dấu) → chưa đủ 300ms thì bảng chưa đổi.
     fireEvent.change(screen.getByTestId('categories-search-input'), { target: { value: 'son moi' } });
     expect(screen.getByText('Kem dưỡng')).toBeInTheDocument();
     // Sau debounce → chỉ còn "Son môi", đếm 1 / 2.

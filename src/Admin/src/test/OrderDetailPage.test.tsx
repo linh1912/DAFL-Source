@@ -120,8 +120,10 @@ describe('OrderDetailPage — route /orders/:code (đợt 21)', () => {
     expect(screen.getByTestId('admin-nav-orders')).toHaveClass('sa-active');
     expect(screen.getByTestId('admin-nav-dashboard')).not.toHaveClass('sa-active');
     expect(screen.queryByTestId('orders-search-input')).toBeNull();
-    // Breadcrumb về danh sách đơn.
-    expect(screen.getByTestId('admin-order-detail-back')).toHaveTextContent('Đơn hàng');
+    // Breadcrumb về danh sách đơn — đợt 25/26: mục đầu là <span> chữ thường
+    // (không còn là nút bấm); testid giữ nguyên tên breadcrumb mới.
+    expect(screen.getByTestId('admin-order-detail-breadcrumb')).toHaveTextContent('Đơn hàng');
+    expect(screen.getByTestId('admin-order-detail-back-btn')).toHaveTextContent('Quay lại');
   });
 
   it('không có state (vào thẳng URL / refresh): resolve qua GET /api/admin/orders?search={code}&pageSize=100 rồi GET detail', async () => {
@@ -146,9 +148,10 @@ describe('OrderDetailPage — route /orders/:code (đợt 21)', () => {
     });
   });
 
-  it('breadcrumb "← Đơn hàng" về danh sách đơn (tab Đơn hàng)', async () => {
+  it('nút "← Quay lại" về danh sách đơn (tab Đơn hàng) — breadcrumb chỉ là chữ (đợt 25/26)', async () => {
     await openDetailWithState('Pending');
-    fireEvent.click(screen.getByTestId('admin-order-detail-back'));
+    expect(screen.getByTestId('admin-order-detail-breadcrumb')).toHaveTextContent('Đơn hàng');
+    fireEvent.click(screen.getByTestId('admin-order-detail-back-btn'));
     await waitFor(() => {
       expect(screen.getByTestId('orders-search-input')).toBeInTheDocument();
     });

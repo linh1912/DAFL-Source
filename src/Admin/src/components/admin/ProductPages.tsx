@@ -59,10 +59,15 @@ const RatingStars = ({ rating }: { rating: number }) => {
 
 /** Breadcrumb "Quản lý sản phẩm > Chi tiết sản phẩm" — bấm mục đầu về danh sách.
  *  Dùng dấu ">" như spec đợt 21 viết (khác breadcrumb KM dùng "/"). */
+/** Breadcrumb "Quản lý sản phẩm > Chi tiết sản phẩm" — chữ thường (đợt 26):
+ *  mục đầu là <span>, không còn là nút. Prop onBackToList giữ lại vì nút
+ *  "Quay lại" ở header trang chi tiết vẫn dùng nó (không dùng cho breadcrumb).
+ *  Dùng dấu ">" như spec đợt 21 viết (khác breadcrumb KM dùng "/"). */
 export function ProductBreadcrumb({ current, onBackToList }: { current: string; onBackToList: () => void }) {
+  void onBackToList;
   return (
     <nav className="sa-breadcrumb" aria-label="Breadcrumb" data-testid="admin-product-breadcrumb">
-      <button type="button" className="sa-breadcrumb-link" onClick={onBackToList}>Quản lý sản phẩm</button>
+      <span className="sa-breadcrumb-link">Quản lý sản phẩm</span>
       <span aria-hidden="true">&gt;</span>
       <span aria-current="page">{current}</span>
     </nav>
@@ -93,7 +98,7 @@ export function ProductDetailPage({ product, onBackToList, onEdit }: {
   return (
     <section className="sa-product-page" data-testid="admin-product-detail-page">
       <ProductBreadcrumb current="Chi tiết sản phẩm" onBackToList={onBackToList} />
-      <div className="sa-product-page-head">
+      <div className="sa-product-page-head sa-page-sticky-head">
         <div className="sa-product-page-head-text">
           <h2>Chi tiết sản phẩm</h2>
           <p><span className="sa-code">{product.code ?? '—'}</span> · {product.name}</p>

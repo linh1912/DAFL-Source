@@ -2,8 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { PHONE_FORMAT_MSG, PHONE_RE, REQUIRED_MSG, discountPercent, formatDateTimeVN, formatDateVN, formatMoneyVND, parseMoney, randomPromoCode, slugify, validateEntityCode } from './formUtils';
 import { CategoryPicker, FieldError, ImageUploader, MoneyInput, Req, Toggle, ViewImageGallery, imageItemFromUrl } from './FormControls';
 import type { UploadImageItem } from './FormControls';
-import { Banknote, Percent, Save, ShoppingBag, Star, Truck } from 'lucide-react';
+import { ArrowLeft, Banknote, Lock, Percent, Save, ShoppingBag, Sparkles, Truck } from 'lucide-react';
 import { FormShell } from './FormShell';
+import './product-form.css';
 import { notify } from './notify';
 import { confirmAction } from './ConfirmDialog';
 import { fmt, messages, shortName } from './messages.vi';
@@ -19,13 +20,16 @@ import { fmt, messages, shortName } from './messages.vi';
  * Chuỗi validate bắt buộc/email/SĐT lấy nguyên văn mẫu VCB (§2):
  *  trống -> "Vui lòng bổ sung thông tin bắt buộc."; SĐT sai -> "Số điện thoại không đúng định dạng.".
  * Toast thành công/trùng dữ liệu qua notify + messages.vi (đợt 18, W1).
- * Đóng form (ESC/X/Hủy) khi dirty: hỏi "Thoát mà chưa lưu?" qua confirmAction
- * của W1 (messages.confirm.discardForm, đúng 2 nút [Ở lại] + [Thoát]);
+ * Đóng form (ESC/X/Hủy) khi dirty: hỏi "Hủy các thay đổi?" qua confirmAction
+ * của W1 (messages.confirm.discardForm, đúng 2 nút [Ở lại] + [Rời trang]);
  * xem requestDiscardConfirm — có fallback về onRequestClose(dirty) khi host
  * chưa mount. Ở chế độ xem đóng luôn, không hỏi.
  */
 
 export type FormMode = 'create' | 'edit' | 'view';
+
+/** Ngưỡng tồn kho thấp (đợt 25): dưới ngưỡng này SP hiện "Sắp hết hàng". */
+const LOW_STOCK_THRESHOLD = 10;
 
 // ---------- Helper dùng chung ----------
 
@@ -48,9 +52,20 @@ const focusFirstError = (formTestid: string, errors: Record<string, string>, ord
   if (first) focusField(formTestid, testidOf[first]);
 };
 
-/** Tiêu đề nhóm field trong form. */
-const FormSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div className="sa-form-section">
+/** Xóa lỗi của 1 field khỏi errors (đợt 25/26): lỗi tự biến mất khi người
+ *  dùng sửa ô đó. Dùng dạng setErrors(prev => clearError(prev, field)) để
+ *  tránh closure stale state (xem cảnh báo ở CategoryPicker). */
+const clearError = (prev: Record<string, string>, field: string): Record<string, string> => {
+  if (!(field in prev)) return prev;
+  const next = { ...prev };
+  delete next[field];
+  return next;
+};
+
+/** Tiêu đề nhóm field trong form. className tùy chọn (đợt 24: section "Giá trị
+ *  giảm" của form KM mang class pv-card để nhận style riêng). */
+const FormSection = ({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) => (
+  <div className={`sa-form-section${className ? ` ${className}` : ''}`}>
     <h4 className="sa-form-section-title">{title}</h4>
     {children}
   </div>
@@ -120,8 +135,8 @@ const orDash = (v: string): string => (v.trim() === '' ? '—' : v.trim());
 
 /**
  * Đóng form khi có thay đổi chưa lưu (đợt 18, §6.6): hỏi qua confirmAction
- * của W1 — "Thoát mà chưa lưu?" / "Các thay đổi bạn vừa nhập sẽ bị mất.",
- * đúng 2 nút [Ở lại] (trái) + [Thoát] (phải). Xác nhận -> onRequestClose(false)
+ * của W1 — "Hủy các thay đổi?" / "Các thay đổi bạn vừa nhập sẽ bị mất.",
+ * đúng 2 nút [Ở lại] (trái) + [Rời trang] (phải). Xác nhận -> onRequestClose(false)
  * (đóng luôn, cha không hỏi lại); chưa sửa (dirty=false) -> đóng luôn.
  *
  * Fallback khi <ConfirmDialogHost/> chưa mount ở gốc AdminPage (W3 gắn ở sóng B):
@@ -131,6 +146,14 @@ const orDash = (v: string): string => (v.trim() === '' ? '—' : v.trim());
  * đóng được, không treo. Khi host đã mount (bản tích hợp), dialog hiện ngay
  * nên không bao giờ rơi vào fallback. Cờ chống gọi chồng khi bấm ESC/X/Hủy
  * liên tiếp trong lúc popup đang mở.
+ *
+ * BUG #1 (đợt 24/25/26): KHÔNG được sleep 300ms rồi mới đọc kết quả
+ * confirmAction — người dùng bấm [Ở lại]/[Rời trang] trong 300ms đó thì
+ * promise đã resolve nhưng dialog đã đóng, kiểm tra dialogOpen sau sleep
+ * nhầm thành "host chưa mount" và gọi onRequestClose(true) → cha mở lại
+ * dialog lần 2. Vì vậy phải đua (race) promise với timeout 300ms: trả lời
+ * trước 300ms thì tôn trọng ngay; chỉ khi hết 300ms chưa có câu trả lời
+ * mới kiểm tra dialogOpen để quyết định fallback.
  */
 let discardConfirmPending = false;
 const requestDiscardConfirm = async (dirty: boolean, onRequestClose: (dirty: boolean) => void) => {
@@ -145,7 +168,19 @@ const requestDiscardConfirm = async (dirty: boolean, onRequestClose: (dirty: boo
       cancelText: 'Ở lại',
       variant: 'warning',
     });
-    await new Promise(r => setTimeout(r, 300));
+    // Đua câu trả lời với timeout 300ms (xem BUG #1 ở comment trên hàm):
+    // bấm [Ở lại]/[Rời trang] trong 300ms đầu vẫn được tôn trọng, không
+    // rơi vào fallback mở lại dialog lần 2.
+    const answered = await Promise.race([
+      pending.then(r => ({ settled: true as const, ...r })),
+      new Promise<{ settled: false }>(resolve => {
+        setTimeout(() => resolve({ settled: false }), 300);
+      }),
+    ]);
+    if (answered.settled) {
+      if (answered.confirmed) onRequestClose(false);
+      return;
+    }
     const dialogOpen = typeof document !== 'undefined'
       && !!document.querySelector('[data-testid="confirm-dialog"]');
     if (!dialogOpen) {
@@ -158,6 +193,23 @@ const requestDiscardConfirm = async (dirty: boolean, onRequestClose: (dirty: boo
     discardConfirmPending = false;
   }
 };
+
+/** Nút "Quay lại" ở đầu trang form (đợt 25/26): form dirty -> hỏi "Hủy các
+ *  thay đổi?" trước; chưa sửa -> history.back(), không có lịch sử thì về
+ *  danh sách qua onRequestClose(false) (cha điều hướng). */
+const goBackOrClose = (dirty: boolean, onRequestClose: (dirty: boolean) => void) => {
+  if (dirty) { void requestDiscardConfirm(dirty, onRequestClose); return; }
+  if (typeof window !== 'undefined' && window.history.length > 1) window.history.back();
+  else onRequestClose(false);
+};
+
+/** Nút "Quay lại" dùng chung cho header sticky của 4 trang form
+ *  (testid admin-{entity}-form-back-btn, thứ tự: Quay lại, Hủy, Lưu). */
+const FormBackButton = ({ testid, onBack }: { testid: string; onBack: () => void }) => (
+  <button type="button" className="sa-btn sa-btn-ghost sa-form-back-btn" data-testid={testid} onClick={onBack}>
+    <ArrowLeft size={16} strokeWidth={2} aria-hidden="true" /> Quay lại
+  </button>
+);
 
 // ============================================================================
 // 1. FORM SẢN PHẨM — Drawer 600px (đợt 18)
@@ -232,6 +284,36 @@ export function ProductForm({ initial, categories, onSave, onRequestClose, mode:
     if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px`; }
   }, [description]);
 
+  /** Stepper tồn kho giữ-chuột-tăng-liên-tục (đợt 25): pointerdown bước 1 lần
+   *  rồi sau 400ms lặp mỗi 80ms; nhả chuột/rời nút/hủy thì dừng (dọn cả khi
+   *  unmount). onClick chỉ chạy cho bàn phím (Enter/Space) — click chuột đã
+   *  bước ở pointerdown nên bỏ qua nhờ cờ stockPointerUsedRef. */
+  const stockHoldTimerRef = useRef<number | null>(null);
+  const stockHoldIntervalRef = useRef<number | null>(null);
+  const stockPointerUsedRef = useRef(false);
+  const stopStockHold = () => {
+    if (stockHoldTimerRef.current !== null) { window.clearTimeout(stockHoldTimerRef.current); stockHoldTimerRef.current = null; }
+    if (stockHoldIntervalRef.current !== null) { window.clearInterval(stockHoldIntervalRef.current); stockHoldIntervalRef.current = null; }
+  };
+  useEffect(() => stopStockHold, []);
+  const changeStock = (delta: number) => {
+    setStock(prev => String(Math.max(0, (prev === '' ? 0 : Number(prev)) + delta)));
+    setErrors(prev => clearError(prev, 'stock'));
+  };
+  const onStockStepPointerDown = (delta: 1 | -1) => (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.button !== 0) return;
+    stockPointerUsedRef.current = true;
+    changeStock(delta);
+    stopStockHold();
+    stockHoldTimerRef.current = window.setTimeout(() => {
+      stockHoldIntervalRef.current = window.setInterval(() => changeStock(delta), 80);
+    }, 400);
+  };
+  const onStockStepClick = (delta: 1 | -1) => () => {
+    if (stockPointerUsedRef.current) { stockPointerUsedRef.current = false; return; }
+    changeStock(delta);
+  };
+
   const validateAll = (): Record<string, string> => {
     const errs: Record<string, string> = {};
     const codeErr = validateEntityCode(code.trim().toUpperCase(), 'sản phẩm');
@@ -279,6 +361,7 @@ export function ProductForm({ initial, categories, onSave, onRequestClose, mode:
     const errs = validateAll();
     setErrors(errs);
     if (Object.keys(errs).length > 0) {
+      notify.warning(messages.toast.form.invalid.title, messages.toast.form.invalid.desc);
       focusFirstError('admin-product-form', errs,
         ['code', 'name', 'categoryId', 'price', 'originalPrice', 'stock'], PRODUCT_ERROR_TESTID);
       return;
@@ -303,23 +386,20 @@ export function ProductForm({ initial, categories, onSave, onRequestClose, mode:
       else setFormError(res.error || 'Không lưu được sản phẩm.');
       return;
     }
-    // Thành công: toast qua notify + messages.vi; cha đóng form + reload
-    // (form unmount, không cần làm gì thêm).
+    // Thành công: toast chung "Đã lưu sản phẩm" (đợt 25/26 — không nêu tên SP);
+    // cha đóng form + reload (form unmount, không cần làm gì thêm).
+    notify.success(messages.toast.product.saved.title, messages.toast.product.saved.desc);
     const displayName = shortName(name.trim());
-    if (isEdit) {
-      notify.success(messages.toast.product.updated.title, fmt(messages.toast.product.updated.desc, { tên: displayName }));
-    } else {
-      notify.success(messages.toast.product.added.title, fmt(messages.toast.product.added.desc, { tên: displayName }));
-    }
     if (Number(stock) === 0) {
       notify.info(messages.toast.product.outOfStock.title, fmt(messages.toast.product.outOfStock.desc, { tên: displayName }));
     }
   };
 
   const requestClose = () => void requestDiscardConfirm(dirty, onRequestClose);
+  const handleBack = () => goBackOrClose(dirty, onRequestClose);
   /** Đợt 21 — trang full page không có FormShell nên tự lo autofocus ô đầu
    *  + ESC (FormShell làm việc này ở Drawer): ESC khi chưa sửa thì đóng ngay,
-   *  đã sửa thì hỏi "Thoát mà chưa lưu?" qua requestClose. requestCloseRef
+   *  đã sửa thì hỏi "Hủy các thay đổi?" qua requestClose. requestCloseRef
    *  tránh closure cũ (dirty) trong listener đăng ký 1 lần khi mount. */
   const pageFormRef = useRef<HTMLFormElement>(null);
   const requestCloseRef = useRef(requestClose);
@@ -338,21 +418,30 @@ export function ProductForm({ initial, categories, onSave, onRequestClose, mode:
   const title = isPage
     ? (isView ? 'Chi tiết sản phẩm' : isEdit ? 'Chỉnh sửa sản phẩm' : 'Thêm mới sản phẩm')
     : (isView ? 'Chi tiết sản phẩm' : isEdit ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm');
-  const subtitle = isView ? 'Xem thông tin sản phẩm.'
-    : isEdit ? 'Chỉnh sửa thông tin sản phẩm đang bán.' : 'Thêm sản phẩm mới lên sàn.';
+  const subtitle: string | undefined = undefined;
+  // Đợt 26: bỏ subtitle — tiêu đề đã đủ thông tin (không còn dòng mô tả dưới
+  // tiêu đề form: "Thêm sản phẩm mới lên sàn." / "Chỉnh sửa thông tin sản phẩm
+  // đang bán." / "Xem thông tin sản phẩm."). Header chỉ render <p> khi có subtitle.
 
   const priceNum = parseMoney(price);
   const origNum = originalPrice === '' ? null : parseMoney(originalPrice);
   const pct = discountPercent(Number.isNaN(priceNum) ? 0 : priceNum, origNum);
   const stockNum = stock === '' ? 0 : Number(stock);
+  /** Nhãn trạng thái tồn kho cạnh stepper (đợt 25): ≥ ngưỡng Còn hàng, 1–9
+   *  Sắp hết hàng, 0 Hết hàng; chưa nhập thì chưa hiện. */
+  const stockStatus = stock === '' ? null
+    : stockNum >= LOW_STOCK_THRESHOLD ? { tone: 'green', label: 'Còn hàng' }
+    : stockNum >= 1 ? { tone: 'yellow', label: 'Sắp hết hàng' }
+    : { tone: 'red', label: 'Hết hàng' };
   const categoryName = categories.find(c => c.id === categoryId)?.name ?? '';
 
   /** Nội dung form dùng chung cho cả 2 variant (đợt 21): Drawer (FormShell)
-   *  và trang full page (form thường + header sticky). Chỉ khác cách bọc ngoài. */
-  const body = (
-    <>
-      {formError && <p className="sa-error" role="alert">{formError}</p>}
-      <FormSection title="Thông tin cơ bản">
+   *  và trang full page (form thường + header sticky). Chỉ khác cách bọc ngoài:
+   *  Drawer xếp 1 cột theo thứ tự cũ (body), trang full page xếp lưới 2 cột
+   *  (pageBody, đợt 25/26). Mỗi section tách thành const riêng để dùng chung. */
+  const formErrorNode = formError && <p className="sa-error" role="alert">{formError}</p>;
+  const basicSection = (
+    <FormSection title="Thông tin cơ bản">
         <div className="sa-form-grid">
           <div className="sa-field">
             <label className="sa-field-label" htmlFor="admin-product-code">Mã SP</label>
@@ -360,18 +449,25 @@ export function ProductForm({ initial, categories, onSave, onRequestClose, mode:
               <ViewInput id="admin-product-code" testid="admin-product-code-input" value={orDash(code)} />
             ) : (
               <>
-                <input
-                  id="admin-product-code"
-                  className={`sa-input${errors.code ? ' sa-input-error' : ''}`}
-                  value={code}
-                  data-testid="admin-product-code-input"
-                  aria-describedby={errors.code ? 'admin-product-code-error' : undefined}
-                  disabled={isEdit}
-                  placeholder="Để trống để tự sinh (SP-xxxx)"
-                  onChange={e => setCode(e.target.value.toUpperCase())}
-                  onBlur={() => validateField('code')}
-                />
-                <span className="sa-field-meta"><span className="sa-hint">{isEdit ? 'Mã sản phẩm không thay đổi khi sửa.' : 'Để trống để tự sinh; nếu nhập: 3–20 ký tự, chỉ chữ in hoa, chữ số, gạch ngang.'}</span></span>
+                <span className="sa-code-lock-wrap">
+                  <input
+                    id="admin-product-code"
+                    className={`sa-input${errors.code ? ' sa-input-error' : ''}`}
+                    value={code}
+                    data-testid="admin-product-code-input"
+                    aria-describedby={errors.code ? 'admin-product-code-error' : undefined}
+                    disabled={isEdit}
+                    placeholder="Để trống để tự sinh (SP-xxxx)"
+                    maxLength={20}
+                    onChange={e => { setCode(e.target.value.toUpperCase()); setErrors(prev => clearError(prev, 'code')); }}
+                    onBlur={() => validateField('code')}
+                  />
+                  {isEdit && (
+                    <span className="sa-code-lock" title="Mã sản phẩm không thể thay đổi">
+                      <Lock size={16} strokeWidth={2} aria-hidden="true" />
+                    </span>
+                  )}
+                </span>
                 <FieldError id="admin-product-code-error" testid="admin-product-code-error" message={errors.code} />
               </>
             )}
@@ -388,13 +484,10 @@ export function ProductForm({ initial, categories, onSave, onRequestClose, mode:
                   value={name}
                   data-testid="admin-product-name-input"
                   aria-describedby={errors.name ? 'admin-product-name-error' : undefined}
-                  onChange={e => setName(e.target.value)}
+                  maxLength={120}
+                  onChange={e => { setName(e.target.value); setErrors(prev => clearError(prev, 'name')); }}
                   onBlur={() => validateField('name')}
                 />
-                <span className="sa-field-meta">
-                  <span className="sa-hint">Từ 3 đến 120 ký tự.</span>
-                  <span className="sa-count" data-testid="admin-product-name-count">{name.length}/120</span>
-                </span>
                 <FieldError id="admin-product-name-error" testid="admin-product-name-error" message={errors.name} />
               </>
             )}
@@ -417,8 +510,10 @@ export function ProductForm({ initial, categories, onSave, onRequestClose, mode:
             {!isView && <FieldError id="admin-product-category-error" testid="admin-product-category-error" message={errors.categoryId} />}
           </div>
         </div>
-      </FormSection>
-      <FormSection title="Giá & tồn kho">
+    </FormSection>
+  );
+  const priceSection = (
+    <FormSection title="Giá & tồn kho">
         <div className="sa-form-grid">
           <div className="sa-field">
             <label className="sa-field-label" htmlFor="admin-product-price">Giá bán{!isView && <Req />}</label>
@@ -429,17 +524,20 @@ export function ProductForm({ initial, categories, onSave, onRequestClose, mode:
                 <MoneyInput
                   id="admin-product-price"
                   value={price}
-                  onChange={v => setPrice(v)}
+                  onChange={v => { setPrice(v); setErrors(prev => clearError(prev, 'price')); }}
                   testid="admin-product-price-input"
                   errorId={errors.price ? 'admin-product-price-error' : undefined}
+                  error={!!errors.price}
                 />
-                <span className="sa-field-meta"><span className="sa-hint">Giá bán phải lớn hơn 0.</span></span>
                 <FieldError id="admin-product-price-error" testid="admin-product-price-error" message={errors.price} />
               </>
             )}
           </div>
           <div className="sa-field">
-            <label className="sa-field-label" htmlFor="admin-product-original-price">Giá gốc</label>
+            <span className="sa-field-label-row">
+              <label className="sa-field-label" htmlFor="admin-product-original-price">Giá gốc</label>
+              {!isView && pct !== null && <span className="sa-discount-badge" data-testid="admin-product-discount-badge">-{pct}%</span>}
+            </span>
             {isView ? (
               <ViewInput id="admin-product-original-price" testid="admin-product-original-price-input" value={originalPrice === '' ? '—' : formatMoneyVND(originalPrice)} />
             ) : (
@@ -447,14 +545,11 @@ export function ProductForm({ initial, categories, onSave, onRequestClose, mode:
                 <MoneyInput
                   id="admin-product-original-price"
                   value={originalPrice}
-                  onChange={v => setOriginalPrice(v)}
+                  onChange={v => { setOriginalPrice(v); setErrors(prev => clearError(prev, 'originalPrice')); }}
                   testid="admin-product-original-price-input"
                   errorId={errors.originalPrice ? 'admin-product-original-price-error' : undefined}
+                  error={!!errors.originalPrice}
                 />
-                <span className="sa-field-meta">
-                  <span className="sa-hint">Không bắt buộc; phải lớn hơn giá bán.</span>
-                  {pct !== null && <span className="sa-discount-badge" data-testid="admin-product-discount-badge">Giảm {pct}%</span>}
-                </span>
                 <FieldError id="admin-product-original-price-error" testid="admin-product-original-price-error" message={errors.originalPrice} />
               </>
             )}
@@ -465,76 +560,98 @@ export function ProductForm({ initial, categories, onSave, onRequestClose, mode:
               <ViewInput id="admin-product-stock" testid="admin-product-stock-input" value={stock === '' ? '—' : stock} />
             ) : (
               <>
-                <span className="sa-stepper">
-                  <button
-                    type="button"
-                    className="sa-stepper-btn"
-                    data-testid="admin-product-stock-minus-btn"
-                    aria-label="Giảm tồn kho"
-                    onClick={() => setStock(String(Math.max(0, stockNum - 1)))}
-                  >
-                    −
-                  </button>
-                  <input
-                    id="admin-product-stock"
-                    className={`sa-input sa-stepper-input${errors.stock ? ' sa-input-error' : ''}`}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    value={stock}
-                    data-testid="admin-product-stock-input"
-                    aria-describedby={errors.stock ? 'admin-product-stock-error' : undefined}
-                    onChange={e => setStock(e.target.value.replace(/\D/g, ''))}
-                    onBlur={() => validateField('stock')}
-                  />
-                  <button
-                    type="button"
-                    className="sa-stepper-btn"
-                    data-testid="admin-product-stock-plus-btn"
-                    aria-label="Tăng tồn kho"
-                    onClick={() => setStock(String(stockNum + 1))}
-                  >
-                    +
-                  </button>
+                <span className="sa-stock-row">
+                  <span className="sa-stepper">
+                    <button
+                      type="button"
+                      className="sa-stepper-btn"
+                      data-testid="admin-product-stock-minus-btn"
+                      aria-label="Giảm tồn kho"
+                      disabled={stockNum <= 0}
+                      onPointerDown={onStockStepPointerDown(-1)}
+                      onPointerUp={stopStockHold}
+                      onPointerLeave={stopStockHold}
+                      onPointerCancel={stopStockHold}
+                      onClick={onStockStepClick(-1)}
+                    >
+                      −
+                    </button>
+                    <input
+                      id="admin-product-stock"
+                      className={`sa-input sa-stepper-input${errors.stock ? ' sa-input-error' : ''}`}
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      value={stock}
+                      data-testid="admin-product-stock-input"
+                      aria-describedby={errors.stock ? 'admin-product-stock-error' : undefined}
+                      onChange={e => { setStock(e.target.value.replace(/\D/g, '')); setErrors(prev => clearError(prev, 'stock')); }}
+                      onBlur={() => validateField('stock')}
+                      onKeyDown={e => {
+                        if (e.key === 'ArrowUp') { e.preventDefault(); changeStock(1); }
+                        else if (e.key === 'ArrowDown') { e.preventDefault(); changeStock(-1); }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="sa-stepper-btn"
+                      data-testid="admin-product-stock-plus-btn"
+                      aria-label="Tăng tồn kho"
+                      onPointerDown={onStockStepPointerDown(1)}
+                      onPointerUp={stopStockHold}
+                      onPointerLeave={stopStockHold}
+                      onPointerCancel={stopStockHold}
+                      onClick={onStockStepClick(1)}
+                    >
+                      +
+                    </button>
+                  </span>
+                  {stockStatus && (
+                    <span className={`sa-stock-pill sa-stock-pill-${stockStatus.tone}`} data-testid="admin-product-stock-status">
+                      <span className="sa-stock-dot" aria-hidden="true" />
+                      {stockStatus.label}
+                    </span>
+                  )}
                 </span>
-                <span className="sa-field-meta"><span className="sa-hint">Số nguyên ≥ 0.</span></span>
                 <FieldError id="admin-product-stock-error" testid="admin-product-stock-error" message={errors.stock} />
               </>
             )}
           </div>
-          <div className="sa-field">
-            <span className="sa-field-label">Trạng thái</span>
-            {isView ? (
-              <StatusBadge
-                tone={isActive ? 'green' : 'gray'}
-                label={isActive ? 'Đang bán' : 'Đang ẩn'}
-                testid="admin-product-status-badge"
-              />
-            ) : (
-              <>
-                <Toggle
-                  checked={isActive}
-                  onChange={setIsActive}
-                  testid="admin-product-status-toggle"
-                  label={isActive ? 'Hiển thị / Đang bán' : 'Đang ẩn'}
-                />
-                <span className="sa-field-meta"><span className="sa-hint">Tắt để ẩn sản phẩm khỏi sàn.</span></span>
-              </>
-            )}
-          </div>
         </div>
-      </FormSection>
-      <FormSection title="Hình ảnh">
+    </FormSection>
+  );
+  const statusSection = (
+    <FormSection title="Trạng thái">
+      <div className="sa-field">
+        <span className="sa-field-label">Trạng thái</span>
+        {isView ? (
+          <StatusBadge
+            tone={isActive ? 'green' : 'gray'}
+            label={isActive ? 'Đang bán' : 'Đang ẩn'}
+            testid="admin-product-status-badge"
+          />
+        ) : (
+          <Toggle
+            checked={isActive}
+            onChange={setIsActive}
+            testid="admin-product-status-toggle"
+            label={isActive ? 'Đang bán' : 'Đã ẩn'}
+          />
+        )}
+      </div>
+    </FormSection>
+  );
+  const imageSection = (
+    <FormSection title="Hình ảnh">
         {isView ? (
           <ViewImageGallery prefix="admin-product-image" urls={readyUrls} />
         ) : (
-          <>
-            <ImageUploader prefix="admin-product-image" images={images} onChange={setImages} multiple max={8} />
-            <p className="sa-hint">Kéo-thả thumbnail để đổi thứ tự — ảnh đầu tiên là ảnh chính. Bấm <Star size={14} strokeWidth={2} fill="currentColor" aria-hidden="true" style={{ verticalAlign: '-2px' }} /> để đặt ảnh chính.</p>
-          </>
+          <ImageUploader prefix="admin-product-image" images={images} onChange={setImages} multiple max={8} />
         )}
-      </FormSection>
-      <FormSection title="Mô tả">
+    </FormSection>
+  );
+  const descSection = (
+    <FormSection title="Mô tả">
         <div className="sa-field">
           <label className="sa-field-label" htmlFor="admin-product-description">Mô tả</label>
           <textarea
@@ -545,18 +662,14 @@ export function ProductForm({ initial, categories, onSave, onRequestClose, mode:
             value={isView ? orDash(description) : description}
             data-testid="admin-product-description-input"
             readOnly={isView}
+            maxLength={2000}
             onChange={e => setDescription(e.target.value)}
           />
-          {!isView && (
-            <span className="sa-field-meta">
-              <span className="sa-hint">Mô tả chi tiết sản phẩm.</span>
-              <span className="sa-count" data-testid="admin-product-description-count">{description.length}/2000</span>
-            </span>
-          )}
         </div>
-      </FormSection>
-      {!isView && (
-        <FormSection title="Xem trước">
+    </FormSection>
+  );
+  const previewSection = !isView ? (
+    <FormSection title="Xem trước" className="sa-product-preview-card">
           <div className="sa-product-preview" data-testid="admin-product-preview">
             {readyUrls[0]
               ? <img src={readyUrls[0]} alt="" className="sa-preview-img" />
@@ -567,16 +680,40 @@ export function ProductForm({ initial, categories, onSave, onRequestClose, mode:
               <span className="sa-preview-price">
                 <span className="sa-money">{Number.isNaN(priceNum) || priceNum <= 0 ? '—' : `${priceNum.toLocaleString('vi-VN')}đ`}</span>
                 {origNum !== null && origNum > 0 && <s>{origNum.toLocaleString('vi-VN')}đ</s>}
-                {pct !== null && <span className="sa-discount-badge">Giảm {pct}%</span>}
+                {pct !== null && <span className="sa-discount-badge">-{pct}%</span>}
               </span>
               <small>Tồn kho: {stock === '' ? '—' : stockNum}</small>
             </span>
           </div>
-        </FormSection>
-      )}
-      {isView && (
-        <ViewMeta prefix="admin-product" createdAt={initial.createdAt} updatedAt={initial.updatedAt} updatedBy={initial.updatedBy} />
-      )}
+    </FormSection>
+  ) : null;
+  const viewMetaNode = isView ? (
+    <ViewMeta prefix="admin-product" createdAt={initial.createdAt} updatedAt={initial.updatedAt} updatedBy={initial.updatedBy} />
+  ) : null;
+  /** Drawer: 1 cột theo thứ tự cũ (cơ bản, giá, trạng thái, hình ảnh, mô tả, xem trước). */
+  const body = (
+    <>
+      {formErrorNode}
+      {basicSection}
+      {priceSection}
+      {statusSection}
+      {imageSection}
+      {descSection}
+      {previewSection}
+      {viewMetaNode}
+    </>
+  );
+  /** Trang full page (đợt 25/26): lưới 2 cột trái 1.6fr/phải 1fr — trái: thông
+   *  tin cơ bản, mô tả, hình ảnh; phải: giá & tồn kho, trạng thái, xem trước
+   *  (sticky, giữ nguyên nội dung preview). Dưới 960px 1 cột. */
+  const pageBody = (
+    <>
+      {formErrorNode}
+      <div className="sa-product-form-cols">
+        <div className="sa-product-form-col">{basicSection}{descSection}{imageSection}</div>
+        <div className="sa-product-form-col sa-product-form-col-side">{priceSection}{statusSection}{previewSection}</div>
+      </div>
+      {viewMetaNode}
     </>
   );
 
@@ -585,12 +722,13 @@ export function ProductForm({ initial, categories, onSave, onRequestClose, mode:
   if (isPage) {
     return (
       <form ref={pageFormRef} onSubmit={isView ? undefined : handleSubmit} data-testid="admin-product-form" data-form-mode={mode} noValidate className="sa-product-page-form">
-        <div className="sa-product-page-head">
+        <div className="sa-product-page-head sa-page-sticky-head">
           <div className="sa-product-page-head-text">
             <h2 data-testid="admin-product-form-title">{title}</h2>
-            <p>{subtitle}</p>
+            {subtitle && <p>{subtitle}</p>}
           </div>
           <div className="sa-product-page-head-actions">
+            <FormBackButton testid="admin-product-form-back-btn" onBack={handleBack} />
             {isView ? (
               <>
                 <button type="button" className="sa-btn sa-btn-ghost" data-testid="admin-product-cancel-btn" onClick={requestClose}>
@@ -608,13 +746,13 @@ export function ProductForm({ initial, categories, onSave, onRequestClose, mode:
                   Hủy
                 </button>
                 <button type="submit" className="sa-btn" data-testid="admin-product-save-btn" disabled={submitting || (isEdit && !dirty)}>
-                  {submitting ? 'Đang lưu...' : isEdit ? 'Lưu thay đổi' : 'Lưu'}
+                  {submitting ? (<><span className="sa-btn-spinner" aria-hidden="true" /> Đang lưu...</>) : isEdit ? 'Lưu thay đổi' : 'Lưu'}
                 </button>
               </>
             )}
           </div>
         </div>
-        {body}
+        {pageBody}
       </form>
     );
   }
@@ -646,7 +784,7 @@ export function ProductForm({ initial, categories, onSave, onRequestClose, mode:
             Hủy
           </button>
           <button type="submit" className="sa-btn" data-testid="admin-product-save-btn" disabled={submitting || (isEdit && !dirty)}>
-            {submitting ? 'Đang lưu...' : isEdit ? 'Lưu thay đổi' : 'Lưu'}
+            {submitting ? (<><span className="sa-btn-spinner" aria-hidden="true" /> Đang lưu...</>) : isEdit ? 'Lưu thay đổi' : 'Lưu'}
           </button>
         </>
       )}
@@ -778,9 +916,10 @@ export function CategoryForm({ initial, onSave, onRequestClose, mode: modeProp, 
   };
 
   const requestClose = () => void requestDiscardConfirm(dirty, onRequestClose);
+  const handleBack = () => goBackOrClose(dirty, onRequestClose);
   /** Đợt 21 — trang full page không có FormShell nên tự lo autofocus ô đầu
    *  + ESC (FormShell làm việc này ở Drawer): ESC khi chưa sửa thì đóng ngay,
-   *  đã sửa thì hỏi "Thoát mà chưa lưu?" qua requestClose. requestCloseRef
+   *  đã sửa thì hỏi "Hủy các thay đổi?" qua requestClose. requestCloseRef
    *  tránh closure cũ (dirty) trong listener đăng ký 1 lần khi mount. */
   const pageFormRef = useRef<HTMLFormElement>(null);
   const requestCloseRef = useRef(requestClose);
@@ -799,8 +938,9 @@ export function CategoryForm({ initial, onSave, onRequestClose, mode: modeProp, 
   const title = isPage
     ? (isView ? `Chi tiết danh mục ${code || name}` : isEdit ? 'Chỉnh sửa danh mục' : 'Thêm mới danh mục')
     : (isView ? 'Chi tiết danh mục' : isEdit ? 'Chỉnh sửa danh mục' : 'Thêm danh mục');
-  const subtitle = isView ? 'Xem thông tin danh mục.'
-    : isEdit ? 'Chỉnh sửa thông tin danh mục.' : 'Thêm danh mục mới cho sàn.';
+  /** Đợt 26: bỏ subtitle — tiêu đề đã đủ thông tin ("Thêm danh mục mới cho
+   *  sàn." / "Chỉnh sửa thông tin danh mục." / "Xem thông tin danh mục."). */
+  const subtitle: string | undefined = undefined;
 
   /** Nút footer dùng chung cho cả 2 variant (Drawer + trang full page):
    *  Drawer đặt ở footer FormShell, trang full page đặt ở header sticky. */
@@ -847,10 +987,11 @@ export function CategoryForm({ initial, onSave, onRequestClose, mode: modeProp, 
                   aria-describedby={errors.code ? 'admin-category-code-error' : undefined}
                   disabled={isEdit}
                   placeholder="Để trống để tự sinh (DM-xxxx)"
-                  onChange={e => setCode(e.target.value.toUpperCase())}
+                  maxLength={20}
+                  title={isEdit ? 'Mã danh mục không thay đổi khi sửa' : undefined}
+                  onChange={e => { setCode(e.target.value.toUpperCase()); setErrors(prev => clearError(prev, 'code')); }}
                   onBlur={() => validateField('code')}
                 />
-                <span className="sa-field-meta"><span className="sa-hint">{isEdit ? 'Mã danh mục không thay đổi khi sửa.' : 'Để trống để tự sinh; nếu nhập: 3–20 ký tự, chỉ chữ in hoa, chữ số, gạch ngang.'}</span></span>
                 <FieldError id="admin-category-code-error" testid="admin-category-code-error" message={errors.code} />
               </>
             )}
@@ -867,14 +1008,15 @@ export function CategoryForm({ initial, onSave, onRequestClose, mode: modeProp, 
                   value={name}
                   data-testid="admin-category-name-input"
                   aria-describedby={errors.name ? 'admin-category-name-error' : undefined}
+                  maxLength={150}
                   onChange={e => {
                     const v = e.target.value;
                     setName(v);
+                    setErrors(prev => clearError(prev, 'name'));
                     if (!slugEdited) setSlug(slugify(v));
                   }}
                   onBlur={() => validateField('name')}
                 />
-                <span className="sa-field-meta"><span className="sa-hint">Từ 2 đến 150 ký tự.</span></span>
                 <FieldError id="admin-category-name-error" testid="admin-category-name-error" message={errors.name} />
               </>
             )}
@@ -892,10 +1034,10 @@ export function CategoryForm({ initial, onSave, onRequestClose, mode: modeProp, 
                   data-testid="admin-category-slug-input"
                   aria-describedby={errors.slug ? 'admin-category-slug-error' : undefined}
                   readOnly={isEdit}
-                  onChange={e => { setSlug(e.target.value); setSlugEdited(true); }}
+                  title={isEdit ? 'Slug không thay đổi khi sửa' : undefined}
+                  onChange={e => { setSlug(e.target.value); setSlugEdited(true); setErrors(prev => clearError(prev, 'slug')); }}
                   onBlur={() => validateField('slug')}
                 />
-                <span className="sa-field-meta"><span className="sa-hint">{isEdit ? 'Slug không thay đổi khi sửa.' : 'Tự sinh từ tên — sửa tay để giữ slug riêng.'}</span></span>
                 <FieldError id="admin-category-slug-error" testid="admin-category-slug-error" message={errors.slug} />
               </>
             )}
@@ -930,7 +1072,6 @@ export function CategoryForm({ initial, onSave, onRequestClose, mode: modeProp, 
                   data-testid="admin-category-sort-order-input"
                   onChange={e => setSortOrder(e.target.value.replace(/[^0-9]/g, ''))}
                 />
-                <span className="sa-field-meta"><span className="sa-hint">Số càng nhỏ càng hiện trước.</span></span>
               </>
             )}
           </div>
@@ -971,12 +1112,13 @@ export function CategoryForm({ initial, onSave, onRequestClose, mode: modeProp, 
   if (isPage) {
     return (
       <form ref={pageFormRef} onSubmit={isView ? undefined : handleSubmit} data-testid="admin-category-form" data-form-mode={mode} noValidate className="sa-promo-page-form">
-        <div className="sa-promo-page-head">
+        <div className="sa-promo-page-head sa-page-sticky-head">
           <div className="sa-promo-page-head-text">
             <h2 data-testid="admin-category-form-title">{title}</h2>
-            <p>{subtitle}</p>
+            {subtitle && <p>{subtitle}</p>}
           </div>
           <div className="sa-promo-page-head-actions">
+            <FormBackButton testid="admin-category-form-back-btn" onBack={handleBack} />
             {footer}
           </div>
         </div>
@@ -1193,37 +1335,24 @@ export function PromoForm({ initial, categories, onSave, onRequestClose, mode: m
   };
 
   const requestClose = () => void requestDiscardConfirm(dirty, onRequestClose);
+  const handleBack = () => goBackOrClose(dirty, onRequestClose);
   /** Đợt 21 — tiêu đề trang full page theo spec (ghi đè tiêu đề Drawer chỉ ở variant page). */
   const title = isPage
     ? (isView ? `Chi tiết khuyến mãi ${normInitial.code}` : isEdit ? 'Chỉnh sửa khuyến mãi' : 'Thêm mới khuyến mãi')
     : (isView ? `Chi tiết khuyến mãi ${normInitial.code}` : isEdit ? `Chỉnh sửa khuyến mãi ${normInitial.code}` : 'Tạo khuyến mãi mới');
-  const subtitle = isPage
-    ? (isView ? 'Xem thông tin khuyến mãi.'
-      : isEdit
-        ? 'Voucher Nháp: chỉ sửa được mô tả, giá trị giảm, đơn tối thiểu, trần giảm, ngày kết thúc và tổng lượt. Mã, loại giảm và phạm vi không đổi.'
-        : 'Thiết lập thông tin và điều kiện áp dụng cho chương trình khuyến mãi')
-    : (isView ? 'Xem thông tin khuyến mãi.'
-      : isEdit
-        ? 'Voucher Nháp: chỉ sửa được mô tả, giá trị giảm, đơn tối thiểu, trần giảm, ngày kết thúc và tổng lượt. Mã, loại giảm và phạm vi không đổi.'
-        : 'Tạo ở trạng thái Nháp — bấm Kích hoạt để chạy.');
+  /** Đợt 26: chỉ giữ subtitle khi mang thông tin thật — ở chế độ sửa, ghi rõ
+   *  trường nào sửa được (mã/loại giảm/phạm vi không đổi). Các subtitle còn
+   *  lại ("Tạo ở trạng thái Nháp — bấm Kích hoạt để chạy", "Thiết lập thông
+   *  tin...", "Xem thông tin khuyến mãi.") đã bỏ. */
+  const subtitle: string | undefined = !isView && isEdit
+    ? 'Voucher Nháp: chỉ sửa được mô tả, giá trị giảm, đơn tối thiểu, trần giảm, ngày kết thúc và tổng lượt. Mã, loại giảm và phạm vi không đổi.'
+    : undefined;
 
-  const discountTypeBtn = (type: string, testid: string, label: string) => (
-    <button
-      key={type}
-      type="button"
-      role="radio"
-      aria-checked={discountType === type}
-      data-testid={testid}
-      className={`sa-segmented-btn${discountType === type ? ' sa-segmented-active' : ''}`}
-      disabled={isEdit}
-      onClick={() => setDiscountType(type)}
-    >
-      {label}
-    </button>
-  );
-
-  /** Radio card chọn loại giảm — CHỈ ở trang full page (đợt 21): bấm cả card để
-   *  chọn, card chọn viền xanh lá + nền xanh nhạt + radio indicator, chỉ 1 lựa chọn. */
+  /** Radio card chọn loại giảm (đợt 24 — dùng chung cả 2 variant page/drawer,
+   *  thay segmented đợt 18 + radio card ngang đợt 21): bấm cả card để chọn;
+   *  card chọn viền xanh lá #166534 + nền #ecf8ef + ring 3px xanh nhạt, icon
+   *  đổi sang nền xanh đậm chữ trắng, radio tô đầy. testid/role/aria-checked
+   *  giữ nguyên — test Vitest/Selenium phụ thuộc vào chúng. */
   const discountTypeCard = (type: string, testid: string, label: string, desc: string, icon: React.ReactNode) => (
     <button
       key={type}
@@ -1231,18 +1360,67 @@ export function PromoForm({ initial, categories, onSave, onRequestClose, mode: m
       role="radio"
       aria-checked={discountType === type}
       data-testid={testid}
-      className={`sa-radio-card${discountType === type ? ' sa-radio-card-selected' : ''}`}
+      className={`pv-type-card${discountType === type ? ' pv-type-card-selected' : ''}`}
       disabled={isEdit}
       onClick={() => setDiscountType(type)}
     >
-      <span className="sa-radio-card-indicator" aria-hidden="true" />
-      <span className="sa-radio-card-icon" aria-hidden="true">{icon}</span>
-      <span className="sa-radio-card-text">
-        <strong>{label}</strong>
-        <small>{desc}</small>
+      <span className="pv-type-top" aria-hidden="true">
+        <span className="pv-type-icon">{icon}</span>
+        <span className="pv-type-radio" />
       </span>
+      <span className="pv-type-name">{label}</span>
+      <span className="pv-type-desc">{desc}</span>
     </button>
   );
+
+  /** Điều hướng radiogroup loại giảm bằng phím mũi tên (đợt 24): Trái/Lên =
+   *  loại trước, Phải/Xuống = loại sau, quay vòng; focus đi theo lựa chọn.
+   *  Chế độ sửa khóa loại giảm (disabled) nên không đổi. */
+  const onDiscountTypeKeyDown = (e: React.KeyboardEvent) => {
+    if (isEdit) return;
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft' && e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    const order = ['Fixed', 'Percentage', 'FreeShip'];
+    const testidOf: Record<string, string> = {
+      Fixed: 'admin-promo-discount-type-fixed',
+      Percentage: 'admin-promo-discount-type-percent',
+      FreeShip: 'admin-promo-discount-type-freeship',
+    };
+    const dir = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1 : -1;
+    const next = order[(order.indexOf(discountType) + dir + order.length) % order.length];
+    setDiscountType(next);
+    const group = e.currentTarget as HTMLElement;
+    group.querySelector<HTMLElement>(`[data-testid="${testidOf[next]}"]`)?.focus();
+  };
+
+  /** Đợt 24 — dải xem trước mức giảm (chỉ hiển thị, KHÔNG đổi state/validate):
+   *  tính từ state đang nhập, cập nhật realtime. Quy tắc chốt:
+   *  - Đơn tối thiểu 0/trống -> "cho mọi đơn hàng" (không hiện "cho đơn từ 0₫").
+   *  - Phần trăm: không có giảm tối đa -> bỏ phần "(tối đa …)".
+   *  - FreeShip chỉ cần đơn tối thiểu; chưa có giá trị giảm hợp lệ (Fixed/
+   *    Percentage trống, = 0, % > 100, hoặc chưa chọn loại) -> câu muted
+   *    "Nhập mức giảm để xem trước". */
+  const dvDigits = discountValue.replace(/\D/g, '');
+  const dvNum = dvDigits === '' ? NaN : Number(dvDigits);
+  const minDigits = minOrderAmount.replace(/\D/g, '');
+  const minNum = minDigits === '' ? 0 : Number(minDigits);
+  const maxDigits = maxDiscountAmount.replace(/\D/g, '');
+  const maxNum = maxDigits === '' ? 0 : Number(maxDigits);
+  const minPart = minNum > 0 ? (<>đơn từ <strong>{formatMoneyVND(minDigits)}</strong></>) : 'mọi đơn hàng';
+  let previewMuted = true;
+  let previewContent: React.ReactNode = 'Nhập mức giảm để xem trước';
+  if (discountType === 'Fixed' && dvNum > 0) {
+    previewMuted = false;
+    previewContent = (<>Giảm <strong>{formatMoneyVND(dvDigits)}</strong> cho {minPart}</>);
+  } else if (discountType === 'Percentage' && dvNum >= 1 && dvNum <= 100) {
+    previewMuted = false;
+    previewContent = (
+      <>Giảm <strong>{dvNum}%</strong>{maxNum > 0 ? (<> (tối đa <strong>{formatMoneyVND(maxDigits)}</strong>)</>) : null} cho {minPart}</>
+    );
+  } else if (discountType === 'FreeShip') {
+    previewMuted = false;
+    previewContent = (<>Miễn phí vận chuyển cho {minPart}</>);
+  }
 
   /** Nội dung form dùng chung cho cả 2 variant (đợt 21): Drawer (FormShell) và
    *  trang full page (form thường + header sticky). Chỉ khác cách bọc ngoài. */
@@ -1266,7 +1444,8 @@ export function PromoForm({ initial, categories, onSave, onRequestClose, mode: m
                     data-testid="admin-promo-code-input"
                     aria-describedby={errors.code ? 'admin-promo-code-error' : undefined}
                     disabled={isEdit}
-                    onChange={e => setCode(e.target.value.toUpperCase())}
+                    maxLength={50}
+                    onChange={e => { setCode(e.target.value.toUpperCase()); setErrors(prev => clearError(prev, 'code')); }}
                     onBlur={() => validateField('code')}
                   />
                   {!isPage && !isEdit && (
@@ -1275,7 +1454,6 @@ export function PromoForm({ initial, categories, onSave, onRequestClose, mode: m
                     </button>
                   )}
                 </span>
-                {!isPage && <span className="sa-field-meta"><span className="sa-hint">3–50 ký tự: chữ, số, gạch ngang/gạch dưới. Tự viết hoa khi gõ.</span></span>}
                 <FieldError id="admin-promo-code-error" testid="admin-promo-code-error" message={errors.code} />
               </>
             )}
@@ -1302,139 +1480,139 @@ export function PromoForm({ initial, categories, onSave, onRequestClose, mode: m
           )}
         </div>
       </FormSection>
-      <FormSection title="Giá trị giảm">
-        <div className="sa-form-grid">
-          <div className={`sa-field${isPage && !isView ? ' sa-field-wide' : ''}`}>
-            <span className="sa-field-label" id="admin-promo-discount-type-label">Loại giảm{!isView && <Req />}</span>
-            {isView ? (
+      <FormSection title="Giá trị giảm" className="pv-card">
+        {isView ? (
+          <div className="sa-form-grid">
+            <div className="sa-field">
+              <span className="sa-field-label">Loại giảm</span>
               <ViewInput id="admin-promo-discount-type" testid="admin-promo-discount-type-value" value={DISCOUNT_TYPE_LABEL[discountType] ?? discountType} />
-            ) : isPage ? (
-              <span className="sa-radio-cards" role="radiogroup" aria-labelledby="admin-promo-discount-type-label">
-                {discountTypeCard('Fixed', 'admin-promo-discount-type-fixed', 'Cố định', 'Giảm một số tiền cụ thể trên đơn hàng', <Banknote size={20} strokeWidth={2} aria-hidden="true" />)}
-                {discountTypeCard('Percentage', 'admin-promo-discount-type-percent', 'Phần trăm', 'Giảm theo tỷ lệ phần trăm trên giá trị đơn hàng', <Percent size={20} strokeWidth={2} aria-hidden="true" />)}
-                {discountTypeCard('FreeShip', 'admin-promo-discount-type-freeship', 'Miễn phí ship', 'Miễn phí phí vận chuyển cho đơn hàng', <Truck size={20} strokeWidth={2} aria-hidden="true" />)}
-              </span>
-            ) : (
-              <>
-                <span className="sa-segmented" role="radiogroup" aria-labelledby="admin-promo-discount-type-label">
-                  {discountTypeBtn('Fixed', 'admin-promo-discount-type-fixed', 'Cố định')}
-                  {discountTypeBtn('Percentage', 'admin-promo-discount-type-percent', 'Phần trăm')}
-                  {discountTypeBtn('FreeShip', 'admin-promo-discount-type-freeship', 'Miễn phí ship')}
-                </span>
-                <span className="sa-field-meta"><span className="sa-hint">Sửa voucher Nháp không đổi được loại giảm.</span></span>
-              </>
-            )}
-          </div>
-          <div className="sa-field">
-            <label className="sa-field-label" htmlFor="admin-promo-value">Giá trị giảm{!isView && !(isPage && discountType === 'FreeShip') && <Req />}</label>
-            {isView ? (
+            </div>
+            <div className="sa-field">
+              <label className="sa-field-label" htmlFor="admin-promo-value">Giá trị giảm</label>
               <ViewInput
                 id="admin-promo-value"
                 testid="admin-promo-value-input"
                 value={discountValue.trim() === '' ? '—' : discountType === 'Percentage' ? `${discountValue.replace(/\D/g, '')}%` : formatMoneyVND(discountValue)}
               />
-            ) : discountType === 'Percentage' ? (
-              <>
-                <span className="sa-money-wrap">
-                  <input
-                    id="admin-promo-value"
-                    className={`sa-input sa-money-input${errors.discountValue ? ' sa-input-error' : ''}`}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    value={discountValue.replace(/\D/g, '')}
-                    data-testid="admin-promo-value-input"
-                    aria-describedby={errors.discountValue ? 'admin-promo-value-error' : undefined}
-                    onChange={e => setDiscountValue(e.target.value.replace(/\D/g, ''))}
-                    onBlur={() => validateField('discountValue')}
-                  />
-                  <span className="sa-money-suffix" aria-hidden="true">%</span>
-                </span>
-                {!isPage && <span className="sa-field-meta"><span className="sa-hint">Từ 1 đến 100%.</span></span>}
-                <FieldError id="admin-promo-value-error" testid="admin-promo-value-error" message={errors.discountValue} />
-              </>
-            ) : isPage && discountType === 'FreeShip' ? (
-              <p className="sa-promo-freeship-note" data-testid="admin-promo-value-freeship-note">
-                Miễn phí phí vận chuyển — không cần nhập giá trị.
-              </p>
-            ) : (
-              <>
-                <MoneyInput
-                  id="admin-promo-value"
-                  value={discountValue.replace(/\D/g, '')}
-                  onChange={setDiscountValue}
-                  testid="admin-promo-value-input"
-                  errorId={errors.discountValue ? 'admin-promo-value-error' : undefined}
-                  error={!!errors.discountValue}
-                />
-                {!isPage && <span className="sa-field-meta"><span className="sa-hint">{discountType === 'FreeShip' ? 'Miễn phí vận chuyển — giá trị 0.' : 'Số tiền giảm cố định.'}</span></span>}
-                <FieldError id="admin-promo-value-error" testid="admin-promo-value-error" message={errors.discountValue} />
-              </>
-            )}
-          </div>
-          <div className="sa-field">
-            <label className="sa-field-label" htmlFor="admin-promo-min-order">Đơn tối thiểu</label>
-            {isView ? (
-              <ViewInput id="admin-promo-min-order" testid="admin-promo-min-order-input" value={minOrderAmount === '' ? '—' : formatMoneyVND(minOrderAmount)} />
-            ) : (
-              <>
-                <MoneyInput
-                  id="admin-promo-min-order"
-                  value={minOrderAmount}
-                  onChange={setMinOrderAmount}
-                  testid="admin-promo-min-order-input"
-                  errorId={errors.minOrderAmount ? 'admin-promo-min-order-error' : undefined}
-                  error={!!errors.minOrderAmount}
-                />
-                <FieldError id="admin-promo-min-order-error" testid="admin-promo-min-order-error" message={errors.minOrderAmount} />
-              </>
-            )}
-          </div>
-          {discountType === 'Percentage' && (
-            <div className="sa-field">
-              <label className="sa-field-label" htmlFor="admin-promo-max-discount">Giảm tối đa</label>
-              {isView ? (
-                <ViewInput id="admin-promo-max-discount" testid="admin-promo-max-discount-input" value={maxDiscountAmount === '' ? '—' : formatMoneyVND(maxDiscountAmount)} />
-              ) : (
-                <>
-                  <MoneyInput
-                    id="admin-promo-max-discount"
-                    value={maxDiscountAmount}
-                    onChange={setMaxDiscountAmount}
-                    testid="admin-promo-max-discount-input"
-                    errorId={errors.maxDiscountAmount ? 'admin-promo-max-discount-error' : undefined}
-                    error={!!errors.maxDiscountAmount}
-                  />
-                  {!isPage && <span className="sa-field-meta"><span className="sa-hint">Không bắt buộc.</span></span>}
-                  <FieldError id="admin-promo-max-discount-error" testid="admin-promo-max-discount-error" message={errors.maxDiscountAmount} />
-                </>
-              )}
             </div>
-          )}
-          <div className="sa-field">
-            <label className="sa-field-label" htmlFor="admin-promo-max-uses">Số lượt dùng tối đa</label>
-            {isView ? (
-              <ViewInput id="admin-promo-max-uses" testid="admin-promo-max-uses-input" value={maxUses.trim() === '' ? '—' : maxUses.replace(/\D/g, '')} />
-            ) : (
-              <>
-                <input
-                  id="admin-promo-max-uses"
-                  className={`sa-input${errors.maxUses ? ' sa-input-error' : ''}`}
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  value={maxUses.replace(/\D/g, '')}
-                  data-testid="admin-promo-max-uses-input"
-                  aria-describedby={errors.maxUses ? 'admin-promo-max-uses-error' : undefined}
-                  onChange={e => setMaxUses(e.target.value.replace(/\D/g, ''))}
-                  onBlur={() => validateField('maxUses')}
-                />
-                {!isPage && <span className="sa-field-meta"><span className="sa-hint">Để trống = không giới hạn.</span></span>}
-                <FieldError id="admin-promo-max-uses-error" testid="admin-promo-max-uses-error" message={errors.maxUses} />
-              </>
+            <div className="sa-field">
+              <label className="sa-field-label" htmlFor="admin-promo-min-order">Đơn tối thiểu</label>
+              <ViewInput id="admin-promo-min-order" testid="admin-promo-min-order-input" value={minOrderAmount === '' ? '—' : formatMoneyVND(minOrderAmount)} />
+            </div>
+            {discountType === 'Percentage' && (
+              <div className="sa-field">
+                <label className="sa-field-label" htmlFor="admin-promo-max-discount">Giảm tối đa</label>
+                <ViewInput id="admin-promo-max-discount" testid="admin-promo-max-discount-input" value={maxDiscountAmount === '' ? '—' : formatMoneyVND(maxDiscountAmount)} />
+              </div>
             )}
+            <div className="sa-field">
+              <label className="sa-field-label" htmlFor="admin-promo-max-uses">Số lượt dùng tối đa</label>
+              <ViewInput id="admin-promo-max-uses" testid="admin-promo-max-uses-input" value={maxUses.trim() === '' ? '—' : maxUses.replace(/\D/g, '')} />
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="pv-body">
+            <div className="pv-step">
+              <span className="sa-field-label pv-step-title" id="admin-promo-discount-type-label">Loại giảm<Req /></span>
+              <span className="pv-type-grid" role="radiogroup" aria-labelledby="admin-promo-discount-type-label" onKeyDown={onDiscountTypeKeyDown}>
+                {discountTypeCard('Fixed', 'admin-promo-discount-type-fixed', 'Cố định', 'Giảm một số tiền cụ thể trên đơn hàng', <Banknote size={20} strokeWidth={2} aria-hidden="true" />)}
+                {discountTypeCard('Percentage', 'admin-promo-discount-type-percent', 'Phần trăm', 'Giảm theo tỷ lệ % trên giá trị đơn hàng', <Percent size={20} strokeWidth={2} aria-hidden="true" />)}
+                {discountTypeCard('FreeShip', 'admin-promo-discount-type-freeship', 'Miễn phí ship', 'Miễn phí vận chuyển cho đơn hàng', <Truck size={20} strokeWidth={2} aria-hidden="true" />)}
+              </span>
+            </div>
+            <div className="pv-step-divider" aria-hidden="true" />
+            <div className="pv-step">
+              <span className="sa-field-label pv-step-title">Mức giảm</span>
+              <div className="pv-amounts" key={discountType}>
+                <div className="pv-amounts-grid">
+                  <div className={`sa-field pv-field${errors.discountValue ? ' pv-field-error' : ''}`}>
+                    <label className="sa-field-label" htmlFor="admin-promo-value">Giá trị giảm{discountType !== 'FreeShip' && <Req />}</label>
+                    {discountType === 'Percentage' ? (
+                      <>
+                        <span className="sa-money-wrap">
+                          <input
+                            id="admin-promo-value"
+                            className={`sa-input sa-money-input${errors.discountValue ? ' sa-input-error' : ''}`}
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="off"
+                            value={discountValue.replace(/\D/g, '')}
+                            data-testid="admin-promo-value-input"
+                            aria-describedby={errors.discountValue ? 'admin-promo-value-error' : undefined}
+                            onChange={e => { setDiscountValue(e.target.value.replace(/\D/g, '')); setErrors(prev => clearError(prev, 'discountValue')); }}
+                            onBlur={() => validateField('discountValue')}
+                          />
+                          <span className="sa-money-suffix" aria-hidden="true">%</span>
+                        </span>
+                        <FieldError id="admin-promo-value-error" testid="admin-promo-value-error" message={errors.discountValue} />
+                      </>
+                    ) : discountType === 'FreeShip' ? null : (
+                      <>
+                        <MoneyInput
+                          id="admin-promo-value"
+                          value={discountValue.replace(/\D/g, '')}
+                          onChange={v => { setDiscountValue(v); setErrors(prev => clearError(prev, 'discountValue')); }}
+                          testid="admin-promo-value-input"
+                          errorId={errors.discountValue ? 'admin-promo-value-error' : undefined}
+                          error={!!errors.discountValue}
+                        />
+                        <FieldError id="admin-promo-value-error" testid="admin-promo-value-error" message={errors.discountValue} />
+                      </>
+                    )}
+                  </div>
+                  <div className={`sa-field pv-field${errors.minOrderAmount ? ' pv-field-error' : ''}`}>
+                    <label className="sa-field-label" htmlFor="admin-promo-min-order">Đơn tối thiểu</label>
+                    <MoneyInput
+                      id="admin-promo-min-order"
+                      value={minOrderAmount}
+                      onChange={v => { setMinOrderAmount(v); setErrors(prev => clearError(prev, 'minOrderAmount')); }}
+                      testid="admin-promo-min-order-input"
+                      errorId={errors.minOrderAmount ? 'admin-promo-min-order-error' : undefined}
+                      error={!!errors.minOrderAmount}
+                    />
+                    <FieldError id="admin-promo-min-order-error" testid="admin-promo-min-order-error" message={errors.minOrderAmount} />
+                  </div>
+                  {discountType === 'Percentage' && (
+                    <div className={`sa-field pv-field${errors.maxDiscountAmount ? ' pv-field-error' : ''}`}>
+                      <label className="sa-field-label" htmlFor="admin-promo-max-discount">Giảm tối đa</label>
+                      <MoneyInput
+                        id="admin-promo-max-discount"
+                        value={maxDiscountAmount}
+                        onChange={v => { setMaxDiscountAmount(v); setErrors(prev => clearError(prev, 'maxDiscountAmount')); }}
+                        testid="admin-promo-max-discount-input"
+                        errorId={errors.maxDiscountAmount ? 'admin-promo-max-discount-error' : undefined}
+                        error={!!errors.maxDiscountAmount}
+                      />
+                      <FieldError id="admin-promo-max-discount-error" testid="admin-promo-max-discount-error" message={errors.maxDiscountAmount} />
+                    </div>
+                  )}
+                </div>
+                <div className="pv-maxuses-row">
+                  <div className="sa-field pv-field">
+                    <label className="sa-field-label" htmlFor="admin-promo-max-uses">Số lượt dùng tối đa</label>
+                    <input
+                      id="admin-promo-max-uses"
+                      className={`sa-input${errors.maxUses ? ' sa-input-error' : ''}`}
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      value={maxUses.replace(/\D/g, '')}
+                      data-testid="admin-promo-max-uses-input"
+                      aria-describedby={errors.maxUses ? 'admin-promo-max-uses-error' : undefined}
+                      onChange={e => { setMaxUses(e.target.value.replace(/\D/g, '')); setErrors(prev => clearError(prev, 'maxUses')); }}
+                      onBlur={() => validateField('maxUses')}
+                    />
+                    <FieldError id="admin-promo-max-uses-error" testid="admin-promo-max-uses-error" message={errors.maxUses} />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p className={`pv-preview${previewMuted ? ' pv-preview-muted' : ''}`} data-testid="admin-promo-value-preview" role="status" aria-live="polite">
+              <Sparkles size={18} strokeWidth={2} aria-hidden="true" />
+              <span>{previewContent}</span>
+            </p>
+          </div>
+        )}
       </FormSection>
       <FormSection title="Thời gian & phạm vi">
         <div className="sa-form-grid">
@@ -1450,7 +1628,7 @@ export function PromoForm({ initial, categories, onSave, onRequestClose, mode: m
                 value={startDate}
                 data-testid="admin-promo-start-input"
                 disabled={isEdit}
-                onChange={e => setStartDate(e.target.value)}
+                onChange={e => { setStartDate(e.target.value); setErrors(prev => clearError(prev, 'expiryDate')); }}
               />
             )}
           </div>
@@ -1467,10 +1645,9 @@ export function PromoForm({ initial, categories, onSave, onRequestClose, mode: m
                   value={expiryDate}
                   data-testid="admin-promo-expiry-input"
                   aria-describedby={errors.expiryDate ? 'admin-promo-expiry-error' : undefined}
-                  onChange={e => setExpiryDate(e.target.value)}
+                  onChange={e => { setExpiryDate(e.target.value); setErrors(prev => clearError(prev, 'expiryDate')); }}
                   onBlur={() => validateField('expiryDate')}
                 />
-                {!isPage && <span className="sa-field-meta"><span className="sa-hint">Định dạng dd/mm/yyyy.</span></span>}
                 <FieldError id="admin-promo-expiry-error" testid="admin-promo-expiry-error" message={errors.expiryDate} />
               </>
             )}
@@ -1514,7 +1691,7 @@ export function PromoForm({ initial, categories, onSave, onRequestClose, mode: m
               className={`sa-input${isView ? ' sa-view-input' : ''}`}
               value={scopeType}
               disabled={isEdit || isView}
-              onChange={e => setScopeType(e.target.value)}
+              onChange={e => { setScopeType(e.target.value); setErrors(prev => clearError(prev, 'scope')); }}
             >
               <option value="All">Toàn sàn</option>
               <option value="Category">Theo danh mục</option>
@@ -1529,7 +1706,7 @@ export function PromoForm({ initial, categories, onSave, onRequestClose, mode: m
                 className={`sa-input${isView ? ' sa-view-input' : ''}`}
                 value={scopeCategoryId}
                 disabled={isView}
-                onChange={e => setScopeCategoryId(e.target.value)}
+                onChange={e => { setScopeCategoryId(e.target.value); setErrors(prev => clearError(prev, 'scope')); }}
               >
                 <option value="">— Chọn danh mục —</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -1546,7 +1723,7 @@ export function PromoForm({ initial, categories, onSave, onRequestClose, mode: m
                   id="admin-promo-scope-products"
                   className="sa-input"
                   value={scopeProductIds}
-                  onChange={e => setScopeProductIds(e.target.value)}
+                  onChange={e => { setScopeProductIds(e.target.value); setErrors(prev => clearError(prev, 'scope')); }}
                 />
               )}
             </div>
@@ -1564,17 +1741,6 @@ export function PromoForm({ initial, categories, onSave, onRequestClose, mode: m
           )}
         </div>
       </FormSection>
-      {/* Đợt 21 — (S4) Trạng thái: CHỈ ở trang full page. Tạo mới mặc định Nháp,
-        KHÔNG tự kích hoạt (đã bỏ toggle + bỏ gọi activate sau tạo); sửa không đổi trạng thái. */}
-      {isPage && !isView && (
-        <FormSection title="Trạng thái">
-          <p className="sa-promo-status-note" data-testid="admin-promo-status-text">
-            {isEdit
-              ? `Trạng thái hiện tại: ${normInitial.statusLabel ?? '—'}. Sửa khuyến mãi không đổi trạng thái — bật/tắt từ danh sách khuyến mãi.`
-              : 'Nháp — khuyến mãi mới được tạo ở trạng thái Nháp. Bật khuyến mãi từ danh sách sau khi tạo.'}
-          </p>
-        </FormSection>
-      )}
       {isView && (
         <ViewMeta prefix="admin-promo" createdAt={normInitial.createdAt} updatedAt={normInitial.updatedAt} updatedBy={normInitial.updatedBy} />
       )}
@@ -1586,12 +1752,13 @@ export function PromoForm({ initial, categories, onSave, onRequestClose, mode: m
   if (isPage) {
     return (
       <form onSubmit={isView ? undefined : handleSubmit} data-testid="admin-promo-form" data-form-mode={mode} noValidate className="sa-promo-page-form">
-        <div className="sa-promo-page-head">
+        <div className="sa-promo-page-head sa-page-sticky-head">
           <div className="sa-promo-page-head-text">
             <h2 data-testid="admin-promo-form-title">{title}</h2>
-            <p>{subtitle}</p>
+            {subtitle && <p>{subtitle}</p>}
           </div>
           <div className="sa-promo-page-head-actions">
+            <FormBackButton testid="admin-promo-form-back-btn" onBack={handleBack} />
             {isView ? (
               <>
                 <button type="button" className="sa-btn sa-btn-ghost" data-testid="admin-promo-cancel-btn" onClick={requestClose}>
@@ -1757,9 +1924,10 @@ export function CustomerForm({ initial, onSave, onRequestClose, mode: modeProp, 
   };
 
   const requestClose = () => void requestDiscardConfirm(dirty, onRequestClose);
+  const handleBack = () => goBackOrClose(dirty, onRequestClose);
   /** Đợt 21 — trang full page không có FormShell nên tự lo autofocus ô đầu
    *  + ESC (FormShell làm việc này ở Drawer): ESC khi chưa sửa thì đóng ngay,
-   *  đã sửa thì hỏi "Thoát mà chưa lưu?" qua requestClose. requestCloseRef
+   *  đã sửa thì hỏi "Hủy các thay đổi?" qua requestClose. requestCloseRef
    *  tránh closure cũ (dirty) trong listener đăng ký 1 lần khi mount. */
   const pageFormRef = useRef<HTMLFormElement>(null);
   const requestCloseRef = useRef(requestClose);
@@ -1778,8 +1946,9 @@ export function CustomerForm({ initial, onSave, onRequestClose, mode: modeProp, 
   const title = isPage
     ? (isView ? `Chi tiết khách hàng ${initial.code || fullName}` : 'Chỉnh sửa khách hàng')
     : (isView ? 'Chi tiết khách hàng' : isEdit ? 'Chỉnh sửa khách hàng' : 'Thêm khách hàng');
-  const subtitle = isView ? 'Xem thông tin khách hàng.'
-    : isEdit ? 'Mã khách hàng và email không thay đổi khi sửa.' : 'Thêm khách hàng mới.';
+  /** Đợt 26: chỉ giữ subtitle ở chế độ sửa (ghi rõ mã + email không đổi);
+   *  "Xem thông tin khách hàng." / "Thêm khách hàng mới." đã bỏ. */
+  const subtitle: string | undefined = !isView && isEdit ? 'Mã khách hàng và email không thay đổi khi sửa.' : undefined;
 
   /** Nút footer dùng chung cho cả 2 variant (Drawer + trang full page):
    *  Drawer đặt ở footer FormShell, trang full page đặt ở header sticky. */
@@ -1824,9 +1993,9 @@ export function CustomerForm({ initial, onSave, onRequestClose, mode: modeProp, 
                 data-testid="admin-customer-code-input"
                 disabled
                 readOnly
+                title="Mã khách hàng không thay đổi khi sửa"
               />
             )}
-            {!isView && <span className="sa-field-meta"><span className="sa-hint">Mã khách hàng không thay đổi khi sửa.</span></span>}
           </div>
           <div className="sa-field">
             <label className="sa-field-label" htmlFor="admin-customer-email">Email</label>
@@ -1840,9 +2009,9 @@ export function CustomerForm({ initial, onSave, onRequestClose, mode: modeProp, 
                 data-testid="admin-customer-email-input"
                 disabled
                 readOnly
+                title="Email là định danh đăng nhập — chỉ xem, không sửa"
               />
             )}
-            {!isView && <span className="sa-field-meta"><span className="sa-hint">Email là định danh đăng nhập — chỉ xem, không sửa.</span></span>}
           </div>
         </div>
       </FormSection>
@@ -1860,7 +2029,7 @@ export function CustomerForm({ initial, onSave, onRequestClose, mode: modeProp, 
                   value={fullName}
                   data-testid="admin-customer-name-input"
                   aria-describedby={errors.fullName ? 'admin-customer-name-error' : undefined}
-                  onChange={e => setFullName(e.target.value)}
+                  onChange={e => { setFullName(e.target.value); setErrors(prev => clearError(prev, 'fullName')); }}
                   onBlur={() => validateField('fullName')}
                 />
                 <FieldError id="admin-customer-name-error" testid="admin-customer-name-error" message={errors.fullName} />
@@ -1879,10 +2048,10 @@ export function CustomerForm({ initial, onSave, onRequestClose, mode: modeProp, 
                   value={phoneNumber}
                   data-testid="admin-customer-phone-input"
                   aria-describedby={errors.phoneNumber ? 'admin-customer-phone-error' : undefined}
-                  onChange={e => setPhoneNumber(e.target.value)}
+                  placeholder="0xxxxxxxxx"
+                  onChange={e => { setPhoneNumber(e.target.value); setErrors(prev => clearError(prev, 'phoneNumber')); }}
                   onBlur={() => validateField('phoneNumber')}
                 />
-                <span className="sa-field-meta"><span className="sa-hint">Bắt đầu bằng 0, gồm 10 chữ số.</span></span>
                 <FieldError id="admin-customer-phone-error" testid="admin-customer-phone-error" message={errors.phoneNumber} />
               </>
             )}
@@ -1914,12 +2083,13 @@ export function CustomerForm({ initial, onSave, onRequestClose, mode: modeProp, 
   if (isPage) {
     return (
       <form ref={pageFormRef} onSubmit={isView ? undefined : handleSubmit} data-testid="admin-customer-form" data-form-mode={mode} noValidate className="sa-promo-page-form">
-        <div className="sa-promo-page-head">
+        <div className="sa-promo-page-head sa-page-sticky-head">
           <div className="sa-promo-page-head-text">
             <h2 data-testid="admin-customer-form-title">{title}</h2>
-            <p>{subtitle}</p>
+            {subtitle && <p>{subtitle}</p>}
           </div>
           <div className="sa-promo-page-head-actions">
+            <FormBackButton testid="admin-customer-form-back-btn" onBack={handleBack} />
             {footer}
           </div>
         </div>

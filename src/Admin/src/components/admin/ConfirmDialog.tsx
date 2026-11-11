@@ -4,7 +4,7 @@
  * QUY TẮC BẮT BUỘC (Matthew 16:27 + spec A–H 17:42): MỌI popup mặc định chỉ
  * có ĐÚNG 2 NÚT, không bao giờ 3 — footer luôn là [Hủy] trái + [Xác nhận cụ
  * thể] phải. Ngoại lệ theo spec mới: đóng form chưa lưu là [Ở lại] trái +
- * [Thoát] phải (truyền cancelText="Ở lại", confirmText="Thoát",
+ * [Rời trang] phải (truyền cancelText="Ở lại", confirmText="Rời trang",
  * variant="warning"); A3 chặn xóa DM và G4 phiên hết hạn CHỈ 1 NÚT
  * (singleButton: true — footer chỉ còn nút xác nhận); A5/C5/G5 có nút trái
  * [Đóng]; D1 nút trái [Giữ đơn hàng]; G6 nút trái [Giữ bản của tôi].
@@ -69,7 +69,7 @@
  *        await confirmAction({ ..., variant: 'warning', singleButton: true,
  *          nonDismissable: true });
  *        clearToken(); navigate('/login');
- *    - Đóng form chưa lưu: cancelText: 'Ở lại', confirmText: 'Thoát',
+ *    - Đóng form chưa lưu: cancelText: 'Ở lại', confirmText: 'Rời trang',
  *      variant: 'warning' (không irreversible).
  *    confirmAction xếp hàng (queue): gọi nhiều lần liên tiếp thì các popup
  *    hiện lần lượt, mỗi lần resolve { confirmed, reason? } của riêng nó.
@@ -455,6 +455,13 @@ export function confirmAction(
 
 export function ConfirmDialogHost() {
   const [current, setCurrent] = useState<PendingRequest | null>(currentRequest);
+  // BUG #1: mỗi request chỉ được settle đúng 1 lần. ESC + click, bấm nền mờ
+  // + click, hoặc double-click có thể gọi onConfirm/onCancel 2 lần trong
+  // cùng 1 tick; lần gọi thứ 2 mà chạy showNext() thừa sẽ bật/nuốt mất
+  // dialog đang xếp hàng tiếp theo (và để lại dialog tồn đọng). Guard theo
+  // đúng object request đang hiện — request mới là object khác nên không
+  // bị chặn.
+  const settledRef = useRef<PendingRequest | null>(null);
 
   useEffect(() => {
     hostListeners.add(setCurrent);
@@ -468,13 +475,17 @@ export function ConfirmDialogHost() {
   if (!current) return null;
 
   const req = current;
-  const handleConfirm = (reason?: string) => {
+  const settle = (result: { confirmed: boolean; reason?: string }) => {
+    if (settledRef.current === req) return;
+    settledRef.current = req;
     showNext();
-    req.resolve({ confirmed: true, reason });
+    req.resolve(result);
+  };
+  const handleConfirm = (reason?: string) => {
+    settle({ confirmed: true, reason });
   };
   const handleCancel = () => {
-    showNext();
-    req.resolve({ confirmed: false });
+    settle({ confirmed: false });
   };
 
   return (
@@ -502,8 +513,8 @@ export function ConfirmDialogHost() {
             label: req.linkLabel,
             onClick: () => {
               // Đóng popup + resolve { confirmed: false } rồi mới điều hướng.
-              showNext();
-              req.resolve({ confirmed: false });
+              // Qua settle() để double-click link không gọi showNext() thừa.
+              settle({ confirmed: false });
               req.onLinkClick?.();
             },
           }

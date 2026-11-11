@@ -790,9 +790,9 @@ describe('AdminPage — menu dropdown + badge (đợt 21, 22:18 — ghi đè men
     expect(screen.queryByTestId('admin-nav-group-products-badge')).toBeNull();
   });
 
-  it('spacing + màu menu TỐI qua CSS (đợt 23): nhóm cách 14px, mục padding 8px 12px + cách 4px, Tổng quan cách nhóm đầu 14px; sidebar gradient tối, mục chọn nền xanh đậm + chữ lime #bff53c, badge giữ cam; drawer <960px', () => {
+  it('spacing + màu menu TỐI qua CSS (đợt 23 + đợt 26): nhóm cách 16px, mục padding 8px 12px + cách 4px, Tổng quan cách nhóm đầu 16px; sidebar PHẲNG #0E2A1F (bỏ gradient), mục chọn nền xanh đậm + chữ lime #bff53c, badge giữ cam; drawer <960px', () => {
     const css = adminPageCss();
-    expect(css).toMatch(/\.spark-admin\s+\.sa-nav-group\s*\{\s*margin-top:\s*14px;?\s*\}/);
+    expect(css).toMatch(/\.spark-admin\s+\.sa-nav-group\s*\{\s*margin-top:\s*16px;?\s*\}/);
     expect(css).toMatch(/\.spark-admin\s+\.sa-nav-overview\s*\{\s*margin-bottom:\s*0;?\s*\}/);
     // Chỉ có 1 kiểu ngắt nhóm (whitespace 14px): không còn rule nhóm kề nhau riêng.
     expect(css).not.toMatch(/\.spark-admin\s+\.sa-nav-group\s*\+\s*\.sa-nav-group\s*\{/);
@@ -803,11 +803,12 @@ describe('AdminPage — menu dropdown + badge (đợt 21, 22:18 — ghi đè men
     const titleRules = [...css.matchAll(/\.spark-admin\s+\.sa-nav-group-title\s*\{([^}]*)\}/g)].map(m => m[1]);
     expect(titleRules.length).toBeGreaterThan(0);
     expect(titleRules.some(r => r.includes('padding: 10px 12px'))).toBe(true);
-    // Sidebar TỐI (đợt 23 đảo ngược đợt 22 sáng): gradient #0E2A1F→#0B1F17→
-    // #081811, viền phải mờ trắng — không còn nền trắng.
+    // Sidebar TỐI (đợt 23 đảo ngược đợt 22 sáng; đợt 26 bỏ gradient đợt 20):
+    // nền PHẲNG #0E2A1F, viền phải mờ trắng — không còn nền trắng, không gradient.
     const sidebarRule = css.match(/\.spark-admin\s+\.sa-sidebar\s*\{([^}]*)\}/);
     expect(sidebarRule).not.toBeNull();
-    expect(sidebarRule![1]).toContain('background: linear-gradient(180deg, #0e2a1f 0%, #0b1f17 55%, #081811 100%)');
+    expect(sidebarRule![1]).toContain('background: #0E2A1F');
+    expect(sidebarRule![1]).not.toContain('linear-gradient');
     expect(sidebarRule![1]).toContain('border-right: 1px solid rgba(255, 255, 255, 0.08)');
     expect(sidebarRule![1]).not.toContain('background: #ffffff');
     // Một font Inter cho toàn bộ menu: rule .sa-sidebar * ép font.
@@ -1047,7 +1048,10 @@ describe('AdminPage — form XEM khuyến mãi + footer đơn + trả hàng + đ
     expect(screen.getByTestId('admin-order-change-status-btn')).toBeDisabled();
     expect(screen.queryByTestId('admin-order-status-panel')).toBeNull();
     expect(screen.queryByTestId('admin-order-status-select')).toBeNull();
-    fireEvent.click(screen.getByTestId('admin-order-detail-back'));
+    // Đợt 25/26: breadcrumb "Đơn hàng" chỉ còn <span> (không bấm được); về danh
+    // sách bằng nút [← Quay lại] đầu tiên (admin-order-detail-back-btn).
+    expect(screen.getByTestId('admin-order-detail-breadcrumb')).toHaveTextContent('Đơn hàng');
+    fireEvent.click(screen.getByTestId('admin-order-detail-back-btn'));
     await waitFor(() => {
       expect(screen.queryByTestId('admin-order-detail-title')).toBeNull();
     });
@@ -1073,7 +1077,9 @@ describe('AdminPage — form XEM khuyến mãi + footer đơn + trả hàng + đ
     expect(screen.queryByTestId('admin-return-detail')).toBeNull();
     const headBtns = within(screen.getByTestId('admin-return-detail-page')).getAllByRole('button')
       .filter(b => b.closest('.sa-promo-page-head-actions'));
-    expect(headBtns).toHaveLength(2);
+    // Đợt 25/26: header sticky có thêm nút [← Quay lại] đầu tiên.
+    expect(headBtns).toHaveLength(3);
+    expect(screen.getByTestId('admin-return-detail-back-btn')).toHaveTextContent('Quay lại');
     expect(screen.getByTestId('admin-return-reject-btn')).toHaveTextContent('Từ chối');
     expect(screen.getByTestId('admin-return-approve-btn')).toHaveTextContent('Duyệt');
     // Bấm Duyệt → panel xác nhận INLINE (KHÔNG ConfirmDialog).

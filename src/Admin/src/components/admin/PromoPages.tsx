@@ -21,6 +21,11 @@ import { ArrowLeft, Pencil } from 'lucide-react';
 import { apiJson } from '../../../../Shared/utils/api';
 import { Badge, EmptyState, Pagination } from './shared';
 import { DISCOUNT_TYPE_LABEL } from './AdminForms';
+import { formatDateTimeVN } from './formUtils';
+/** Đợt 24: style khối "Giá trị giảm" (card .pv-card) của PromoForm.
+ *  Import ở file trang KM theo pattern order-detail.css <- OrderDetailPage.tsx;
+ *  AdminPage import PromoPages nên CSS này vào chung bundle admin. */
+import './promo-value.css';
 
 /** Tóm tắt KM dùng cho các trang con (cấu trúc khớp Promotion ở AdminPage). */
 export interface PromoSummary {
@@ -49,21 +54,22 @@ const fmtDateShort = (s?: string | null): string => {
   const d = new Date(s);
   return Number.isNaN(d.getTime()) ? String(s) : d.toLocaleDateString('vi-VN');
 };
-const fmtDateTime = (s?: string | null): string => {
-  if (!s) return '—';
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? String(s) : d.toLocaleString('vi-VN');
-};
+// Đợt 26 — ngày-giờ dd/mm/yyyy HH:mm (dùng sẵn formatDateTimeVN; toLocaleString cũ kèm giây).
+const fmtDateTime = (s?: string | null): string => formatDateTimeVN(s ?? '');
 const discountValueText = (p: PromoSummary): string =>
   p.discountType === 'Percentage' ? `${p.discountValue}%`
   : p.discountType === 'FreeShip' ? 'Miễn phí ship'
   : fmtMoney(p.discountValue);
 
 /** Breadcrumb "Quản lý khuyến mãi / <trang hiện tại>" — bấm mục đầu về danh sách. */
+/** Breadcrumb "Quản lý khuyến mãi / <trang hiện tại>" — chữ thường (đợt 26):
+ *  mục đầu là <span>, không còn là nút. Prop onBackToList giữ lại vì nút
+ *  "Quay lại" ở header trang chi tiết vẫn dùng nó. */
 export function PromoBreadcrumb({ current, onBackToList }: { current: string; onBackToList: () => void }) {
+  void onBackToList;
   return (
     <nav className="sa-breadcrumb" aria-label="Breadcrumb" data-testid="admin-promo-breadcrumb">
-      <button type="button" className="sa-breadcrumb-link" onClick={onBackToList}>Quản lý khuyến mãi</button>
+      <span className="sa-breadcrumb-link">Quản lý khuyến mãi</span>
       <span aria-hidden="true">/</span>
       <span aria-current="page">{current}</span>
     </nav>
@@ -93,7 +99,7 @@ export function PromoDetailPage({ promo, onBackToList, onEdit }: {
   return (
     <section className="sa-promo-page" data-testid="admin-promo-detail-page">
       <PromoBreadcrumb current="Chi tiết" onBackToList={onBackToList} />
-      <div className="sa-promo-page-head">
+      <div className="sa-promo-page-head sa-page-sticky-head">
         <div className="sa-promo-page-head-text">
           <h2>Chi tiết khuyến mãi</h2>
           <p>Mã <span className="sa-coupon-tag">{promo.code}</span></p>
@@ -218,7 +224,7 @@ export function PromoUsagesPage({ promo, onBackToList }: {
   return (
     <section className="sa-promo-page" data-testid="admin-promo-usages-page">
       <PromoBreadcrumb current="Lượt sử dụng" onBackToList={onBackToList} />
-      <div className="sa-promo-page-head">
+      <div className="sa-promo-page-head sa-page-sticky-head">
         <div className="sa-promo-page-head-text">
           <h2>Lịch sử sử dụng khuyến mãi</h2>
           <p>Mã <span className="sa-coupon-tag">{promo.code}</span></p>

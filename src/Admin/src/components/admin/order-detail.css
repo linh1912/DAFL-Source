@@ -22,27 +22,13 @@
   color: var(--sa-muted, #6b7280);
 }
 
-.od-breadcrumb-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 999px;
-  background: #fff;
-  color: var(--sa-green-dark, #051c12);
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
+/* Breadcrumb chữ thường (đợt 26): mục đầu là <span>, không còn pill-button. */
+.od-breadcrumb-link {
+  color: var(--sa-muted, #6b7280);
 }
-
-.od-breadcrumb-back:hover {
-  background: #f7fee7;
-}
-
 .od-breadcrumb-current {
-  font-weight: 700;
-  color: var(--sa-green-dark, #051c12);
+  font-weight: 600;
+  color: var(--sa-text, #111827);
 }
 
 /* ---------- Header ---------- */
@@ -52,6 +38,10 @@
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+}
+.od-header.sa-page-sticky-head {
+  background: #fff;
+  padding: 12px 0;
 }
 
 .od-header-main {
@@ -76,14 +66,14 @@
 
 .od-header-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
 }
 
 /* ---------- Panel đổi trạng thái / hủy đơn ---------- */
 .od-panel {
   border: 1px solid #d1d5db;
-  border-radius: 16px;
+  border-radius: 12px;
   background: #fff;
   padding: 16px 20px;
   display: flex;
@@ -110,15 +100,15 @@
 .od-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 0.95rem;
-  font-weight: 600;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
   max-width: 420px;
 }
 
 .od-panel-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   justify-content: flex-end;
 }
 
@@ -140,7 +130,7 @@
 
 .od-card {
   border: 1px solid #e5e7eb;
-  border-radius: 16px;
+  border-radius: 12px;
   background: #fff;
   padding: 16px 20px;
 }
@@ -180,7 +170,7 @@
   width: 56px;
   height: 56px;
   object-fit: cover;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid #e5e7eb;
   flex-shrink: 0;
 }
@@ -210,7 +200,7 @@
 }
 
 .od-product-total {
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -236,6 +226,8 @@
   margin: 0;
   font-weight: 600;
   white-space: nowrap;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
 }
 
 .od-totals-grand {
@@ -247,7 +239,7 @@
 .od-totals-grand dt,
 .od-totals-grand dd {
   color: var(--sa-green-dark, #051c12);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 1.05rem;
 }
 

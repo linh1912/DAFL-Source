@@ -148,12 +148,15 @@ describe('AdminPage — Đánh giá (đợt 16)', () => {
     expect(screen.getByText(shortComment)).toBeInTheDocument();
     // Toolbar chuẩn đợt 18 (PageToolbar): tìm kiếm + lọc sao + Đặt lại.
     // Đợt 21: tìm/lọc TỰ ĐỘNG (debounce 300ms) nên KHÔNG còn nút icon Tìm;
-    // nút Đặt lại là nút chữ "Đặt lại bộ lọc". KHÔNG có nút Export / Làm mới
-    // / Thêm mới (admin không tạo đánh giá).
+    // nút Đặt lại đợt 24/26 chỉ còn icon RotateCcw. KHÔNG có nút Export /
+    // Làm mới / Thêm mới (admin không tạo đánh giá).
     expect(screen.getByTestId('reviews-search-input')).toBeInTheDocument();
     expect(screen.getByTestId('admin-review-rating-filter')).toBeInTheDocument();
     expect(screen.queryByTestId('reviews-search-btn')).toBeNull();
-    expect(screen.getByTestId('reviews-reset-btn')).toHaveTextContent('Đặt lại bộ lọc');
+    const reviewsResetBtn = screen.getByTestId('reviews-reset-btn');
+    expect(reviewsResetBtn).toHaveTextContent('');
+    expect(reviewsResetBtn).toHaveAttribute('aria-label', 'Đặt lại bộ lọc');
+    expect(reviewsResetBtn.querySelector('svg.lucide-rotate-ccw')).not.toBeNull();
     expect(screen.queryByTestId('reviews-refresh-btn')).toBeNull();
     expect(screen.queryByTestId('reviews-add-btn')).toBeNull();
     expect(screen.queryByRole('button', { name: /Export/ })).toBeNull();

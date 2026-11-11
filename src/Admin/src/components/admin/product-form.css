@@ -1,0 +1,448 @@
+/**
+ * product-form.css — Style riêng của form sản phẩm admin (đợt 24 giai đoạn 2 +
+ * đợt 25 + đợt 26). Import từ AdminForms.tsx.
+ *
+ * PHẠM VI: form sản phẩm (trang full page + Drawer) và các control dùng chung
+ * trong 4 form (MoneyInput, FieldError, CategoryPicker, ô nhập, label) — các
+ * rule dùng chung đều ghi chú rõ. KHÔNG đụng layout trang danh sách, sidebar,
+ * dashboard hay khối "Giá trị giảm" của KM (promo-value.css).
+ *
+ * TOKEN: mọi màu/cỡ lấy từ biến --sa-* (worker B định nghĩa trong
+ * design-tokens.css/AdminPage.css) + fallback = đúng giá trị hợp đồng, nên
+ * file này hiển thị đúng ngay cả khi token của B chưa cập nhật xong. Các rule
+ * override dùng độ đặc hiệu CAO HƠN rule gốc trong AdminPage.css (vì file này
+ * load TRƯỚC AdminPage.css — AdminPage import AdminForms trước khi import
+ * AdminPage.css), không dựa vào thứ tự load.
+ *
+ * SỐ ĐO (đợt 26, ghi đè số cũ): ô nhập/nút cao 38px, bo 8px, card 12px,
+ * chỉ dùng độ đậm 400/500/600, nút chính #166534, không
+ * gradient/glow/nút đen/emoji, không icon trang trí ở header card.
+ *
+ * DARK MODE: admin KHÔNG có cơ chế dark mode (chỉ shop có). Khối
+ * @media (prefers-color-scheme: dark) cuối file chỉ đổi màu các component
+ * MỚI trong file này khi máy bật dark ở cấp OS — toàn bộ admin còn lại vẫn
+ * sáng (lệch tông, giống khối KM đợt 24). Không xây dark mode cho cả admin.
+ */
+
+/* ---------- Trang form sản phẩm full page: khung 1100px căn giữa ---------- */
+.spark-admin .sa-product-page-form {
+  max-width: 1100px;
+  margin: 0 auto;
+  /* Chừa khoảng trống cuối trang để thanh sticky không che nội dung. */
+  padding-bottom: 48px;
+}
+
+/* Tiêu đề trang 24px/600 (ghi đè cỡ chữ/độ đậm cũ trong AdminPage.css). */
+.spark-admin .sa-product-page-form .sa-product-page-head-text h2 {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 32px;
+}
+
+/* ---------- Lưới 2 cột của trang form SP: trái 1.6fr / phải 1fr ---------- */
+.spark-admin .sa-product-form-cols {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 20px;
+}
+
+.spark-admin .sa-product-form-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* Card "Xem trước" ở cột phải dính khi cuộn (chỉ trang full page). */
+.spark-admin .sa-product-form-cols .sa-product-preview-card {
+  position: sticky;
+  top: 84px;
+}
+
+/* ---------- Card của form SP (chỉ trang full page) ---------- */
+.spark-admin .sa-product-page-form .sa-form-section {
+  background: var(--sa-surface, #ffffff);
+  border: 1px solid var(--sa-border, #e2e9e3);
+  border-radius: var(--sa-radius-card, 12px);
+  box-shadow: var(--sa-shadow-card, 0 1px 2px rgba(0, 0, 0, 0.04));
+  padding: 20px;
+  margin-bottom: 0;
+}
+
+/* Khối "Lịch sử" (chế độ xem) nằm ngoài lưới 2 cột: cách khối trên 16px. */
+.spark-admin .sa-product-page-form > .sa-form-section {
+  margin-top: 16px;
+}
+
+/* Header card CHỈ có tiêu đề 16px/600 viết thường — không icon trang trí,
+   không in hoa giãn chữ (ghi đè kiểu in hoa/đậm cũ). */
+.spark-admin .sa-product-page-form .sa-form-section-title {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--sa-text, #111827);
+}
+
+/* Lưới trong card: 2 cột, gap 16px (rule gốc không có gap). */
+.spark-admin .sa-product-page-form .sa-form-grid {
+  gap: 16px;
+  margin-bottom: 0;
+}
+
+/* ---------- Ô nhập + label dùng chung cho 4 form (trang + Drawer) ---------- */
+/* Label trên ô: 13px/500, dấu * đỏ (class .sa-req có sẵn); label–ô 6px. */
+.spark-admin .sa-product-page-form .sa-field-label,
+.spark-admin .sa-promo-page-form .sa-field-label,
+.spark-admin .fs-shell .sa-field-label {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+/* Ô nhập: cao 38px, bo 8px, viền #cdd8cf, padding ngang 14px. */
+.spark-admin .sa-product-page-form .sa-input,
+.spark-admin .sa-promo-page-form .sa-input,
+.spark-admin .fs-shell .sa-input {
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--sa-input-border, #cdd8cf);
+  border-radius: var(--sa-radius-input, 8px);
+  font-size: 14px;
+}
+
+.spark-admin .sa-product-page-form .sa-input:focus,
+.spark-admin .sa-promo-page-form .sa-input:focus,
+.spark-admin .fs-shell .sa-input:focus {
+  border-color: var(--sa-primary, #166534);
+  box-shadow: var(--sa-focus-ring, 0 0 0 3px rgba(22, 101, 52, 0.15));
+}
+
+/* Ô lỗi: viền đỏ + nền hồng rất nhạt (border-color gốc có !important nên
+   rule này cũng cần !important để thắng). */
+.spark-admin .sa-product-page-form .sa-input.sa-input-error,
+.spark-admin .sa-promo-page-form .sa-input.sa-input-error,
+.spark-admin .fs-shell .sa-input.sa-input-error {
+  border-color: var(--sa-danger, #b42318) !important;
+  background-color: var(--sa-danger-bg, #fef3f2);
+}
+
+/* Lỗi validate: 12.5px kèm icon (icon do FieldError render). */
+.spark-admin .sa-product-page-form .sa-field-error,
+.spark-admin .sa-promo-page-form .sa-field-error,
+.spark-admin .fs-shell .sa-field-error {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--sa-danger, #b42318);
+}
+
+/* Dropdown danh mục: cùng chiều cao/bo góc với ô nhập. */
+.spark-admin .sa-product-page-form .sa-picker-trigger,
+.spark-admin .sa-promo-page-form .sa-picker-trigger,
+.spark-admin .fs-shell .sa-picker-trigger {
+  height: 38px;
+  border-radius: var(--sa-radius-input, 8px);
+}
+
+/* Textarea mô tả SP: tối thiểu 140px, tự giãn theo nội dung (JS có sẵn). */
+.spark-admin .sa-textarea-auto {
+  min-height: 140px;
+}
+
+/* Chip giảm giá: chỉ dùng độ đậm 600 (ghi đè độ đậm cũ). */
+.spark-admin .sa-product-page-form .sa-discount-badge,
+.spark-admin .fs-shell .sa-discount-badge {
+  font-weight: 600;
+}
+
+/* ---------- Hàng label + chip "-xx%" cạnh label "Giá gốc" ---------- */
+/* Ghi đè rule gốc ".sa-field > span" (display:block, margin-bottom:6px). */
+.spark-admin .sa-field > span.sa-field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+
+.spark-admin .sa-field > span.sa-field-label-row .sa-field-label {
+  margin-bottom: 0;
+}
+
+/* ---------- Ô mã SP + icon ổ khóa (trang sửa) ---------- */
+.spark-admin .sa-field > span.sa-code-lock-wrap {
+  position: relative;
+  display: block;
+  margin-bottom: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+
+.spark-admin .sa-code-lock-wrap .sa-input {
+  padding-right: 38px;
+}
+
+.spark-admin .sa-code-lock {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  color: var(--sa-text-muted, #6b7280);
+}
+
+/* ---------- Ô tiền tệ: input-group thật (áp cho cả form KM) ---------- */
+/* Khung nhóm: cao 38px, bo 8px, viền ôm cả nhóm (ghi đè hậu tố ₫ absolute cũ). */
+.spark-admin .sa-form-section .sa-money-wrap {
+  display: flex;
+  align-items: stretch;
+  height: var(--sa-control-height, 38px);
+  border: 1px solid var(--sa-input-border, #cdd8cf);
+  border-radius: var(--sa-radius-input, 8px);
+  background: var(--sa-surface, #ffffff);
+  overflow: hidden;
+}
+
+.spark-admin .sa-form-section .sa-money-wrap:focus-within {
+  border-color: var(--sa-primary, #166534);
+  box-shadow: var(--sa-focus-ring, 0 0 0 3px rgba(22, 101, 52, 0.15));
+  outline: none;
+}
+
+.spark-admin .sa-form-section .sa-money-wrap .sa-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  height: 100%;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  box-shadow: none;
+}
+
+.spark-admin .sa-form-section .sa-money-wrap .sa-input:focus {
+  box-shadow: none;
+  outline: none;
+}
+
+/* Addon ₫/% cố định bên phải: rộng 44px, nền xám xanh nhạt, ngăn bằng viền trái. */
+.spark-admin .sa-form-section .sa-money-wrap .sa-money-suffix {
+  position: static;
+  flex: 0 0 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  border-left: 1px solid var(--sa-input-border, #cdd8cf);
+  background: #f1f5f2;
+  color: var(--sa-text-muted, #6b7280);
+  font-size: 14px;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.spark-admin .sa-form-section .sa-money-wrap:focus-within .sa-money-suffix {
+  border-left-color: var(--sa-primary, #166534);
+  background: var(--sa-success-bg, #ecf8ef);
+  color: var(--sa-primary, #166534);
+}
+
+/* Lỗi: viền đỏ cả nhóm (kể cả khi focus). */
+.spark-admin .sa-form-section .sa-money-wrap-error {
+  border-color: var(--sa-danger, #b42318);
+}
+
+.spark-admin .sa-form-section .sa-money-wrap-error:focus-within {
+  border-color: var(--sa-danger, #b42318);
+  box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.15);
+}
+
+/* Thống nhất token đợt 26 cho khối KM (promo-value.css đợt 24 dùng cao/bo cũ):
+   chỉ đổi cao + bo, giữ nguyên viền/nền riêng của khối đó. */
+.spark-admin .sa-form-section.pv-card .sa-money-wrap {
+  height: var(--sa-control-height, 38px);
+  border-radius: var(--sa-radius-input, 8px);
+}
+
+/* ---------- Stepper tồn kho + nhãn trạng thái ---------- */
+.spark-admin .sa-field > span.sa-stock-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+
+/* Bộ stepper ngang liền khối, tối đa 180px, cao 38px. */
+.spark-admin .sa-field .sa-stepper {
+  max-width: 180px;
+  height: var(--sa-control-height, 38px);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.spark-admin .sa-field .sa-stepper-btn {
+  width: 38px;
+  height: 100%;
+  flex: none;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.spark-admin .sa-field .sa-stepper-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.spark-admin .sa-field .sa-stepper-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Nhãn trạng thái tồn kho: pill cao 26px, có chấm tròn màu. */
+.spark-admin .sa-stock-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--sa-radius-full, 999px);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.spark-admin .sa-stock-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.spark-admin .sa-stock-pill-green {
+  background: var(--sa-success-bg, #ecf8ef);
+  color: var(--sa-success, #166534);
+}
+
+.spark-admin .sa-stock-pill-yellow {
+  background: #fefce8;
+  color: var(--sa-warning, #b45309);
+}
+
+.spark-admin .sa-stock-pill-red {
+  background: var(--sa-danger-bg, #fef3f2);
+  color: var(--sa-danger, #b42318);
+}
+
+/* ---------- Spinner CSS-only trong nút Lưu (không đổi kích thước nút) ---------- */
+.spark-admin .sa-btn-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: sa-form-spin 750ms linear infinite;
+  vertical-align: -2px;
+}
+
+@keyframes sa-form-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 960px) {
+  .spark-admin .sa-product-form-cols {
+    grid-template-columns: 1fr;
+  }
+
+  .spark-admin .sa-product-form-cols .sa-product-preview-card {
+    position: static;
+  }
+}
+
+@media (max-width: 600px) {
+  .spark-admin .sa-product-page-form .sa-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Dark mode (chỉ các component mới trong file này) ---------- */
+/* Admin KHÔNG có cơ chế dark mode (chỉ shop có): khối này chỉ đổi màu các
+   component mới khi máy bật dark ở cấp OS, admin còn lại vẫn sáng — lệch
+   tông nhưng vẫn đọc được (giống khối KM đợt 24). */
+@media (prefers-color-scheme: dark) {
+  .spark-admin .sa-product-page-form .sa-form-section {
+    background: #1a2620;
+    border-color: #2a3f31;
+  }
+
+  .spark-admin .sa-product-page-form .sa-form-section-title {
+    color: #e7f0e9;
+  }
+
+  .spark-admin .sa-product-page-form .sa-input,
+  .spark-admin .sa-promo-page-form .sa-input,
+  .spark-admin .fs-shell .sa-input {
+    background: #1e3325;
+    border-color: #3a4f41;
+    color: #e7f0e9;
+  }
+
+  .spark-admin .sa-form-section .sa-money-wrap {
+    background: #1e3325;
+    border-color: #3a4f41;
+  }
+
+  .spark-admin .sa-form-section .sa-money-wrap .sa-money-suffix {
+    background: #1e3325;
+    border-color: #3a4f41;
+    color: #b9cdc0;
+  }
+
+  .spark-admin .sa-field .sa-stepper-btn {
+    background: #1e3325;
+    border-color: #3a4f41;
+    color: #e7f0e9;
+  }
+
+  .spark-admin .sa-stock-pill-green {
+    background: #1c2b21;
+    color: #86efac;
+  }
+
+  .spark-admin .sa-stock-pill-yellow {
+    background: #2b2505;
+    color: #fcd34d;
+  }
+
+  .spark-admin .sa-stock-pill-red {
+    background: #2b1512;
+    color: #fda29b;
+  }
+
+  .spark-admin .sa-code-lock {
+    color: #9db3a5;
+  }
+}

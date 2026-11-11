@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { MapPin, Plus, Pencil, Trash2, Check } from 'lucide-react';
+import { MapPin, Plus, Pencil, Trash2, Check, Home } from 'lucide-react';
 import { UserAddress } from '../../../../Shared/types';
 import { apiJson } from '../../../../Shared/utils/api';
 import {
@@ -18,6 +18,9 @@ import {
  */
 
 const MAX_ADDRESSES = 5;
+const ERROR_COLOR = '#d81b60';
+const fieldErrorStyle: React.CSSProperties = { color: ERROR_COLOR, fontSize: '0.85rem', marginTop: 6 };
+const errorBorder = (hasError: boolean): React.CSSProperties => (hasError ? { borderColor: ERROR_COLOR } : {});
 
 const isValidVietnamesePhone = (phone: string) => /^0\d{9}$/.test(phone.trim());
 
@@ -225,7 +228,7 @@ export const AddressBook: React.FC = () => {
     <div data-testid="address-book">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <h3 className="profile-section-title" style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
-          <MapPin size={17} color="var(--ink)" /> Sổ địa chỉ giao hàng
+          <MapPin size={17} color="var(--primary)" /> Sổ địa chỉ giao hàng
         </h3>
         <button
           type="button"
@@ -238,19 +241,19 @@ export const AddressBook: React.FC = () => {
           <Plus size={15} /> Thêm địa chỉ
         </button>
       </div>
-      <p style={{ color: 'var(--muted)', fontSize: '0.9rem', margin: '8px 0 0' }}>
+      <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '8px 0 0' }}>
         Tối đa {MAX_ADDRESSES} địa chỉ. Địa chỉ đầu tiên tự động là mặc định; khi đặt hàng bạn có thể chọn địa chỉ khác trong sổ.
       </p>
 
       {atLimit && !formOpen && (
-        <div data-testid="address-limit-error" className="field-error" style={{ marginTop: 10 }}>
+        <div data-testid="address-limit-error" style={{ color: ERROR_COLOR, fontSize: '0.85rem', marginTop: 10 }}>
           Bạn đã lưu tối đa {MAX_ADDRESSES} địa chỉ. Vui lòng xóa bớt trước khi thêm mới.
         </div>
       )}
 
       <div data-testid="address-book-list" style={{ display: 'grid', gap: 10, marginTop: 14 }}>
         {loading ? (
-          <p style={{ color: 'var(--muted)', fontSize: '0.88rem' }}>Đang tải sổ địa chỉ…</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Đang tải sổ địa chỉ…</p>
         ) : addresses.length === 0 && !formOpen ? (
           <div className="empty-state-inline">
             Bạn chưa lưu địa chỉ nào. Thêm địa chỉ để đặt hàng nhanh hơn.
@@ -259,25 +262,24 @@ export const AddressBook: React.FC = () => {
           addresses.map(address => (
             <div
               key={address.id}
-              className={`card${address.isDefault ? ' card-selected' : ''}`}
-              style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}
+              className="address-book-item"
               data-testid={`address-item-${address.id}`}
             >
               <div style={{ flex: 1, minWidth: 220 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <strong style={{ fontSize: '0.92rem' }}>{address.recipientName}</strong>
-                  <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{address.phone}</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{address.phone}</span>
                   {address.isDefault && (
-                    <span className="badge badge-ok" data-testid={`address-default-badge-${address.id}`}>
-                      Mặc định
+                    <span className="address-default-badge" data-testid={`address-default-badge-${address.id}`}>
+                      <Home size={11} /> Mặc định
                     </span>
                   )}
                 </div>
-                <div style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: 3, lineHeight: 1.5 }}>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: 3, lineHeight: 1.5 }}>
                   {composeFullAddress(address)}
                 </div>
                 {address.note && (
-                  <div style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: 2 }}>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: 2 }}>
                     Ghi chú: {address.note}
                   </div>
                 )}
@@ -307,7 +309,7 @@ export const AddressBook: React.FC = () => {
                   <>
                     <button
                       type="button"
-                      className="btn btn-secondary address-action-btn"
+                      className="btn btn-primary address-action-btn"
                       onClick={() => handleDelete(address)}
                       disabled={busyId === address.id}
                       data-testid="address-delete-confirm-btn"
@@ -316,7 +318,7 @@ export const AddressBook: React.FC = () => {
                     </button>
                     <button
                       type="button"
-                      className="btn btn-text address-action-btn"
+                      className="btn btn-secondary address-action-btn"
                       onClick={() => setConfirmDeleteId(null)}
                       data-testid="address-delete-cancel-btn"
                     >
@@ -326,7 +328,7 @@ export const AddressBook: React.FC = () => {
                 ) : (
                   <button
                     type="button"
-                    className="btn btn-text address-action-btn address-delete-btn"
+                    className="btn btn-secondary address-action-btn address-delete-btn"
                     onClick={() => setConfirmDeleteId(address.id)}
                     disabled={busyId === address.id}
                     data-testid={`address-delete-btn-${address.id}`}
@@ -345,8 +347,7 @@ export const AddressBook: React.FC = () => {
           onSubmit={handleSave}
           noValidate
           data-testid="address-form"
-          className="card"
-          style={{ marginTop: 16 }}
+          style={{ marginTop: 16, border: '1px solid var(--border-subtle)', borderRadius: 12, padding: 16, background: 'var(--bg-subtle)' }}
         >
           <h4 style={{ margin: '0 0 12px', fontSize: '0.95rem', fontWeight: 800 }}>
             {editingId ? 'Sửa địa chỉ' : 'Thêm địa chỉ mới'}
@@ -356,21 +357,22 @@ export const AddressBook: React.FC = () => {
               <label className="form-label" htmlFor="address-recipient">Tên người nhận</label>
               <input
                 id="address-recipient"
-                className={errors.recipient ? 'input input-error' : 'input'}
+                className="form-input"
                 data-testid="address-recipient-input"
                 value={form.recipientName}
                 onChange={e => {
                   setForm(f => ({ ...f, recipientName: e.target.value }));
                   setErrors(prev => ({ ...prev, recipient: undefined }));
                 }}
+                style={errorBorder(!!errors.recipient)}
               />
-              {errors.recipient && <div data-testid="address-recipient-error" className="field-error">{errors.recipient}</div>}
+              {errors.recipient && <div data-testid="address-recipient-error" style={fieldErrorStyle}>{errors.recipient}</div>}
             </div>
             <div className="form-group">
               <label className="form-label" htmlFor="address-phone">Số điện thoại</label>
               <input
                 id="address-phone"
-                className={errors.phone ? 'input input-error' : 'input'}
+                className="form-input"
                 inputMode="numeric"
                 data-testid="address-phone-input"
                 value={form.phone}
@@ -378,8 +380,9 @@ export const AddressBook: React.FC = () => {
                   setForm(f => ({ ...f, phone: e.target.value }));
                   setErrors(prev => ({ ...prev, phone: undefined }));
                 }}
+                style={errorBorder(!!errors.phone)}
               />
-              {errors.phone && <div data-testid="address-phone-error" className="field-error">{errors.phone}</div>}
+              {errors.phone && <div data-testid="address-phone-error" style={fieldErrorStyle}>{errors.phone}</div>}
             </div>
           </div>
 
@@ -387,7 +390,7 @@ export const AddressBook: React.FC = () => {
             <label className="form-label" htmlFor="address-province">Tỉnh / Thành phố</label>
             <select
               id="address-province"
-              className={errors.province ? 'input input-error' : 'input'}
+              className="form-input"
               data-testid="address-province-select"
               value={form.provinceCode ?? ''}
               onChange={e => {
@@ -395,6 +398,7 @@ export const AddressBook: React.FC = () => {
                 setForm(f => ({ ...f, provinceCode: code, districtCode: null, wardCode: null }));
                 setErrors(prev => ({ ...prev, province: undefined, district: undefined, ward: undefined }));
               }}
+              style={errorBorder(!!errors.province)}
             >
               <option value="">— Chọn Tỉnh / Thành phố —</option>
               {VIETNAM_PROVINCES.map(province => (
@@ -403,7 +407,7 @@ export const AddressBook: React.FC = () => {
                 </option>
               ))}
             </select>
-            {errors.province && <div data-testid="address-province-error" className="field-error">{errors.province}</div>}
+            {errors.province && <div data-testid="address-province-error" style={fieldErrorStyle}>{errors.province}</div>}
           </div>
 
           <div className="address-form-grid">
@@ -411,7 +415,7 @@ export const AddressBook: React.FC = () => {
               <label className="form-label" htmlFor="address-district">Quận / Huyện</label>
               <select
                 id="address-district"
-                className={errors.district ? 'input input-error' : 'input'}
+                className="form-input"
                 data-testid="address-district-select"
                 value={form.districtCode ?? ''}
                 disabled={!selectedProvince}
@@ -420,6 +424,7 @@ export const AddressBook: React.FC = () => {
                   setForm(f => ({ ...f, districtCode: code, wardCode: null }));
                   setErrors(prev => ({ ...prev, district: undefined, ward: undefined }));
                 }}
+                style={errorBorder(!!errors.district)}
               >
                 <option value="">— Chọn Quận / Huyện —</option>
                 {(selectedProvince?.districts ?? []).map(district => (
@@ -428,13 +433,13 @@ export const AddressBook: React.FC = () => {
                   </option>
                 ))}
               </select>
-              {errors.district && <div data-testid="address-district-error" className="field-error">{errors.district}</div>}
+              {errors.district && <div data-testid="address-district-error" style={fieldErrorStyle}>{errors.district}</div>}
             </div>
             <div className="form-group">
               <label className="form-label" htmlFor="address-ward">Phường / Xã</label>
               <select
                 id="address-ward"
-                className={errors.ward ? 'input input-error' : 'input'}
+                className="form-input"
                 data-testid="address-ward-select"
                 value={form.wardCode ?? ''}
                 disabled={!selectedDistrict}
@@ -442,6 +447,7 @@ export const AddressBook: React.FC = () => {
                   setForm(f => ({ ...f, wardCode: e.target.value ? Number(e.target.value) : null }));
                   setErrors(prev => ({ ...prev, ward: undefined }));
                 }}
+                style={errorBorder(!!errors.ward)}
               >
                 <option value="">— Chọn Phường / Xã —</option>
                 {(selectedDistrict?.wards ?? []).map(ward => (
@@ -450,7 +456,7 @@ export const AddressBook: React.FC = () => {
                   </option>
                 ))}
               </select>
-              {errors.ward && <div data-testid="address-ward-error" className="field-error">{errors.ward}</div>}
+              {errors.ward && <div data-testid="address-ward-error" style={fieldErrorStyle}>{errors.ward}</div>}
             </div>
           </div>
 
@@ -458,22 +464,23 @@ export const AddressBook: React.FC = () => {
             <label className="form-label" htmlFor="address-detail">Địa chỉ chi tiết (số nhà, tên đường, tòa nhà...)</label>
             <input
               id="address-detail"
-              className={errors.detail ? 'input input-error' : 'input'}
+              className="form-input"
               data-testid="address-detail-input"
               value={form.detailAddress}
               onChange={e => {
                 setForm(f => ({ ...f, detailAddress: e.target.value }));
                 setErrors(prev => ({ ...prev, detail: undefined }));
               }}
+              style={errorBorder(!!errors.detail)}
             />
-            {errors.detail && <div data-testid="address-detail-error" className="field-error">{errors.detail}</div>}
+            {errors.detail && <div data-testid="address-detail-error" style={fieldErrorStyle}>{errors.detail}</div>}
           </div>
 
           <div className="form-group">
             <label className="form-label" htmlFor="address-note">Ghi chú (không bắt buộc)</label>
             <input
               id="address-note"
-              className="input"
+              className="form-input"
               data-testid="address-note-input"
               value={form.note}
               onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
@@ -492,13 +499,13 @@ export const AddressBook: React.FC = () => {
           </label>
 
           {errors.form && (
-            <div data-testid="address-form-error" className="field-error" style={{ marginBottom: 10 }}>
+            <div data-testid="address-form-error" style={{ color: ERROR_COLOR, fontSize: '0.85rem', marginBottom: 10 }}>
               {errors.form}
             </div>
           )}
 
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
-            <button type="button" className="btn btn-text" onClick={closeForm} data-testid="address-cancel-btn">
+            <button type="button" className="btn btn-secondary" onClick={closeForm} data-testid="address-cancel-btn">
               Hủy
             </button>
             <button type="submit" className="btn btn-primary" disabled={saving} data-testid="address-save-btn">

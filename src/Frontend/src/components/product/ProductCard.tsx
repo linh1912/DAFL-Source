@@ -24,53 +24,32 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <div
-      className="product-card card"
+      className="product-card"
       onClick={() => onOpenDetail(product)}
       data-testid={`product-card-${product.id}`}
     >
-      <div className="product-image-wrap" style={{ aspectRatio: '1 / 1', overflow: 'hidden', borderRadius: 12 }}>
+      <div className="product-image-wrap">
         <img
           src={product.imageUrl}
           alt={product.name}
           className="product-image"
           loading="lazy"
           decoding="async"
-          style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 12 }}
           onError={e => {
             // Ảnh lỗi (404...) -> thay bằng ảnh placeholder, tránh icon ảnh vỡ; chặn lặp vô hạn nếu placeholder cũng lỗi
             if (e.currentTarget.src !== IMAGE_PLACEHOLDER) e.currentTarget.src = IMAGE_PLACEHOLDER;
           }}
         />
         {discountPercent !== null && (
-          <span className="product-discount-badge badge badge-sale mono" style={{ fontSize: 12 }}>
-            -{discountPercent}%
-          </span>
+          <span className="product-discount-badge">-{discountPercent}%</span>
         )}
       </div>
       <div className="product-content">
-        <div
-          className="product-brand mono"
-          style={{ fontSize: 12, textTransform: 'uppercase', color: 'var(--muted)' }}
-        >
-          {product.categoryName}
-        </div>
-        <h3
-          className="product-name"
-          data-testid={`product-name-${product.id}`}
-          style={{
-            fontSize: 15,
-            fontWeight: 600,
-            lineHeight: 1.3,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-            minHeight: '2.6em',
-          }}
-        >
+        <div className="product-brand">{product.categoryName}</div>
+        <h3 className="product-name" data-testid={`product-name-${product.id}`}>
           {product.name}
         </h3>
-        <div className="product-shop-row" style={{ fontSize: 13 }}>
+        <div className="product-shop-row">
           <div className="product-shop" data-testid={`product-shop-${product.id}`}>
             <Store size={12} /> {shopNameFor(product)}
           </div>
@@ -85,22 +64,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         </div>
 
         <div className="product-footer">
-          <div className="product-price-block price">
-            <span className="product-price price-sale" data-testid={`product-price-${product.id}`}>
+          <div className="product-price-block">
+            <span className="product-price" data-testid={`product-price-${product.id}`}>
               {formatPrice(product.price)}
             </span>
             {product.originalPrice && (
-              <span className="product-original-price price-old">
+              <span className="product-original-price">
                 {formatPrice(product.originalPrice)}
               </span>
             )}
           </div>
-          <div className="product-stock mono" data-testid={`product-stock-${product.id}`} style={{ fontSize: 12 }}>
+          <div className="product-stock" data-testid={`product-stock-${product.id}`}>
             {isOutOfStock ? 'Hết hàng' : `Còn ${product.availableStock}`}
           </div>
           <button
-            className="btn btn-secondary btn-sm product-add-btn"
-            style={{ width: '100%' }}
+            className="btn btn-primary product-add-btn"
             onClick={(e) => {
               e.stopPropagation();
               onAddToCart(product);

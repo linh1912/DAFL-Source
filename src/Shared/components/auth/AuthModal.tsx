@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { X, ArrowLeft, Eye, EyeOff, Check, Circle } from 'lucide-react';
+import { X, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { apiJson } from '../../utils/api';
 const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
 const isValidVietnamesePhone = (phone: string) => /^0\d{9}$/.test(phone.trim());
 
-/** Class ô nhập theo hợp đồng token: .input (+ .input-error khi có lỗi). */
-const inputClassName = (hasError: boolean): string => (hasError ? 'input input-error' : 'input');
+const ERROR_COLOR = '#d81b60';
+const SUCCESS_GREEN = '#16a34a';
+
+const fieldErrorStyle: React.CSSProperties = { color: ERROR_COLOR, fontSize: '0.85rem', marginTop: 6 };
+const errorBorderStyle = (hasError: boolean): React.CSSProperties =>
+  hasError ? { borderColor: ERROR_COLOR } : {};
 
 /** Giá trị form đăng ký sau khi đã trim/validate phía client (CN-01 — KHÔNG còn ô địa chỉ). */
 export interface RegisterFormValues {
@@ -24,8 +28,7 @@ interface PasswordRuleListProps {
   testIdPrefix: string;
 }
 
-/** Checklist policy mật khẩu nghiêm ngặt (O2): ≥8 + chữ hoa + chữ số + ký tự đặc biệt.
- * Danh sách tick dọc, cập nhật TRỰC TIẾP lúc đang gõ (giữ nguyên logic kiểm tra). */
+/** Checklist policy mật khẩu nghiêm ngặt (O2): ≥8 + chữ hoa + chữ số + ký tự đặc biệt, 2×2, xanh lá khi đạt. */
 export const PasswordRuleList: React.FC<PasswordRuleListProps> = ({ password, testIdPrefix }) => {
   const rules = [
     { key: 'len', label: 'Tối thiểu 8 ký tự', passed: password.length >= 8 },
@@ -35,31 +38,31 @@ export const PasswordRuleList: React.FC<PasswordRuleListProps> = ({ password, te
   ];
 
   return (
-    <ul
-      aria-label="Điều kiện mật khẩu"
-      style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8, fontSize: 13 }}
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '6px 12px',
+        marginTop: 8,
+        fontSize: '0.8rem',
+      }}
     >
       {rules.map(rule => (
-        <li
+        <span
           key={rule.key}
           data-testid={`${testIdPrefix}-rule-${rule.key}`}
           style={{
-            color: rule.passed ? 'var(--ok)' : 'var(--muted)',
+            color: rule.passed ? SUCCESS_GREEN : 'var(--text-muted)',
             display: 'inline-flex',
             alignItems: 'center',
-            gap: 6,
+            gap: 4,
             fontWeight: rule.passed ? 600 : 400,
           }}
         >
-          {rule.passed ? (
-            <Check size={14} strokeWidth={2} aria-hidden="true" />
-          ) : (
-            <Circle size={14} strokeWidth={1.75} aria-hidden="true" />
-          )}
-          <span>{rule.label}</span>
-        </li>
+          {rule.passed ? '✓' : '•'} {rule.label}
+        </span>
       ))}
-    </ul>
+    </div>
   );
 };
 
@@ -135,7 +138,7 @@ const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({
     transform: 'translateY(-50%)',
     background: 'none',
     border: 'none',
-    color: 'var(--muted)',
+    color: 'var(--text-muted)',
     cursor: 'pointer',
     padding: 4,
     display: 'flex',
@@ -148,10 +151,9 @@ const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({
         type="button"
         onClick={onBackToLogin}
         data-testid="forgot-password-back-btn"
-        className="btn-text"
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+        style={{ background: 'none', border: 'none', color: '#d81b60', fontSize: '0.85rem', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
       >
-        <ArrowLeft size={14} strokeWidth={1.75} /> Quay lại đăng nhập
+        ← Quay lại đăng nhập
       </button>
     </div>
   );
@@ -161,9 +163,9 @@ const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({
       <div data-testid="forgot-password-success">
         <div
           style={{
-            background: 'var(--ok-soft)',
-            border: '1px solid var(--ok)',
-            color: 'var(--ink)',
+            background: 'rgba(22, 163, 74, 0.1)',
+            border: '1px solid #16a34a',
+            color: 'var(--text-main)',
             padding: '10px 14px',
             borderRadius: 8,
             marginBottom: 16,
@@ -185,15 +187,15 @@ const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({
           <div
             data-testid="forgot-password-notice"
             style={{
-            background: 'var(--ok-soft)',
-            border: '1px solid var(--ok)',
-            color: 'var(--ink)',
-            padding: '10px 14px',
-            borderRadius: 8,
-            marginBottom: 16,
-            fontSize: '0.85rem',
-            lineHeight: 1.5,
-          }}
+              background: 'rgba(22, 163, 74, 0.1)',
+              border: '1px solid #16a34a',
+              color: 'var(--text-main)',
+              padding: '10px 14px',
+              borderRadius: 8,
+              marginBottom: 16,
+              fontSize: '0.85rem',
+              lineHeight: 1.5,
+            }}
           >
             {forgotNotice} Mã có hiệu lực trong 15 phút.
           </div>
@@ -202,9 +204,9 @@ const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({
           <div
             data-testid="reset-password-error"
             style={{
-              background: 'var(--error-soft)',
-              border: '1px solid var(--error)',
-              color: 'var(--error)',
+              background: 'rgba(228, 0, 70, 0.08)',
+              border: '1px solid #d81b60',
+              color: '#b91c1c',
               padding: '10px 14px',
               borderRadius: 8,
               marginBottom: 16,
@@ -219,7 +221,8 @@ const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({
             <label className="form-label" htmlFor="reset-code">Mã đặt lại (6 chữ số, đã gửi tới {forgotEmail})</label>
             <input
               id="reset-code"
-                            inputMode="numeric"
+              className="form-input"
+              inputMode="numeric"
               maxLength={6}
               autoComplete="one-time-code"
               data-testid="reset-code-input"
@@ -229,10 +232,10 @@ const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({
                 if (resetCodeError) setResetCodeError(null);
               }}
               placeholder="123456"
-              className={inputClassName(!!resetCodeError)}
+              style={errorBorderStyle(!!resetCodeError)}
             />
             {resetCodeError && (
-              <div data-testid="reset-code-error" className="field-error">{resetCodeError}</div>
+              <div data-testid="reset-code-error" style={fieldErrorStyle}>{resetCodeError}</div>
             )}
           </div>
           <div className="form-group">
@@ -240,7 +243,8 @@ const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({
             <div style={{ position: 'relative' }}>
               <input
                 id="reset-new-password"
-                                type={showResetNewPassword ? 'text' : 'password'}
+                className="form-input"
+                type={showResetNewPassword ? 'text' : 'password'}
                 autoComplete="new-password"
                 data-testid="reset-new-password-input"
                 value={resetNewPassword}
@@ -248,8 +252,8 @@ const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({
                   setResetNewPassword(e.target.value);
                   if (resetPasswordError) setResetPasswordError(null);
                 }}
-                placeholder="Ít nhất 8 ký tự"
-                className={inputClassName(!!resetPasswordError)} style={{ paddingRight: 40 }}
+                placeholder="Tối thiểu 8 ký tự, gồm chữ hoa & ký tự đặc biệt"
+                style={{ paddingRight: 40, ...errorBorderStyle(!!resetPasswordError) }}
               />
               <button
                 type="button"
@@ -264,7 +268,7 @@ const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({
             </div>
             <PasswordRuleList password={resetNewPassword} testIdPrefix="reset-password" />
             {resetPasswordError && (
-              <div data-testid="reset-new-password-error" className="field-error">{resetPasswordError}</div>
+              <div data-testid="reset-new-password-error" style={fieldErrorStyle}>{resetPasswordError}</div>
             )}
           </div>
           <div className="form-group">
@@ -272,7 +276,8 @@ const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({
             <div style={{ position: 'relative' }}>
               <input
                 id="reset-confirm-password"
-                                type={showResetConfirmPassword ? 'text' : 'password'}
+                className="form-input"
+                type={showResetConfirmPassword ? 'text' : 'password'}
                 autoComplete="new-password"
                 data-testid="reset-confirm-password-input"
                 value={resetConfirmPassword}
@@ -281,7 +286,7 @@ const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({
                   if (resetConfirmError) setResetConfirmError(null);
                 }}
                 placeholder="Nhập lại mật khẩu mới để xác nhận"
-                className={inputClassName(!!resetConfirmError)} style={{ paddingRight: 40 }}
+                style={{ paddingRight: 40, ...errorBorderStyle(!!resetConfirmError) }}
               />
               <button
                 type="button"
@@ -295,7 +300,7 @@ const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({
               </button>
             </div>
             {resetConfirmError && (
-              <div data-testid="reset-confirm-password-error" className="field-error">{resetConfirmError}</div>
+              <div data-testid="reset-confirm-password-error" style={fieldErrorStyle}>{resetConfirmError}</div>
             )}
           </div>
           <button
@@ -320,9 +325,9 @@ const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({
         <div
           data-testid="forgot-password-error"
           style={{
-            background: 'var(--error-soft)',
-            border: '1px solid var(--error)',
-            color: 'var(--error)',
+            background: 'rgba(228, 0, 70, 0.08)',
+            border: '1px solid #d81b60',
+            color: '#b91c1c',
             padding: '10px 14px',
             borderRadius: 8,
             marginBottom: 16,
@@ -333,14 +338,15 @@ const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({
         </div>
       )}
       <form onSubmit={onForgotSubmit} noValidate data-testid="forgot-password-form">
-        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: '0 0 16px', lineHeight: 1.5 }}>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 16px', lineHeight: 1.5 }}>
           Nhập email tài khoản của bạn, chúng tôi sẽ gửi mã đặt lại mật khẩu (6 chữ số, hiệu lực 15 phút) tới email đó.
         </p>
         <div className="form-group">
           <label className="form-label" htmlFor="forgot-password-email">Email tài khoản</label>
           <input
             id="forgot-password-email"
-                        type="email"
+            className="form-input"
+            type="email"
             autoComplete="email"
             data-testid="forgot-password-email-input"
             value={forgotEmail}
@@ -349,10 +355,10 @@ const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({
               if (forgotEmailError) setForgotEmailError(null);
             }}
             placeholder="name@example.com"
-            className={inputClassName(!!forgotEmailError)}
+            style={errorBorderStyle(!!forgotEmailError)}
           />
           {forgotEmailError && (
-            <div data-testid="forgot-password-email-error" className="field-error">{forgotEmailError}</div>
+            <div data-testid="forgot-password-email-error" style={fieldErrorStyle}>{forgotEmailError}</div>
           )}
         </div>
         <button
@@ -783,9 +789,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <div
             data-testid="session-expired-notice"
             style={{
-              background: 'var(--warn-soft)',
-              border: '1px solid var(--warn)',
-              color: 'var(--ink)',
+              background: '#fff8e1',
+              border: '1px solid #f59e0b',
+              color: 'var(--text-main)',
               padding: '10px 14px',
               borderRadius: 8,
               marginBottom: 16,
@@ -801,15 +807,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <div
             data-testid="register-success-msg"
             style={{
-            background: 'var(--ok-soft)',
-            border: '1px solid var(--ok)',
-            color: 'var(--ink)',
-            padding: '10px 14px',
-            borderRadius: 8,
-            marginBottom: 16,
-            fontSize: '0.85rem',
-            lineHeight: 1.5,
-          }}
+              background: 'rgba(22, 163, 74, 0.1)',
+              border: '1px solid #16a34a',
+              color: 'var(--text-main)',
+              padding: '10px 14px',
+              borderRadius: 8,
+              marginBottom: 16,
+              fontSize: '0.85rem',
+              lineHeight: 1.5,
+            }}
           >
             Đăng ký thành công. Vui lòng đăng nhập để tiếp tục mua sắm.
           </div>
@@ -819,13 +825,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <div
             data-testid="auth-error-msg"
             style={{
-              background: 'var(--error-soft)',
-              border: '1px solid var(--error)',
-              color: 'var(--error)',
+              background: 'rgba(228, 0, 70, 0.08)',
+              border: '1px solid #d81b60',
+              color: '#b91c1c',
               padding: '10px 14px',
               borderRadius: 8,
               marginBottom: 16,
-              fontSize: '0.85rem',
+              fontSize: '0.85rem'
             }}
           >
             {shownBannerError}
@@ -838,16 +844,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <label className="form-label" htmlFor="login-email">{adminOnly ? 'Tên đăng nhập hoặc email' : 'Email đăng nhập'}</label>
               <input
                 id="login-email"
-                                type="email"
+                className="form-input"
+                type="email"
                 autoComplete={adminOnly ? 'off' : 'username'}
                 data-testid="login-email-input"
                 value={loginEmail}
                 onChange={e => handleLoginEmailChange(e.target.value)}
                 onBlur={() => setLoginEmailTouched(true)}
-                className={inputClassName(!!shownLoginEmailError)}
+                style={errorBorderStyle(!!shownLoginEmailError)}
               />
               {shownLoginEmailError && (
-                <div data-testid="login-email-error" className="field-error">
+                <div data-testid="login-email-error" style={fieldErrorStyle}>
                   {shownLoginEmailError}
                 </div>
               )}
@@ -857,12 +864,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <div style={{ position: 'relative' }}>
                 <input
                   id="login-password"
-                                    type={showLoginPassword ? 'text' : 'password'}
+                  className="form-input"
+                  type={showLoginPassword ? 'text' : 'password'}
                   autoComplete={adminOnly ? 'new-password' : 'current-password'}
                   data-testid="login-password-input"
                   value={loginPassword}
                   onChange={e => handleLoginPasswordChange(e.target.value)}
-                  className={inputClassName(!!shownLoginPasswordError)} style={{ paddingRight: 40 }}
+                  style={{ paddingRight: 40, ...errorBorderStyle(!!shownLoginPasswordError) }}
                 />
                 <button
                   type="button"
@@ -874,7 +882,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     transform: 'translateY(-50%)',
                     background: 'none',
                     border: 'none',
-                    color: 'var(--muted)',
+                    color: 'var(--text-muted)',
                     cursor: 'pointer',
                     padding: 4,
                     display: 'flex',
@@ -889,7 +897,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </button>
               </div>
               {shownLoginPasswordError && (
-                <div data-testid="login-password-error" className="field-error">
+                <div data-testid="login-password-error" style={fieldErrorStyle}>
                   {shownLoginPasswordError}
                 </div>
               )}
@@ -911,7 +919,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 type="button"
                 onClick={openForgotFlow}
                 data-testid="forgot-password-link"
-                className="btn-text"
+                style={{ background: 'none', border: 'none', color: '#d81b60', fontSize: '0.85rem', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
               >
                 Quên mật khẩu?
               </button>
@@ -953,17 +961,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <label className="form-label" htmlFor="register-name">Họ và tên</label>
               <input
                 id="register-name"
-                                data-testid="register-name-input"
+                className="form-input"
+                data-testid="register-name-input"
                 value={registerName}
                 onChange={e => {
                   setRegisterName(e.target.value);
                   clearRegisterError('name');
                 }}
                 placeholder="Nguyễn Văn A"
-                className={inputClassName(!!shownRegisterError('name'))}
+                style={errorBorderStyle(!!shownRegisterError('name'))}
               />
               {shownRegisterError('name') && (
-                <div data-testid="register-name-error" className="field-error">
+                <div data-testid="register-name-error" style={fieldErrorStyle}>
                   {shownRegisterError('name')}
                 </div>
               )}
@@ -972,7 +981,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <label className="form-label" htmlFor="register-email">Email</label>
               <input
                 id="register-email"
-                                type="email"
+                className="form-input"
+                type="email"
                 data-testid="register-email-input"
                 value={registerEmail}
                 onChange={e => {
@@ -980,10 +990,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   clearRegisterError('email');
                 }}
                 placeholder="name@example.com"
-                className={inputClassName(!!shownRegisterError('email'))}
+                style={errorBorderStyle(!!shownRegisterError('email'))}
               />
               {shownRegisterError('email') && (
-                <div data-testid="register-email-error" className="field-error">
+                <div data-testid="register-email-error" style={fieldErrorStyle}>
                   {shownRegisterError('email')}
                 </div>
               )}
@@ -993,15 +1003,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <div style={{ position: 'relative' }}>
                 <input
                   id="register-password"
-                                    type={showRegisterPassword ? 'text' : 'password'}
+                  className="form-input"
+                  type={showRegisterPassword ? 'text' : 'password'}
                   data-testid="register-password-input"
                   value={registerPassword}
                   onChange={e => {
                     setRegisterPassword(e.target.value);
                     clearRegisterError('password');
                   }}
-                  placeholder="Ít nhất 8 ký tự"
-                  className={inputClassName(!!shownRegisterError('password'))} style={{ paddingRight: 40 }}
+                  placeholder="Tối thiểu 8 ký tự, gồm chữ hoa & ký tự đặc biệt"
+                  style={{ paddingRight: 40, ...errorBorderStyle(!!shownRegisterError('password')) }}
                 />
                 <button
                   type="button"
@@ -1013,7 +1024,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     transform: 'translateY(-50%)',
                     background: 'none',
                     border: 'none',
-                    color: 'var(--muted)',
+                    color: 'var(--text-muted)',
                     cursor: 'pointer',
                     padding: 4,
                     display: 'flex',
@@ -1029,7 +1040,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
               <PasswordRuleList password={registerPassword} testIdPrefix="password" />
               {shownRegisterError('password') && (
-                <div data-testid="register-password-error" className="field-error">
+                <div data-testid="register-password-error" style={fieldErrorStyle}>
                   {shownRegisterError('password')}
                 </div>
               )}
@@ -1039,7 +1050,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <div style={{ position: 'relative' }}>
                 <input
                   id="register-confirm-password"
-                                    type={showRegisterConfirmPassword ? 'text' : 'password'}
+                  className="form-input"
+                  type={showRegisterConfirmPassword ? 'text' : 'password'}
                   data-testid="register-confirm-password-input"
                   value={registerConfirmPassword}
                   onChange={e => {
@@ -1052,7 +1064,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     setRegisterErrors(prev => ({ ...prev, confirmPassword: mismatch }));
                   }}
                   placeholder="Nhập lại mật khẩu để xác nhận"
-                  className={inputClassName(!!shownRegisterError('confirmPassword'))} style={{ paddingRight: 40 }}
+                  style={{ paddingRight: 40, ...errorBorderStyle(!!shownRegisterError('confirmPassword')) }}
                 />
                 <button
                   type="button"
@@ -1064,7 +1076,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     transform: 'translateY(-50%)',
                     background: 'none',
                     border: 'none',
-                    color: 'var(--muted)',
+                    color: 'var(--text-muted)',
                     cursor: 'pointer',
                     padding: 4,
                     display: 'flex',
@@ -1079,7 +1091,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </button>
               </div>
               {shownRegisterError('confirmPassword') && (
-                <div data-testid="register-confirm-password-error" className="field-error">
+                <div data-testid="register-confirm-password-error" style={fieldErrorStyle}>
                   {shownRegisterError('confirmPassword')}
                 </div>
               )}
@@ -1088,17 +1100,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <label className="form-label" htmlFor="register-phone">Số điện thoại</label>
               <input
                 id="register-phone"
-                                data-testid="register-phone-input"
+                className="form-input"
+                data-testid="register-phone-input"
                 value={registerPhone}
                 onChange={e => {
                   setRegisterPhone(e.target.value);
                   clearRegisterError('phone');
                 }}
                 placeholder="0987654321"
-                className={inputClassName(!!shownRegisterError('phone'))}
+                style={errorBorderStyle(!!shownRegisterError('phone'))}
               />
               {shownRegisterError('phone') && (
-                <div data-testid="register-phone-error" className="field-error">
+                <div data-testid="register-phone-error" style={fieldErrorStyle}>
                   {shownRegisterError('phone')}
                 </div>
               )}

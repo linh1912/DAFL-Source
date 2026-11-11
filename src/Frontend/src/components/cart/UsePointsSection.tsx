@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Coins, AlertCircle } from 'lucide-react';
+import { Coins } from 'lucide-react';
 
 export interface UsePointsSectionProps {
   availablePoints?: number;
@@ -72,7 +72,7 @@ export const UsePointsSection: React.FC<UsePointsSectionProps> = ({
     <div
       data-testid="use-points-section"
       style={{
-        borderTop: '1px dashed var(--line)',
+        borderTop: '1px dashed var(--border-subtle)',
         paddingTop: 10,
         marginBottom: 8,
       }}
@@ -84,7 +84,7 @@ export const UsePointsSection: React.FC<UsePointsSectionProps> = ({
           gap: 8,
           fontSize: '0.9rem',
           fontWeight: 700,
-          color: 'var(--ink)',
+          color: 'var(--text-main)',
           cursor: disabled ? 'not-allowed' : 'pointer',
           opacity: disabled ? 0.6 : 1,
         }}
@@ -95,17 +95,17 @@ export const UsePointsSection: React.FC<UsePointsSectionProps> = ({
           disabled={disabled}
           onChange={e => handleToggle(e.target.checked)}
           data-testid="use-points-toggle"
-          style={{ width: 16, height: 16, accentColor: 'var(--ink)', cursor: disabled ? 'not-allowed' : 'pointer' }}
+          style={{ width: 16, height: 16, accentColor: '#d81b60', cursor: disabled ? 'not-allowed' : 'pointer' }}
         />
-        <Coins size={15} color="var(--ink)" />
+        <Coins size={15} color="#d81b60" />
         Dùng điểm hội viên
       </label>
 
       <p
-        style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: '6px 0 8px 24px', lineHeight: 1.5 }}
+        style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '6px 0 8px 24px', lineHeight: 1.5 }}
         data-testid="points-balance-hint"
       >
-        Bạn có <span className="mono">{availablePoints}</span> điểm (1 điểm = 1.000đ). Hạng {tierLabel} dùng tối đa <span className="mono">{max}</span> điểm cho đơn này.
+        Bạn có {availablePoints} điểm (1 điểm = 1.000đ). Hạng {tierLabel} dùng tối đa {max} điểm cho đơn này.
       </p>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 24 }}>
@@ -117,29 +117,34 @@ export const UsePointsSection: React.FC<UsePointsSectionProps> = ({
           onChange={e => handleInputChange(e.target.value)}
           data-testid="points-to-use-input"
           aria-label="Số điểm muốn dùng"
-          className="input mono"
-          style={{ width: 110 }}
+          style={{
+            width: 110,
+            padding: '7px 10px',
+            borderRadius: 8,
+            border: '1px solid var(--border-subtle)',
+            fontSize: '0.9rem',
+            background: disabled ? 'var(--bg-subtle)' : '#fff',
+            color: 'var(--text-main)',
+          }}
         />
-        <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>điểm</span>
+        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>điểm</span>
       </div>
 
       {error && (
         <p
-          className="field-error"
-          style={{ margin: '8px 0 0 24px', display: 'flex', alignItems: 'center', gap: 6 }}
+          style={{ fontSize: '0.85rem', color: '#dc2626', margin: '8px 0 0 24px', lineHeight: 1.5 }}
           data-testid="points-error-msg"
         >
-          <AlertCircle size={14} /> {error}
+          {error}
         </p>
       )}
 
       {disabledReason && (
         <p
-          className="field-error"
-          style={{ margin: '8px 0 0 24px', display: 'flex', alignItems: 'center', gap: 6 }}
+          style={{ fontSize: '0.85rem', color: '#dc2626', margin: '8px 0 0 24px', lineHeight: 1.5 }}
           data-testid="points-disabled-note"
         >
-          <AlertCircle size={14} /> {disabledReason}
+          {disabledReason}
         </p>
       )}
     </div>

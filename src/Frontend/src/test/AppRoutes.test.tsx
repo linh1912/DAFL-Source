@@ -338,7 +338,7 @@ describe('App Routing & Navigation System (React Router)', () => {
     expect(await screen.findByTestId('cart-badge-count')).toHaveTextContent('1');
   });
 
-  it('hero đợt cuối: hero 2 cột — tiêu đề lớn + 1 nút chính + 3 ảnh sản phẩm thật, không còn carousel ảnh stock', async () => {
+  it('hero đợt cuối: banner đủ 3 slide, tiêu đề ngắn 1 dòng trong hộp nhỏ, ảnh ngang phủ kín (cover)', async () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <App />
@@ -348,18 +348,27 @@ describe('App Routing & Navigation System (React Router)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('hero-carousel')).toBeInTheDocument();
     });
-    // Không còn carousel 3 slide / chấm tròn / nút chuyển (đã bỏ theo redesign "Tem nhãn").
-    expect(screen.queryByTestId('hero-slide-0')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('hero-dot-0')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('hero-prev-btn')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('hero-next-btn')).not.toBeInTheDocument();
-    // Tiêu đề lớn + 1 nút chính duy nhất.
+    // Đủ 3 slide + nút chuyển + chấm tròn, tiêu đề slide 1 đọc được.
+    for (const i of [0, 1, 2]) {
+      expect(screen.getByTestId(`hero-slide-${i}`)).toBeInTheDocument();
+      expect(screen.getByTestId(`hero-dot-${i}`)).toBeInTheDocument();
+    }
+    expect(screen.getByTestId('hero-prev-btn')).toBeInTheDocument();
+    expect(screen.getByTestId('hero-next-btn')).toBeInTheDocument();
+    // Tiêu đề slide 1 (đang hiện) là h1 đọc được; slide 2/3 đang aria-hidden
+    // nên kiểm tra qua testid của từng slide (getByRole không thấy phần tử ẩn).
     expect(screen.getByRole('heading', { name: /Mỹ phẩm chính hãng/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Mua ngay$/i })).toBeInTheDocument();
-    // 3 ảnh sản phẩm thật (hoặc skeleton lúc đang tải) xếp chồng bên phải.
-    await waitFor(() => {
-      expect(document.querySelectorAll('.hero-new-img').length).toBe(3);
-    });
+    for (const [i, title] of [
+      [0, 'Mỹ phẩm chính hãng'],
+      [1, 'Freeship đơn từ 299K'],
+      [2, 'Tích điểm lên hạng'],
+    ] as const) {
+      expect(screen.getByTestId(`hero-slide-${i}`)).toHaveTextContent(title);
+    }
+    // Chữ nằm trực tiếp trên ảnh nhờ lớp phủ gradient (class hero-text-box) — không còn hộp đen.
+    const box = document.querySelector('.hero-text-box');
+    expect(box).not.toBeNull();
+    expect(box).toHaveTextContent('Mỹ phẩm chính hãng');
   });
 
   it('Flash Sale: có SP giảm giá thì hiện mục Flash Sale + đồng hồ đếm ngược HH:MM:SS', async () => {

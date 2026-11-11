@@ -3,8 +3,7 @@ import {
   ShoppingBag, Sparkles, CheckCircle2, Clock,
   CreditCard, ShieldCheck, X, Plus, Minus,
   User as UserIcon, Bell, Star, Tag, LogOut, Check, RefreshCw, Package,
-  MapPin, Calendar, RotateCcw, Receipt, ArrowLeft, Copy, AlertCircle, Truck, FileText, Layers, Store,
-  Lock, Search
+  MapPin, Calendar, RotateCcw, Receipt, ArrowLeft, Copy, AlertCircle, Truck, FileText, Layers, Store
 } from 'lucide-react';
 import * as signalR from '@microsoft/signalr';
 import {
@@ -18,6 +17,7 @@ import {
 import { getProductDetailExtra } from './productDetailHelper';
 import { Header } from './components/common/Header';
 import { SiteFooter } from './components/common/SiteFooter';
+import { CategoryFilter } from './components/product/CategoryFilter';
 import { ProductCard } from './components/product/ProductCard';
 import { ProductGallery } from './components/product/ProductGallery';
 import { ReviewForm } from './components/product/ReviewForm';
@@ -55,6 +55,49 @@ const FREE_SHIPPING_THRESHOLD = 299000;
 const CATALOG_PAGE_SIZE = 12;
 /** Số đơn mỗi trang ở trang Đơn hàng. */
 const ORDERS_PAGE_SIZE = 10;
+
+/** Slide hero trang chủ DAFL — ít chữ, tự chạy 4s/slide, ảnh mỹ phẩm Unsplash.
+ *  Cả 3 ảnh đều NGANG (đã kiểm chứng HTTP 200 + xem trực tiếp: son flat-lay
+ *  cắt 2:1, bảng trang điểm 1.53, dầu gội/xả 1.5) nên banner dùng
+ *  object-fit: cover để ảnh phủ kín, không còn khoảng hồng trống; chữ trong
+ *  hộp tối mờ nhẹ, tiêu đề ngắn gọn 1 dòng. */
+const HERO_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=2000&h=1000&q=80';
+const HERO_SLIDES = [
+  {
+    badge: 'FLASH SALE • GIẢM ĐẾN 50%',
+    title: 'Mỹ phẩm chính hãng',
+    sub: 'Son, serum, kem chống nắng chính hãng từ nhiều shop.',
+    cta: 'Mua ngay',
+    image: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=2000&h=1000&q=80',
+  },
+  {
+    badge: 'FREESHIP ĐƠN TỪ 299K',
+    title: 'Freeship đơn từ 299K',
+    sub: 'Giao nhanh 2–4 ngày, đổi trả trong 30 ngày.',
+    cta: 'Xem deal freeship',
+    image: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=2000&q=80',
+  },
+  {
+    badge: 'HỘI VIÊN DAFL',
+    title: 'Tích điểm lên hạng',
+    sub: 'Thường • Bạc • Vàng • Kim cương.',
+    cta: 'Khám phá hội viên',
+    image: 'https://images.unsplash.com/photo-1631729371254-42c2892f0e6e?auto=format&fit=crop&w=2000&q=80',
+  },
+];
+
+/** Hàng icon danh mục mỹ phẩm (kiểu Cocolux) — slug khớp danh mục BE thì dùng tên
+ *  danh mục thật, không khớp thì dùng nhãn hardcode; bấm vào lọc theo danh mục
+ *  mỹ phẩm; BE đã seed đủ 6 danh mục này (DbInitializer: son-moi, cham-soc-da,
+ *  trang-diem, nuoc-hoa, cham-soc-co-the, cham-soc-toc) nên bấm icon lọc đúng nhóm. */
+const COSMETIC_ICON_CATEGORIES = [
+  { slug: 'son-moi', label: 'Son môi', icon: '💄' },
+  { slug: 'cham-soc-da', label: 'Chăm sóc da', icon: '🧴' },
+  { slug: 'trang-diem', label: 'Trang điểm', icon: '💋' },
+  { slug: 'nuoc-hoa', label: 'Nước hoa', icon: '🌸' },
+  { slug: 'cham-soc-co-the', label: 'Chăm sóc cơ thể', icon: '🛁' },
+  { slug: 'cham-soc-toc', label: 'Chăm sóc tóc', icon: '💇' },
+];
 
 /** Dải thương hiệu mỹ phẩm nổi bật (chữ/logo text, không cần ảnh). */
 const FEATURED_BRANDS = ['La Roche-Posay', "L'Oréal", '3CE', 'Peripera', 'Clio', 'CeraVe'];
@@ -179,6 +222,15 @@ export default function App() {
   const [catalogHasNext, setCatalogHasNext] = useState(false);
   const [catalogKnownTotal, setCatalogKnownTotal] = useState<number | null>(null);
   const catalogRequestSeq = useRef(0);
+
+  // Hero carousel trang chủ: tự chạy 4s/slide, có thể bấm dot / prev-next để đổi.
+  const [heroSlide, setHeroSlide] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setHeroSlide(prev => (prev + 1) % HERO_SLIDES.length);
+    }, 4000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   // Flash Sale: đồng hồ đếm ngược tới 23:59:59 hôm nay, cập nhật mỗi giây;
   // hết giờ thì tự reset sang ngày hôm sau (đích luôn là cuối ngày hiện tại).
@@ -325,15 +377,6 @@ export default function App() {
   // Notifications State & SignalR
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
-  // Đóng bảng thông báo bằng phím Esc.
-  useEffect(() => {
-    if (!isNotifOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsNotifOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [isNotifOpen]);
   const [toastAlert, setToastAlert] = useState<{ title: string; message: string; type: string; testId?: string } | null>(null);
   const signalRConnection = useRef<signalR.HubConnection | null>(null);
   const toastTimerRef = useRef<number | null>(null);
@@ -1827,34 +1870,6 @@ export default function App() {
       : order.status === 'Cancelled' ? 'Đã hủy'
       : order.status === 'Expired' ? 'Đã hết hạn' : order.status);
 
-  /** Badge trạng thái đơn — map theo NHÃN hiển thị (không theo status enum),
-   *  để cùng nhãn "Chờ xác nhận" chỉ có 1 màu duy nhất (warn), dù gốc là
-   *  Pending+COD hay Paid. "Đang chuẩn bị" không có trong bảng brief nên
-   *  xếp cùng nhóm đang xử lý (info) với "Đang giao". */
-  const orderStatusBadgeClass = (label: string): string => {
-    switch (label) {
-      case 'Chờ xác nhận':
-      case 'Chờ thanh toán':
-        return 'badge badge-warn';
-      case 'Đã xác nhận':
-      case 'Đang chuẩn bị':
-      case 'Đang giao':
-        return 'badge badge-info';
-      case 'Đã giao':
-      case 'Hoàn tất':
-      case 'Hoàn thành':
-        return 'badge badge-ok';
-      case 'Trả hàng':
-      case 'Đã hủy':
-        return 'badge badge-muted';
-      case 'Đã hết hạn':
-      case 'Hết hạn thanh toán':
-        return 'badge badge-error';
-      default:
-        return 'badge badge-muted';
-    }
-  };
-
   const commonAuthProps = {
     authError,
     authLoading,
@@ -1882,6 +1897,19 @@ export default function App() {
     onClearAuthErrors: clearAuthErrors,
   };
 
+  /** Lọc theo danh mục mỹ phẩm: khớp slug thì dùng id đó, không khớp thì về danh
+   *  mục đầu tiên. Không hardcode id danh mục. */
+  const resolveCosmeticCategoryId = (slug: string): string | null =>
+    categories.find(c => c.slug === slug)?.id
+    ?? categories[0]?.id
+    ?? null;
+
+  const goToCosmeticCategory = (slug: string) => {
+    const id = resolveCosmeticCategoryId(slug);
+    if (id) setSelectedCategory(id);
+    document.getElementById('products-section')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   /** Bán chạy: top sản phẩm theo rating rồi reviewCount (tối đa 8); còn lại là gợi ý. */
   const bestSellerProducts = [...products]
     .sort((a, b) => ((b.rating ?? 0) - (a.rating ?? 0)) || ((b.reviewCount ?? 0) - (a.reviewCount ?? 0)))
@@ -1889,8 +1917,6 @@ export default function App() {
   const bestSellerIds = new Set(bestSellerProducts.map(p => p.id));
   const suggestedProducts = products.filter(p => !bestSellerIds.has(p.id));
 
-  /** Hero trang chủ: 3 ảnh sản phẩm thật lấy từ danh sách đã tải. */
-  const heroProducts = products.filter(p => p.imageUrl).slice(0, 3);
   /** Flash Sale: sản phẩm đang giảm giá mạnh nhất (OriginalPrice > Price), xếp theo
    *  % giảm, tối đa 8. Lấy từ danh sách sản phẩm đã tải ở trang chủ. */
   const flashSaleProducts = [...products]
@@ -1932,7 +1958,7 @@ export default function App() {
         <div className="toast-container">
           <div className="toast-alert" data-testid={toastAlert.testId}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <Sparkles size={16} color="var(--ink)" />
+              <Sparkles size={16} color="#d81b60" />
               <strong style={{ fontSize: '0.875rem', color: 'var(--text-main)' }}>{toastAlert.title}</strong>
             </div>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{toastAlert.message}</p>
@@ -1969,131 +1995,120 @@ export default function App() {
           path="/"
           element={
             <>
-              {/* Hero 2 cột — chữ trái, ảnh sản phẩm thật phải (không ảnh stock, không chữ đè ảnh) */}
-              <section className="hero-new" data-testid="hero-carousel" aria-label="Ưu đãi nổi bật">
-                <div className="hero-new-copy">
-                  <p className="hero-new-eyebrow">Sàn mỹ phẩm đa gian hàng</p>
-                  <h1 className="hero-new-title">Mỹ phẩm <span className="hl">chính hãng</span>, giá rõ ràng</h1>
-                  <p className="hero-new-sub">Son, serum, kem chống nắng chính hãng từ nhiều shop. Freeship đơn từ 299K, đổi trả trong 30 ngày.</p>
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={() => document.getElementById('products-section')?.scrollIntoView({ behavior: 'smooth' })}
+              {/* Hero carousel — ít chữ, tự chạy */}
+              <section className="hero-carousel" data-testid="hero-carousel" aria-label="Ưu đãi nổi bật">
+                {HERO_SLIDES.map((slide, i) => (
+                  <div
+                    key={slide.title}
+                    className={`hero-slide ${i === heroSlide ? 'active' : ''}`}
+                    data-testid={`hero-slide-${i}`}
+                    aria-hidden={i !== heroSlide}
                   >
-                    Mua ngay
-                  </button>
-                </div>
-                <div className="hero-new-media" aria-label="Sản phẩm nổi bật">
-                  {heroProducts.length > 0 ? (
-                    heroProducts.map((p, i) => (
-                      <img
-                        key={p.id}
-                        className={`hero-new-img hero-new-img-${i}`}
-                        src={p.imageUrl}
-                        alt={p.name}
-                        loading={i === 0 ? 'eager' : 'lazy'}
-                      />
-                    ))
-                  ) : (
-                    <>
-                      <div className="skeleton hero-new-img" />
-                      <div className="skeleton hero-new-img" />
-                      <div className="skeleton hero-new-img" />
-                    </>
-                  )}
-                </div>
-              </section>
-
-              {/* Dải cam kết — hàng ngang, ngăn bằng đường đứt nét */}
-              <section className="trust-strip-new" aria-label="Cam kết mua sắm">
-                <span><ShieldCheck size={20} strokeWidth={1.75} /> Chính hãng 100%</span>
-                <span><Truck size={20} strokeWidth={1.75} /> Freeship đơn từ 299K</span>
-                <span><RotateCcw size={20} strokeWidth={1.75} /> Đổi trả 30 ngày</span>
-                <span><CreditCard size={20} strokeWidth={1.75} /> PayOS &amp; COD</span>
-              </section>
-
-              {/* Danh mục — chỉ một bộ duy nhất: thẻ chữ lớn + số sản phẩm.
-                  Số đếm theo trang catalog đã tải (BE không trả tổng theo danh mục). */}
-              <section className="home-categories" aria-label="Danh mục mỹ phẩm">
-                <h2 className="section-title">Mua theo <span className="hl">danh mục</span></h2>
-                <div className="home-category-grid">
-                  <button
-                    type="button"
-                    className={`home-category-card${selectedCategory === null ? ' active' : ''}`}
-                    onClick={() => {
-                      setSelectedCategory(null);
-                      document.getElementById('products-section')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                  >
-                    <span className="home-category-thumb"><Tag size={20} strokeWidth={1.75} /></span>
-                    <span className="home-category-name">Tất cả sản phẩm</span>
-                    <span className="mono home-category-count">
-                      {loading && products.length === 0
-                        ? '…'
-                        : catalogKnownTotal !== null
-                          ? `${catalogKnownTotal} sản phẩm`
-                          : `${products.length} sản phẩm`}
-                    </span>
-                  </button>
-                  {categories.map(category => {
-                    const inPage = products.filter(p => p.categoryId === category.id);
-                    const thumb = inPage[0]?.imageUrl;
-                    return (
-                      <button
-                        key={category.id}
-                        type="button"
-                        className={`home-category-card${selectedCategory === category.id ? ' active' : ''}`}
-                        onClick={() => {
-                          setSelectedCategory(category.id);
-                          document.getElementById('products-section')?.scrollIntoView({ behavior: 'smooth' });
-                        }}
-                      >
-                        <span className="home-category-thumb">
-                          {thumb ? <img src={thumb} alt="" /> : <Tag size={20} strokeWidth={1.75} />}
-                        </span>
-                        <span className="home-category-name">{category.name}</span>
-                    <span className="mono home-category-count">
-                      {loading && products.length === 0
-                        ? '…'
-                        : catalogKnownTotal !== null
-                          ? `${FALLBACK_PRODUCTS.filter(p => p.categoryId === category.id).length} sản phẩm`
-                          : `${inPage.length} sản phẩm`}
-                    </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-
-              {/* Flash Sale — trước lưới "Tất cả sản phẩm", nền mực */}
-              {selectedCategory === null && flashSaleProducts.length > 0 && (
-                <section className="flash-sale-dark" data-testid="flash-sale-section" aria-label="Flash Sale">
-                  <div className="flash-sale-dark-head">
-                    <h2 className="section-title" style={{ color: 'var(--paper)' }}>Flash <span className="hl">Sale</span></h2>
-                    <span style={{ color: 'var(--paper)' }}>
-                      Kết thúc trong&nbsp;
-                      <strong data-testid="flash-sale-countdown" className="mono flash-countdown">{flashCountdown}</strong>
-                    </span>
-                  </div>
-                  <div className="products-grid">
-                    {flashSaleProducts.map(product => (
-                      <div key={product.id} data-testid={`flash-sale-item-${product.id}`}>
-                        {renderSectionCard(product, '-flash')}
+                    <img
+                      className="hero-slide-img"
+                      src={slide.image}
+                      alt=""
+                      aria-hidden="true"
+                      loading={i === 0 ? 'eager' : 'lazy'}
+                      onError={e => {
+                        const img = e.currentTarget;
+                        if (img.src !== HERO_FALLBACK_IMAGE) img.src = HERO_FALLBACK_IMAGE;
+                      }}
+                    />
+                    <div className="hero-text-box">
+                      <div className="hero-top-badge">
+                        <Sparkles size={14} color="#ffd900" />
+                        <span>{slide.badge}</span>
                       </div>
-                    ))}
+                      <h1 className="hero-title">{slide.title}</h1>
+                      <p className="hero-subtitle">{slide.sub}</p>
+                      <button
+                        type="button"
+                        className="hero-pdd-cta"
+                        onClick={() => document.getElementById('products-section')?.scrollIntoView({ behavior: 'smooth' })}
+                      >
+                        {slide.cta} →
+                      </button>
+                    </div>
                   </div>
-                </section>
-              )}
+                ))}
+                <div className="hero-dots" role="tablist" aria-label="Chọn slide">
+                  {HERO_SLIDES.map((slide, i) => (
+                    <button
+                      key={slide.title}
+                      type="button"
+                      role="tab"
+                      aria-selected={i === heroSlide}
+                      aria-label={`Slide ${i + 1}: ${slide.badge}`}
+                      className={`hero-dot ${i === heroSlide ? 'active' : ''}`}
+                      data-testid={`hero-dot-${i}`}
+                      onClick={() => setHeroSlide(i)}
+                    />
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="hero-nav-btn hero-prev-btn"
+                  data-testid="hero-prev-btn"
+                  aria-label="Slide trước"
+                  onClick={() => setHeroSlide(prev => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)}
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  className="hero-nav-btn hero-next-btn"
+                  data-testid="hero-next-btn"
+                  aria-label="Slide sau"
+                  onClick={() => setHeroSlide(prev => (prev + 1) % HERO_SLIDES.length)}
+                >
+                  ›
+                </button>
+              </section>
 
-              {/* Thương hiệu nổi bật — hàng chữ wordmark đơn sắc, ngăn bằng gạch đứng */}
-              <section className="brand-wordmarks" data-testid="brand-strip" aria-label="Thương hiệu nổi bật">
-                <h2 className="section-title">Thương hiệu <span className="hl">nổi bật</span></h2>
-                <ul className="brand-wordmark-list">
+              {/* Dải tin cậy — 4 ý ngắn */}
+              <section className="trust-strip" aria-label="Cam kết mua sắm">
+                <span><ShieldCheck size={16} /> Chính hãng 100%</span>
+                <span><Truck size={16} /> Freeship đơn từ 299K</span>
+                <span><RotateCcw size={16} /> Đổi trả 30 ngày</span>
+                <span><CreditCard size={16} /> PayOS &amp; COD</span>
+              </section>
+
+              {/* Hàng icon danh mục mỹ phẩm (kiểu Cocolux) — ngay dưới banner */}
+              <section className="category-icon-row" data-testid="category-icon-row" aria-label="Danh mục mỹ phẩm">
+                {COSMETIC_ICON_CATEGORIES.map(item => {
+                  const matched = categories.find(c => c.slug === item.slug);
+                  return (
+                    <button
+                      key={item.slug}
+                      type="button"
+                      className="category-icon-btn"
+                      data-testid={`category-icon-${item.slug}`}
+                      onClick={() => goToCosmeticCategory(item.slug)}
+                    >
+                      <span className="category-icon-emoji" aria-hidden="true">{item.icon}</span>
+                      <span>{matched?.name ?? item.label}</span>
+                    </button>
+                  );
+                })}
+              </section>
+
+              {/* Dải thương hiệu mỹ phẩm nổi bật */}
+              <section className="brand-strip" data-testid="brand-strip" aria-label="Thương hiệu nổi bật">
+                <span className="brand-strip-label">Thương hiệu nổi bật</span>
+                <ul className="brand-strip-list">
                   {FEATURED_BRANDS.map(brand => (
-                    <li key={brand} className="brand-wordmark-item">{brand}</li>
+                    <li key={brand} className="brand-strip-item">{brand}</li>
                   ))}
                 </ul>
               </section>
+
+              {/* Categories Filter Bar */}
+              <CategoryFilter
+                categories={categories}
+                selectedCategory={selectedCategory}
+                onSelectCategory={setSelectedCategory}
+              />
 
               <div className="shop-layout">
                 <aside className="shop-sidebar" aria-label="Bộ lọc sản phẩm">
@@ -2116,7 +2131,7 @@ export default function App() {
                       </div>
                       <div className="price-range-inputs">
                         <input
-                          className="input"
+                          className="form-input"
                           type="text"
                           inputMode="numeric"
                           placeholder="Từ (đ)"
@@ -2127,7 +2142,7 @@ export default function App() {
                         />
                         <span className="price-range-sep">—</span>
                         <input
-                          className="input"
+                          className="form-input"
                           type="text"
                           inputMode="numeric"
                           placeholder="Đến (đ)"
@@ -2178,14 +2193,12 @@ export default function App() {
                 {/* Products Grid */}
                 <section id="products-section" className="shop-main">
                   <div className="shop-section-header">
-                    <h2 className="section-title">
-                      {selectedCategory
-                        ? (categories.find(c => c.id === selectedCategory)?.name || 'Danh mục sản phẩm')
-                        : (<>Tất cả <span className="hl">sản phẩm</span></>)}
+                    <h2>
+                      {selectedCategory ? (categories.find(c => c.id === selectedCategory)?.name || 'Danh mục sản phẩm') : 'Tất cả sản phẩm'}
                     </h2>
                     <div className="catalog-toolbar">
                       <span className="product-count-badge" data-testid="catalog-result-count">
-                        <Package size={14} color="var(--ink)" />
+                        <Package size={14} color="var(--primary)" />
                         <span>
                           {catalogKnownTotal !== null
                             ? `Hiển thị ${products.length} / ${catalogKnownTotal} sản phẩm`
@@ -2196,7 +2209,7 @@ export default function App() {
                       <label className="sort-label">
                         Sắp xếp:
                         <select
-                          className="input sort-select"
+                          className="form-input sort-select"
                           value={sortOrder}
                           onChange={e => setSortOrder(e.target.value as typeof sortOrder)}
                           data-testid="sort-select"
@@ -2287,18 +2300,44 @@ export default function App() {
                 </section>
               </div>
 
-              {/* Bán chạy + Gợi ý cho bạn — sau lưới chính, trước gian hàng */}
+              {/* Flash Sale — ngay dưới banner, trước mục Bán chạy; chỉ khi có SP đang giảm giá */}
+              {selectedCategory === null && flashSaleProducts.length > 0 && (
+                <section className="flash-sale-section" data-testid="flash-sale-section" aria-label="Flash Sale">
+                  <div className="shop-strip-header">
+                    <h2>⚡ Flash Sale</h2>
+                    <span>
+                      Kết thúc trong&nbsp;
+                      <strong data-testid="flash-sale-countdown" style={{ color: '#d81b60', fontSize: '1.15rem' }}>{flashCountdown}</strong>
+                    </span>
+                  </div>
+                  <div className="products-grid">
+                    {flashSaleProducts.map(product => (
+                      <div key={product.id} data-testid={`flash-sale-item-${product.id}`}>
+                        {renderSectionCard(product, '-flash')}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Bán chạy + Gợi ý cho bạn — chỉ khi xem tất cả sản phẩm */}
               {selectedCategory === null && products.length > 0 && (
                 <>
                   <section className="best-seller-section" data-testid="best-seller-section" aria-label="Bán chạy">
-                    <h2 className="section-title"><span className="hl">Bán chạy</span></h2>
+                    <div className="shop-strip-header">
+                      <h2>Bán chạy</h2>
+                      <span>Được mua nhiều nhất tuần này</span>
+                    </div>
                     <div className="products-grid">
                       {bestSellerProducts.map(product => renderSectionCard(product, '-best'))}
                     </div>
                   </section>
                   {suggestedProducts.length > 0 && (
                     <section className="suggested-section" data-testid="suggested-section" aria-label="Gợi ý cho bạn">
-                      <h2 className="section-title"><span className="hl">Gợi ý</span> cho bạn</h2>
+                      <div className="shop-strip-header">
+                        <h2>Gợi ý cho bạn</h2>
+                        <span>Có thể bạn sẽ thích</span>
+                      </div>
                       <div className="products-grid">
                         {suggestedProducts.map(product => renderSectionCard(product, '-suggest'))}
                       </div>
@@ -2309,7 +2348,10 @@ export default function App() {
 
               {/* Gian hàng mỹ phẩm nổi bật */}
               <section className="shop-strip" aria-label="Gian hàng nổi bật">
-                <h2 className="section-title">Gian hàng <span className="hl">nổi bật</span></h2>
+                <div className="shop-strip-header">
+                  <h2>Gian hàng nổi bật</h2>
+                  <span>Nhiều shop mỹ phẩm chính hãng trên một sàn</span>
+                </div>
                 <div className="shop-strip-row">
                   {FEATURED_SHOPS.map(shop => (
                     <button
@@ -2359,7 +2401,7 @@ export default function App() {
                         <ArrowLeft size={16} /> Tiếp tục mua sắm
                       </button>
                       <h1 className="page-title" style={{ margin: 0 }}>
-                        <Package size={26} color="var(--ink)" /> Đơn hàng của tôi
+                        <Package size={26} color="var(--primary)" /> Đơn hàng của tôi
                       </h1>
                     </div>
                     <p className="page-subtitle" style={{ marginTop: 6 }}>
@@ -2384,7 +2426,7 @@ export default function App() {
                       onClick={() => navigateTo('profile')}
                       style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6 }}
                     >
-                      <MapPin size={15} color="var(--ink)" /> Sổ địa chỉ giao hàng
+                      <MapPin size={15} color="#d81b60" /> Sổ địa chỉ giao hàng
                     </button>
                   </div>
                 </div>
@@ -2412,12 +2454,12 @@ export default function App() {
                       type="button"
                       role="tab"
                       aria-selected={orderStatusFilter === tab.value}
-                      className={`order-filter-btn order-tab-underline ${orderStatusFilter === tab.value ? 'active' : ''}`}
+                      className={`order-filter-btn ${orderStatusFilter === tab.value ? 'active' : ''}`}
                       data-testid={`order-status-tab-${tab.value || 'all'}`}
                       onClick={() => setOrderStatusFilter(tab.value)}
                     >
                       {tab.label}
-                      {tabCount > 0 ? (<span className="mono"> ({tabCount})</span>) : ''}
+                      {tabCount > 0 ? ` (${tabCount})` : ''}
                     </button>
                     );
                   })}
@@ -2431,10 +2473,9 @@ export default function App() {
 
                 {/* Orders List */}
                 {ordersLoading && ordersList.length === 0 ? (
-                  <div aria-label="Đang tải danh sách đơn hàng">
-                    <div className="skeleton" style={{ height: 120, marginBottom: 12 }} />
-                    <div className="skeleton" style={{ height: 120, marginBottom: 12 }} />
-                    <div className="skeleton" style={{ height: 120 }} />
+                  <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
+                    <RefreshCw size={36} className="spin" style={{ margin: '0 auto 12px', color: 'var(--primary)' }} />
+                    <p>Đang tải danh sách đơn hàng từ máy chủ...</p>
                   </div>
                 ) : ordersList.length === 0 ? (
                   <div className="empty-state-card" data-testid="orders-empty-state">
@@ -2454,13 +2495,13 @@ export default function App() {
                         const label = orderStatusLabelOf(order);
                         const displayCode = order.orderDisplayCode || `#${order.orderCode}`;
                         return (
-                          <div key={order.id} className="card order-card" data-testid={`order-item-${displayCode}`}>
+                          <div key={order.id} className="order-card" data-testid={`order-item-${displayCode}`}>
                             <div className="order-card-header">
                               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <span className="mono" style={{ fontWeight: 600, fontSize: '1.05rem', color: 'var(--text-main)' }}>
+                                <span style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-main)' }}>
                                   Mã đơn: {displayCode}
                                 </span>
-                                <span className={orderStatusBadgeClass(label)}>
+                                <span className={`order-status-badge ${order.status.toLowerCase()}`}>
                                   {label}
                                 </span>
                               </div>
@@ -2487,7 +2528,7 @@ export default function App() {
                                       Số lượng: x{item.quantity} • Đơn giá: {formatPrice(item.unitPrice)}
                                     </div>
                                   </div>
-                                  <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-main)' }}>
+                                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-main)' }}>
                                     {formatPrice(item.unitPrice * item.quantity)}
                                   </div>
                                 </div>
@@ -2501,7 +2542,7 @@ export default function App() {
 
                             <div className="order-footer-actions">
                               <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                                Tổng giá trị đơn: <strong className="price" style={{ fontSize: '1.15rem' }}>{formatPrice(order.totalAmount)}</strong>
+                                Tổng giá trị đơn: <strong style={{ color: '#d81b60', fontSize: '1.15rem' }}>{formatPrice(order.totalAmount)}</strong>
                               </div>
                               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                                 {label === 'Chờ thanh toán' && (
@@ -2572,7 +2613,7 @@ export default function App() {
                       <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>
                         Chi tiết đơn {selectedOrder.orderDisplayCode || `#${selectedOrder.orderCode}`}
                       </h3>
-                      <span className={orderStatusBadgeClass(orderStatusLabelOf(selectedOrder))} data-testid="order-detail-status">
+                      <span className={`order-status-badge ${selectedOrder.status.toLowerCase()}`} data-testid="order-detail-status">
                         {orderStatusLabelOf(selectedOrder)}
                       </span>
                     </div>
@@ -2581,7 +2622,7 @@ export default function App() {
                       data-testid="order-shipping-info"
                       style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 14px', background: 'var(--bg-subtle)', borderRadius: 8, marginBottom: 14, fontSize: '0.85rem' }}
                     >
-                      <MapPin size={16} color="var(--ink)" style={{ flexShrink: 0, marginTop: 2 }} />
+                      <MapPin size={16} color="var(--primary)" style={{ flexShrink: 0, marginTop: 2 }} />
                       <div>
                         <strong>{selectedOrder.customerName}</strong> ({selectedOrder.customerPhone}) —{' '}
                         <span style={{ color: 'var(--text-muted)' }}>
@@ -2615,7 +2656,7 @@ export default function App() {
                               Số lượng: x{item.quantity} • Đơn giá: {formatPrice(item.unitPrice)}
                             </div>
                           </div>
-                          <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-main)' }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-main)' }}>
                             {formatPrice(item.unitPrice * item.quantity)}
                           </div>
                         </div>
@@ -2654,13 +2695,13 @@ export default function App() {
                         })}
                       </div>
                       {selectedOrder.status === 'Cancelled' && (
-                        <div style={{ fontSize: '0.8rem', color: 'var(--error)', marginTop: 8 }}>Đơn đã hủy — không đi tiếp các bước sau.</div>
+                        <div style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: 8 }}>Đơn đã hủy — không đi tiếp các bước sau.</div>
                       )}
                       {selectedOrder.statusHistories && selectedOrder.statusHistories.length > 0 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 10 }}>
                           {selectedOrder.statusHistories.map((h, i) => (
                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem' }}>
-                              <CheckCircle2 size={12} color="var(--ink)" />
+                              <CheckCircle2 size={12} color="#10b981" />
                               <span>{new Date(h.timestamp).toLocaleString('vi-VN')}</span>
                               <span style={{ fontWeight: 600 }}>{h.note || 'Cập nhật trạng thái'}</span>
                             </div>
@@ -2728,7 +2769,7 @@ export default function App() {
                         <label className="form-label" htmlFor="cancel-reason-select">Lý do hủy đơn</label>
                         <select
                           id="cancel-reason-select"
-                          className="input"
+                          className="form-input"
                           value={cancelReasonChoice}
                           onChange={e => setCancelReasonChoice(e.target.value)}
                           data-testid="cancel-reason-select"
@@ -2745,7 +2786,7 @@ export default function App() {
                           <label className="form-label" htmlFor="cancel-reason-input">Nhập lý do của bạn</label>
                           <input
                             id="cancel-reason-input"
-                            className="input"
+                            className="form-input"
                             value={cancelReasonText}
                             onChange={e => setCancelReasonText(e.target.value)}
                             placeholder="Ví dụ: Tôi muốn đổi sang sản phẩm khác"
@@ -2754,7 +2795,7 @@ export default function App() {
                         </div>
                       )}
                       {cancelError && (
-                        <div className="field-error" style={{ marginBottom: 12 }}>{cancelError}</div>
+                        <div style={{ color: '#d81b60', fontSize: '0.85rem', marginBottom: 12 }}>{cancelError}</div>
                       )}
                       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
                         <button
@@ -2820,7 +2861,7 @@ export default function App() {
                         <ArrowLeft size={16} /> Trang chủ
                       </button>
                       <h1 className="page-title" style={{ margin: 0 }}>
-                        <UserIcon size={26} color="var(--ink)" /> Tài khoản của tôi
+                        <UserIcon size={26} color="var(--primary)" /> Tài khoản của tôi
                       </h1>
                     </div>
                   </div>
@@ -2835,7 +2876,7 @@ export default function App() {
                   </button>
                 </div>
 
-                <div className="card" style={{ padding: 20, marginBottom: 16 }}>
+                <div className="profile-card">
                   {/* User Avatar & Session Info */}
                   <div className="profile-avatar-banner">
                     <div className="profile-avatar-circle">
@@ -2843,7 +2884,7 @@ export default function App() {
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>
                           {profileFullName || user?.fullName || 'Thông tin tài khoản'}
                         </h3>
                         <span className="brand-badge" style={{ fontSize: '0.75rem' }}>
@@ -2858,7 +2899,8 @@ export default function App() {
                     {user && (
                       <button
                         type="button"
-                        className="btn btn-text"
+                        className="btn btn-secondary"
+                        style={{ color: '#f87171', borderColor: 'rgba(244, 63, 94, 0.3)', fontSize: '0.8rem', padding: '6px 12px' }}
                         onClick={handleLogout}
                       >
                         <LogOut size={14} /> Đăng xuất
@@ -2874,7 +2916,7 @@ export default function App() {
                         <label className="form-label" htmlFor="profile-name">Họ và tên</label>
                         <input
                           id="profile-name"
-                          className={`input${profileNameError ? ' input-error' : ''}`}
+                          className="form-input"
                           data-testid="profile-name-input"
                           value={profileFullName}
                           onChange={e => {
@@ -2883,9 +2925,10 @@ export default function App() {
                             setProfileSuccess(false);
                           }}
                           placeholder="Nguyễn Văn A"
+                          style={profileNameError ? { borderColor: '#d81b60' } : {}}
                         />
                         {profileNameError && (
-                          <div data-testid="profile-name-error" className="field-error">
+                          <div data-testid="profile-name-error" style={{ color: '#d81b60', fontSize: '0.8rem', marginTop: 6 }}>
                             {profileNameError}
                           </div>
                         )}
@@ -2895,7 +2938,7 @@ export default function App() {
                         <label className="form-label" htmlFor="profile-phone">Số điện thoại</label>
                         <input
                           id="profile-phone"
-                          className={`input${profilePhoneError ? ' input-error' : ''}`}
+                          className="form-input"
                           data-testid="profile-phone-input"
                           value={profilePhone}
                           onChange={e => {
@@ -2904,9 +2947,10 @@ export default function App() {
                             setProfileSuccess(false);
                           }}
                           placeholder="0987654321"
+                          style={profilePhoneError ? { borderColor: '#d81b60' } : {}}
                         />
                         {profilePhoneError && (
-                          <div data-testid="profile-phone-error" className="field-error">
+                          <div data-testid="profile-phone-error" style={{ color: '#d81b60', fontSize: '0.8rem', marginTop: 6 }}>
                             {profilePhoneError}
                           </div>
                         )}
@@ -2914,30 +2958,22 @@ export default function App() {
                     </div>
 
                     <div className="form-group">
-                      <label className="form-label" htmlFor="profile-email">Email đăng nhập</label>
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          id="profile-email"
-                          className="input"
-                          type="email"
-                          data-testid="profile-email-input"
-                          value={profileEmail}
-                          disabled
-                          readOnly
-                          style={{ background: 'var(--ground)', paddingRight: 40, width: '100%' }}
-                        />
-                        <Lock
-                          size={18}
-                          strokeWidth={1.75}
-                          style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }}
-                        />
-                      </div>
+                      <label className="form-label" htmlFor="profile-email">Email đăng nhập (không thể thay đổi)</label>
+                      <input
+                        id="profile-email"
+                        className="form-input"
+                        type="email"
+                        data-testid="profile-email-input"
+                        value={profileEmail}
+                        disabled
+                        readOnly
+                      />
                     </div>
 
                     {profileSuccess && (
                       <div
                         data-testid="profile-success-msg"
-                        style={{ background: 'var(--ok-soft)', border: '1px solid var(--ok)', borderRadius: 8, padding: '10px 14px', fontSize: '0.87rem', marginTop: 6 }}
+                        style={{ background: 'rgba(22, 163, 74, 0.1)', border: '1px solid #16a34a', borderRadius: 8, padding: '10px 14px', fontSize: '0.87rem', marginTop: 6 }}
                       >
                         Cập nhật thành công
                       </div>
@@ -2955,24 +2991,23 @@ export default function App() {
                       </button>
                     </div>
                   </form>
-                </div>
 
                   {/* Đổi mật khẩu (CN-03.2) — chỉ khi tài khoản có mật khẩu */}
                   {user && user.hasPassword !== false && (
-                    <div className="card" style={{ padding: 20, marginBottom: 16 }}>
                     <form
                       onSubmit={handleChangePassword}
                       noValidate
                       data-testid="change-password-form"
+                      style={{ marginTop: 26, paddingTop: 22, borderTop: '1px solid var(--border-subtle)' }}
                     >
                       <h3 className="profile-section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <ShieldCheck size={17} color="var(--ink)" /> Đổi mật khẩu
+                        <ShieldCheck size={17} color="var(--primary)" /> Đổi mật khẩu
                       </h3>
                       <div className="form-group">
                         <label className="form-label" htmlFor="cp-current">Mật khẩu hiện tại</label>
                         <input
                           id="cp-current"
-                          className={`input${cpErrors.current ? ' input-error' : ''}`}
+                          className="form-input"
                           type="password"
                           data-testid="change-password-current-input"
                           value={cpCurrent}
@@ -2981,9 +3016,10 @@ export default function App() {
                             setCpErrors(prev => ({ ...prev, current: undefined }));
                             setCpSuccess(false);
                           }}
+                          style={cpErrors.current ? { borderColor: '#d81b60' } : {}}
                         />
                         {cpErrors.current && (
-                          <div data-testid="change-password-current-error" className="field-error">
+                          <div data-testid="change-password-current-error" style={{ color: '#d81b60', fontSize: '0.8rem', marginTop: 6 }}>
                             {cpErrors.current}
                           </div>
                         )}
@@ -2993,7 +3029,7 @@ export default function App() {
                           <label className="form-label" htmlFor="cp-new">Mật khẩu mới</label>
                           <input
                             id="cp-new"
-                            className={`input${cpErrors.next ? ' input-error' : ''}`}
+                            className="form-input"
                             type="password"
                             data-testid="change-password-new-input"
                             value={cpNew}
@@ -3002,11 +3038,12 @@ export default function App() {
                               setCpErrors(prev => ({ ...prev, next: undefined }));
                               setCpSuccess(false);
                             }}
-                            placeholder="Ít nhất 8 ký tự"
+                            placeholder="Tối thiểu 8 ký tự, gồm chữ hoa & ký tự đặc biệt"
+                            style={cpErrors.next ? { borderColor: '#d81b60' } : {}}
                           />
                           <PasswordRuleList password={cpNew} testIdPrefix="change-password" />
                           {cpErrors.next && (
-                            <div data-testid="change-password-new-error" className="field-error">
+                            <div data-testid="change-password-new-error" style={{ color: '#d81b60', fontSize: '0.8rem', marginTop: 6 }}>
                               {cpErrors.next}
                             </div>
                           )}
@@ -3015,7 +3052,7 @@ export default function App() {
                           <label className="form-label" htmlFor="cp-confirm">Nhập lại mật khẩu mới</label>
                           <input
                             id="cp-confirm"
-                            className={`input${cpErrors.confirm ? ' input-error' : ''}`}
+                            className="form-input"
                             type="password"
                             data-testid="change-password-confirm-input"
                             value={cpConfirm}
@@ -3025,9 +3062,10 @@ export default function App() {
                               setCpSuccess(false);
                             }}
                             placeholder="Nhập lại mật khẩu mới để xác nhận"
+                            style={cpErrors.confirm ? { borderColor: '#d81b60' } : {}}
                           />
                           {cpErrors.confirm && (
-                            <div data-testid="change-password-confirm-error" className="field-error">
+                            <div data-testid="change-password-confirm-error" style={{ color: '#d81b60', fontSize: '0.8rem', marginTop: 6 }}>
                               {cpErrors.confirm}
                             </div>
                           )}
@@ -3036,7 +3074,7 @@ export default function App() {
                       {cpSuccess && (
                         <div
                           data-testid="change-password-success"
-                          style={{ background: 'var(--ok-soft)', border: '1px solid var(--ok)', borderRadius: 8, padding: '10px 14px', fontSize: '0.87rem', marginTop: 6 }}
+                          style={{ background: 'rgba(22, 163, 74, 0.1)', border: '1px solid #16a34a', borderRadius: 8, padding: '10px 14px', fontSize: '0.87rem', marginTop: 6 }}
                         >
                           Đổi mật khẩu thành công
                         </div>
@@ -3053,19 +3091,18 @@ export default function App() {
                         </button>
                       </div>
                     </form>
-                    </div>
                   )}
 
                   {/* Đặt mật khẩu — chỉ hiện khi tài khoản chưa có mật khẩu */}
                   {user && !setPasswordDone && (user.hasPassword === false || (user.hasPassword === undefined && !!user.authProvider)) && (
-                    <div className="card" style={{ padding: 20, marginBottom: 16 }}>
                     <form
                       onSubmit={handleSetPassword}
                       noValidate
                       data-testid="set-password-form"
+                      style={{ marginTop: 26, paddingTop: 22, borderTop: '1px solid var(--border-subtle)' }}
                     >
                       <h3 className="profile-section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <ShieldCheck size={17} color="var(--ink)" /> Đặt mật khẩu
+                        <ShieldCheck size={17} color="var(--primary)" /> Đặt mật khẩu
                       </h3>
                       <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 16px', lineHeight: 1.5 }}>
                         Tài khoản của bạn được tạo bằng {user.authProvider || 'mạng xã hội'} và chưa có mật khẩu.
@@ -3075,7 +3112,7 @@ export default function App() {
                         <div className="form-group">
                           <label className="form-label">Mật khẩu mới</label>
                           <input
-                            className="input"
+                            className="form-input"
                             type="password"
                             data-testid="set-password-input"
                             value={setPasswordValue}
@@ -3083,14 +3120,14 @@ export default function App() {
                               setSetPasswordValue(e.target.value);
                               if (setPasswordError) setSetPasswordError(null);
                             }}
-                            placeholder="Ít nhất 8 ký tự"
+                            placeholder="Tối thiểu 8 ký tự, gồm chữ hoa & ký tự đặc biệt"
                           />
                           <PasswordRuleList password={setPasswordValue} testIdPrefix="set-password" />
                         </div>
                         <div className="form-group">
                           <label className="form-label">Nhập lại mật khẩu</label>
                           <input
-                            className="input"
+                            className="form-input"
                             type="password"
                             data-testid="set-password-confirm-input"
                             value={setPasswordConfirm}
@@ -3103,7 +3140,7 @@ export default function App() {
                         </div>
                       </div>
                       {setPasswordError && (
-                        <div data-testid="set-password-error" className="field-error" style={{ marginTop: 8 }}>
+                        <div data-testid="set-password-error" style={{ color: '#d81b60', fontSize: '0.82rem', marginTop: 8 }}>
                           {setPasswordError}
                         </div>
                       )}
@@ -3119,13 +3156,11 @@ export default function App() {
                         </button>
                       </div>
                     </form>
-                    </div>
                   )}
                   {user && setPasswordDone && (
                     <div
                       data-testid="set-password-success"
-                      className="card"
-                      style={{ padding: '12px 14px', borderColor: 'var(--ok)', background: 'var(--ok-soft)', fontSize: '0.87rem', marginBottom: 16 }}
+                      style={{ marginTop: 26, padding: '12px 14px', border: '1px solid #10b981', background: 'rgba(16, 185, 129, 0.1)', borderRadius: 10, fontSize: '0.87rem' }}
                     >
                       Đã đặt mật khẩu thành công — từ nay bạn đăng nhập được bằng email + mật khẩu hoặc {user.authProvider || 'mạng xã hội'}.
                     </div>
@@ -3137,6 +3172,7 @@ export default function App() {
                       <AddressBook />
                     </div>
                   )}
+                </div>
               </section>
             )
           }
@@ -3168,10 +3204,9 @@ export default function App() {
                 </div>
 
                 {productDetailLoading ? (
-                  <div aria-label="Đang tải thông tin chi tiết sản phẩm">
-                    <div className="skeleton" style={{ height: 320, marginBottom: 12 }} />
-                    <div className="skeleton" style={{ height: 20, width: '60%', marginBottom: 8 }} />
-                    <div className="skeleton" style={{ height: 20, width: '40%' }} />
+                  <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
+                    <RefreshCw size={32} className="spin" style={{ margin: '0 auto 12px', color: 'var(--primary)' }} />
+                    <p>Đang tải thông tin chi tiết sản phẩm...</p>
                   </div>
                 ) : productNotFound || !selectedProduct ? (
                   <div style={{ textAlign: 'center', padding: '60px 0' }} data-testid="product-not-found-page">
@@ -3186,39 +3221,42 @@ export default function App() {
                   </div>
                 ) : (
                   <>
-                    <nav className="detail-breadcrumb" aria-label="Breadcrumb">
-                      <button type="button" onClick={() => navigateTo('home')}>Trang chủ</button>
-                      <span aria-hidden="true"> / </span>
-                      <span>{selectedProduct.categoryName}</span>
-                    </nav>
                     <div className="product-detail-layout">
                       <div>
                         <ProductGallery
                           images={resolveGalleryImages(selectedProduct.imageUrl, selectedProduct.images)}
                           alt={selectedProduct.name}
                         />
-                        <div className="detail-trust-row">
-                          <span><Check size={20} strokeWidth={1.75} /> Hàng chính hãng 100%</span>
-                          <span><Clock size={20} strokeWidth={1.75} /> Đổi trả 30 ngày</span>
-                          <span><ShieldCheck size={20} strokeWidth={1.75} /> Bảo hành 12 tháng</span>
-                          <span><Truck size={20} strokeWidth={1.75} /> Giao hàng toàn quốc</span>
+                        <div className="product-trust-badges">
+                          <div className="product-trust-badge">
+                            <Check size={14} color="#10b981" /> Hàng chính hãng 100%
+                          </div>
+                          <div className="product-trust-badge">
+                            <Clock size={14} color="#6366f1" /> Đổi trả trong 7 ngày
+                          </div>
+                          <div className="product-trust-badge">
+                            <ShieldCheck size={14} color="#d81b60" /> Bảo hành 12 tháng
+                          </div>
+                          <div className="product-trust-badge">
+                            <Truck size={14} color="#f59e0b" /> Giao hàng toàn quốc
+                          </div>
                         </div>
                       </div>
 
                       <div>
-                        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 800, marginBottom: 8, color: 'var(--text-main)' }}>{selectedProduct.name}</h1>
+                        <h2 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: 8, color: 'var(--text-main)' }}>{selectedProduct.name}</h2>
 
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 16 }}>
-                          <span className="price price-sale">
+                          <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#d81b60' }}>
                             {formatPrice(selectedProduct.price)}
                           </span>
                           {selectedProduct.originalPrice && (
-                            <span className="price-old">
+                            <span style={{ fontSize: '1rem', color: '#6b7280', textDecoration: 'line-through' }}>
                               {formatPrice(selectedProduct.originalPrice)}
                             </span>
                           )}
                           {selectedProduct.originalPrice && selectedProduct.originalPrice > selectedProduct.price && (
-                            <span style={{ fontSize: '0.8rem', background: 'var(--brand)', color: 'var(--ink)', padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>
+                            <span style={{ fontSize: '0.8rem', background: 'rgba(228, 0, 70, 0.1)', color: '#d81b60', padding: '2px 8px', borderRadius: 8, fontWeight: 700 }}>
                               Tiết kiệm {formatPrice(selectedProduct.originalPrice - selectedProduct.price)}
                             </span>
                           )}
@@ -3236,7 +3274,6 @@ export default function App() {
                             className="variant-option active"
                             data-testid={`variant-option-${selectedProduct.id}`}
                             disabled={selectedProduct.availableStock <= 0}
-                            style={{ background: 'var(--ink)', color: '#fff', borderColor: 'var(--ink)' }}
                           >
                             Mặc định
                           </button>
@@ -3245,7 +3282,7 @@ export default function App() {
                         {selectedProduct.availableStock <= 0 ? (
                           <div
                             data-testid="detail-out-of-stock-notice"
-                            style={{ background: 'var(--error-soft)', border: '1px solid var(--error)', color: 'var(--error)', borderRadius: 12, padding: '10px 14px', fontSize: '0.88rem', marginBottom: 20 }}
+                            style={{ background: 'rgba(228, 0, 70, 0.08)', border: '1px solid rgba(228, 0, 70, 0.3)', color: '#b91c1c', borderRadius: 12, padding: '10px 14px', fontSize: '0.88rem', marginBottom: 20 }}
                           >
                             Sản phẩm đã hết hàng — hiện không thể thêm vào giỏ hoặc mua ngay.
                           </div>
@@ -3263,7 +3300,7 @@ export default function App() {
                               >
                                 <Minus size={14} />
                               </button>
-                              <span style={{ minWidth: 24, textAlign: 'center', fontWeight: 600 }} data-testid="detail-qty-value">
+                              <span style={{ minWidth: 24, textAlign: 'center', fontWeight: 700 }} data-testid="detail-qty-value">
                                 {detailQuantity}
                               </span>
                               <button
@@ -3277,24 +3314,13 @@ export default function App() {
                                 <Plus size={14} />
                               </button>
                             </div>
-                            <span className="mono" style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
-                              Còn {selectedProduct.availableStock}
+                            <span style={{ fontSize: '0.85rem', color: '#9ca3af' }}>
+                              (Còn {selectedProduct.availableStock} sản phẩm có sẵn)
                             </span>
                           </div>
                         )}
 
                         <div style={{ display: 'flex', gap: 12 }}>
-                          <button
-                            className="btn btn-primary"
-                            style={{ flex: 1, padding: '12px' }}
-                            onClick={() => {
-                              handleBuyNow(selectedProduct, detailQuantity);
-                            }}
-                            disabled={selectedProduct.availableStock <= 0}
-                            data-testid="buy-now-btn"
-                          >
-                            Mua ngay
-                          </button>
                           <button
                             className="btn btn-secondary"
                             style={{ flex: 1, padding: '12px' }}
@@ -3305,6 +3331,17 @@ export default function App() {
                             data-testid="detail-add-to-cart-btn"
                           >
                             <Plus size={16} /> Thêm vào giỏ hàng
+                          </button>
+                          <button
+                            className="btn btn-primary"
+                            style={{ flex: 1, padding: '12px' }}
+                            onClick={() => {
+                              handleBuyNow(selectedProduct, detailQuantity);
+                            }}
+                            disabled={selectedProduct.availableStock <= 0}
+                            data-testid="buy-now-btn"
+                          >
+                            Mua ngay
                           </button>
                         </div>
                       </div>
@@ -3317,7 +3354,7 @@ export default function App() {
                         <div className="product-detail-expanded" style={{ marginTop: 24 }}>
                           <div className="detail-section">
                             <h4 className="detail-section-title">
-                              Đặc điểm nổi bật
+                              <Sparkles size={18} color="var(--primary)" /> Đặc điểm nổi bật
                             </h4>
                             <ul style={{ paddingLeft: 20, margin: 0, lineHeight: 1.8 }}>
                               {extra.highlights.map((h, idx) => (
@@ -3330,7 +3367,7 @@ export default function App() {
 
                           <div className="detail-section">
                             <h4 className="detail-section-title">
-                              <Layers size={18} color="var(--ink)" /> Thông số kỹ thuật & Thông tin chi tiết
+                              <Layers size={18} color="var(--primary)" /> Thông số kỹ thuật & Thông tin chi tiết
                             </h4>
                             <table className="specs-table">
                               <tbody>
@@ -3346,7 +3383,7 @@ export default function App() {
 
                           <div className="detail-section">
                             <h4 className="detail-section-title">
-                              <FileText size={18} color="var(--ink)" /> Bài viết giới thiệu chi tiết sản phẩm
+                              <FileText size={18} color="var(--primary)" /> Bài viết giới thiệu chi tiết sản phẩm
                             </h4>
                             <div style={{ background: 'var(--bg-subtle)', padding: 18, borderRadius: 12, border: '1px solid var(--border-subtle)' }}>
                               {extra.detailedArticle.map((para, idx) => (
@@ -3359,12 +3396,12 @@ export default function App() {
 
                           <div className="detail-section">
                             <h4 className="detail-section-title">
-                              <ShieldCheck size={18} color="var(--ink)" /> Ưu điểm vượt trội & Cam kết chất lượng
+                              <ShieldCheck size={18} color="var(--primary)" /> Ưu điểm vượt trội & Cam kết chất lượng
                             </h4>
                             <div className="features-grid">
                               {extra.features.map((feat, idx) => (
                                 <div key={idx} className="feature-box">
-                                  <div className="feature-box-title">{feat.title}</div>
+                                  <div className="feature-box-title">✓ {feat.title}</div>
                                   <div className="feature-box-desc">{feat.desc}</div>
                                 </div>
                               ))}
@@ -3373,7 +3410,7 @@ export default function App() {
 
                           <div className="detail-section">
                             <h4 className="detail-section-title">
-                              <CheckCircle2 size={18} color="var(--ink)" /> Hướng dẫn sử dụng & Bảo quản đúng cách
+                              <CheckCircle2 size={18} color="#10b981" /> Hướng dẫn sử dụng & Bảo quản đúng cách
                             </h4>
                             <div style={{ background: 'var(--bg-subtle)', padding: 16, borderRadius: 12, border: '1px solid var(--border-subtle)' }}>
                               <ol style={{ paddingLeft: 20, margin: 0, lineHeight: 1.8 }}>
@@ -3388,7 +3425,7 @@ export default function App() {
 
                           <div className="detail-section" style={{ marginBottom: 10 }}>
                             <h4 className="detail-section-title">
-                              <Truck size={18} color="var(--ink)" /> Chính sách bán hàng & Dịch vụ khách hàng DAFL
+                              <Truck size={18} color="var(--primary)" /> Chính sách bán hàng & Dịch vụ khách hàng DAFL
                             </h4>
                             <div className="guarantees-grid">
                               {extra.guarantees.map((g, idx) => (
@@ -3423,7 +3460,7 @@ export default function App() {
                       return (
                         <section className="detail-section" data-testid="product-reviews-section" style={{ marginTop: 24 }}>
                           <h4 className="detail-section-title">
-                            <Star size={18} color="var(--ink)" /> Đánh giá của khách hàng
+                            <Star size={18} color="var(--primary)" /> Đánh giá của khách hàng
                           </h4>
                           {evals.length === 0 ? (
                             <p style={{ color: 'var(--text-muted)', fontSize: '1rem', margin: 0 }}>
@@ -3436,7 +3473,7 @@ export default function App() {
                                 style={{ display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap', background: 'var(--bg-subtle)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: 18, marginBottom: 16 }}
                               >
                                 <div style={{ textAlign: 'center' }}>
-                                  <div style={{ fontSize: '2.2rem', fontWeight: 700, color: 'var(--ink)', lineHeight: 1 }}>{avg.toFixed(1)}</div>
+                                  <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--primary)', lineHeight: 1 }}>{avg.toFixed(1)}</div>
                                   <div style={{ display: 'flex', gap: 2, justifyContent: 'center', margin: '6px 0' }}>
                                     {[1, 2, 3, 4, 5].map(i => (
                                       <Star key={i} size={18} fill={i <= Math.round(avg) ? '#f5a623' : 'none'} color="#f5a623" />
@@ -3447,9 +3484,9 @@ export default function App() {
                                 <div style={{ flex: 1, minWidth: 220 }}>
                                   {dist.map(d => (
                                     <div key={d.star} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: '0.9rem' }}>
-                                      <span style={{ width: 34, display: 'inline-flex', alignItems: 'center', gap: 2 }}>{d.star} <Star size={13} fill="#f5a623" color="#f5a623" /></span>
+                                      <span style={{ width: 28 }}>{d.star} ★</span>
                                       <div style={{ flex: 1, height: 8, background: '#f0f0f0', borderRadius: 999, overflow: 'hidden' }}>
-                                        <div style={{ width: `${(d.count / maxCount) * 100}%`, height: '100%', background: 'var(--ink)', borderRadius: 999 }} />
+                                        <div style={{ width: `${(d.count / maxCount) * 100}%`, height: '100%', background: '#d81b60', borderRadius: 999 }} />
                                       </div>
                                       <span style={{ width: 24, textAlign: 'right', color: 'var(--text-muted)' }}>{d.count}</span>
                                     </div>
@@ -3460,11 +3497,11 @@ export default function App() {
                                 {evals.map(ev => (
                                   <li key={ev.id} data-testid="product-review-item" style={{ borderBottom: '1px solid var(--border-subtle)', padding: '12px 0' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                                      <span style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--ground)', color: 'var(--ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, flexShrink: 0 }}>
+                                      <span style={{ width: 36, height: 36, borderRadius: '50%', background: '#ffe8f0', color: '#d81b60', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0 }}>
                                         {(ev.userName || 'K').charAt(0).toUpperCase()}
                                       </span>
                                       <div>
-                                        <div style={{ fontWeight: 600, fontSize: '1rem' }}>{ev.userName}</div>
+                                        <div style={{ fontWeight: 700, fontSize: '1rem' }}>{ev.userName}</div>
                                         <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                                           {[1, 2, 3, 4, 5].map(i => (
                                             <Star key={i} size={14} fill={i <= ev.rating ? '#f5a623' : 'none'} color="#f5a623" />
@@ -3496,28 +3533,6 @@ export default function App() {
                         </section>
                       );
                     })()}
-                    {/* Thanh mua cố định đáy màn hình (chỉ hiện <= 768px) */}
-                    <div className="sticky-buy-bar">
-                      <span className="price price-sale">{formatPrice(selectedProduct.price)}</span>
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        style={{ flex: 1 }}
-                        onClick={() => handleBuyNow(selectedProduct, detailQuantity)}
-                        disabled={selectedProduct.availableStock <= 0}
-                      >
-                        Mua ngay
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        style={{ flex: 1 }}
-                        onClick={() => addToCart(selectedProduct, detailQuantity)}
-                        disabled={selectedProduct.availableStock <= 0}
-                      >
-                        Thêm vào giỏ
-                      </button>
-                    </div>
                   </>
                 )}
               </div>
@@ -3656,7 +3671,7 @@ export default function App() {
                       <ArrowLeft size={16} /> Quay lại danh sách đơn hàng
                     </button>
                     <h1 className="page-title" style={{ margin: 0 }}>
-                      <CreditCard size={24} color="var(--ink)" /> Thanh toán đơn hàng PayOS
+                      <CreditCard size={24} color="var(--primary)" /> Thanh toán đơn hàng PayOS
                     </h1>
                   </div>
 
@@ -3674,7 +3689,7 @@ export default function App() {
                             <strong style={{ fontSize: '1.1rem' }}>{order?.orderDisplayCode || `#${orderCodeNum}`}</strong>
                             <span style={{ margin: '0 8px', color: 'var(--border-subtle)' }}>|</span>
                             <span style={{ fontSize: '0.95rem', color: 'var(--text-muted)' }}>Tổng thanh toán: </span>
-                            <strong className="price" style={{ fontSize: '1.25rem' }}>{formatPrice(totalAmt)}</strong>
+                            <strong style={{ color: '#d81b60', fontSize: '1.25rem' }}>{formatPrice(totalAmt)}</strong>
                           </div>
                           <button
                             type="button"
@@ -3703,7 +3718,7 @@ export default function App() {
                         <div className="payos-sync-footer">
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.825rem', color: 'var(--text-muted)' }}>
-                              <RefreshCw size={14} className="spin" color="var(--ok)" />
+                              <RefreshCw size={14} className="spin" color="#10b981" />
                               <span>Lắng nghe kết quả thanh toán từ VietQR / PayOS qua SignalR...</span>
                             </div>
                             <div style={{ display: 'flex', gap: 8 }}>
@@ -3743,11 +3758,9 @@ export default function App() {
           path="*"
           element={
             <div style={{ padding: '3rem 1rem', maxWidth: 720, margin: '0 auto', textAlign: 'center' }} data-testid="not-found-page">
-              <div style={{ marginBottom: '0.5rem', color: 'var(--muted)' }} aria-hidden="true">
-                <Search size={40} strokeWidth={1.75} />
-              </div>
-              <h1 style={{ fontSize: '1.9rem', color: 'var(--ink)', margin: '0 0 0.5rem' }}>Không tìm thấy trang</h1>
-              <p style={{ color: 'var(--muted)', margin: '0 0 1.5rem' }}>Trang bạn vừa mở không tồn tại hoặc đã được chuyển đi nơi khác.</p>
+              <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }} aria-hidden="true">🔍</div>
+              <h1 style={{ fontSize: '1.9rem', color: '#d81b60', margin: '0 0 0.5rem' }}>Không tìm thấy trang</h1>
+              <p style={{ color: '#555', margin: '0 0 1.5rem' }}>Trang bạn vừa mở không tồn tại hoặc đã được chuyển đi nơi khác.</p>
               <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
                 <button type="button" className="btn btn-primary" onClick={() => navigate('/')}>Về trang chủ</button>
                 <button type="button" className="btn btn-secondary" onClick={() => navigate(-1)}>Quay lại</button>
@@ -3763,42 +3776,40 @@ export default function App() {
       {/* MODAL: NOTIFICATIONS MODAL */}
       {/* ============================================================== */}
       {isNotifOpen && (
-        <>
-          <div className="notif-dropdown-backdrop" onClick={() => setIsNotifOpen(false)} aria-hidden="true" />
-          <div className="notif-dropdown" data-testid="notifications-modal" role="dialog" aria-label="Thông báo">
-            <div className="notif-dropdown-head">
+        <div className="modal-overlay" onClick={() => setIsNotifOpen(false)} data-testid="notifications-modal">
+          <div className="modal-content notif-modal" onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 520 }}>
+            <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Bell size={20} strokeWidth={1.75} />
-                <h2 className="notif-dropdown-title">Thông báo</h2>
+                <Bell size={20} color="var(--primary)" />
+                <h2 className="modal-title">Thông báo</h2>
                 {unreadCount > 0 && (
-                  <span className="badge" style={{ background: 'var(--brand)', color: 'var(--ink)' }}>{unreadCount} mới</span>
+                  <span className="badge-count" style={{ position: 'static' }}>{unreadCount} mới</span>
                 )}
               </div>
-              <button
-                type="button"
-                className="btn btn-icon"
-                onClick={() => setIsNotifOpen(false)}
-                data-testid="close-notif-btn"
-                aria-label="Đóng thông báo"
-              >
-                <X size={20} strokeWidth={1.75} />
-              </button>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-              <button
-                type="button"
-                className="btn btn-text"
-                onClick={markAllNotificationsAsRead}
-                data-testid="mark-all-read-btn"
-              >
-                Đánh dấu đã đọc tất cả
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button
+                  type="button"
+                  className="notif-mark-all-btn"
+                  onClick={markAllNotificationsAsRead}
+                  data-testid="mark-all-read-btn"
+                >
+                  Đánh dấu đã đọc tất cả
+                </button>
+                <button
+                  type="button"
+                  className="close-btn"
+                  onClick={() => setIsNotifOpen(false)}
+                  data-testid="close-notif-btn"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
-            <div className="notif-list">
+            <div className="notif-list" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
               {notifications.length === 0 ? (
-                <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '30px 0' }}>
-                  <Bell size={40} strokeWidth={1.75} style={{ margin: '0 auto 8px', opacity: 0.3 }} />
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '30px 0' }}>
+                  <Bell size={40} style={{ margin: '0 auto 8px', opacity: 0.3 }} />
                   <p>Chưa có thông báo</p>
                 </div>
               ) : (
@@ -3813,12 +3824,12 @@ export default function App() {
                     data-testid={`notification-item-${n.id}`}
                   >
                     <span className="notif-icon">
-                      <NotifIcon size={16} strokeWidth={1.75} />
+                      <NotifIcon size={16} />
                     </span>
                     <span className="notif-body">
                       <span className="notif-title-row">
                         <strong>{n.title}</strong>
-                        <span className="notif-time mono">{timeAgoVi(n.createdAt)}</span>
+                        <span className="notif-time">{timeAgoVi(n.createdAt)}</span>
                       </span>
                       <span className="notif-message">{n.message}</span>
                     </span>
@@ -3829,7 +3840,7 @@ export default function App() {
               )}
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

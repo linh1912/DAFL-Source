@@ -1,65 +1,43 @@
 /* ==========================================================================
  * CSS cho form đăng nhập dùng chung (AuthModal, src/Shared/components/auth/).
- * Trích các rule auth từ src/Frontend/src/index.css (đợt 8) —
+ * Trích NGUYÊN VĂN các rule auth từ src/Frontend/src/index.css (đợt 8) —
  * chỉ lấy đúng những class AuthModal dùng ở chế độ trang (isModal=false)
  * và modal: .btn, .modal-*, .form-*, .auth-*.
  *
- * TOKEN "Tem nhãn" (do worker token định nghĩa — file này chỉ DÙNG lại):
- * --ink #15171A, --paper #FFFFFF, --ground #F5F5F2, --brand #FFD60A,
- * --sale #C8102E, --ok/--warn/--info/--error + bản -soft, --muted #5F6368,
- * --line #D9D9D4; font --font-display 'Bricolage Grotesque',
- * --font-body 'Be Vietnam Pro', --font-mono 'JetBrains Mono'.
- * Vàng = hành động, mực = chữ/cấu trúc, đỏ = giảm giá/lỗi.
- * Chữ trên nền vàng luôn là --ink. KHÔNG gradient/glow, KHÔNG bóng mờ.
+ * THEME GIỮ NGUYÊN theo brief chốt 2026-11-08: vàng #FFD900 + hồng #D81B60,
+ * Be Vietnam Pro. KHÔNG đổi theo đặc tả UI/UX v2.0 §2 (Primary #9E2A2B Rose
+ * Velvet + Playfair Display) — §2 mâu thuẫn với brief đã triển khai, việc
+ * tách thư mục đợt 13 không restyle.
  *
  * LƯU Ý TRÙNG LẶP: src/Frontend/src/index.css vẫn còn giữ nguyên các rule
- * này (web chưa gỡ ra để tránh vỡ giao diện shop). Đây là bản dùng cho app
- * Admin; khi refactor CSS web thì gỡ các rule auth khỏi index.css và để
- * cả 2 app cùng import file này.
+ * này (web chưa gỡ ra để tránh vỡ giao diện shop — file 4828 dòng, nhiều
+ * override theo tầng). Đây là bản dùng cho app Admin; khi refactor CSS web
+ * thì gỡ các rule auth khỏi index.css và để cả 2 app cùng import file này.
  * ========================================================================== */
 
 :root {
   --font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
-  --font-display: 'Bricolage Grotesque', 'Be Vietnam Pro', system-ui, sans-serif;
-  --font-body: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  --ink: #15171a;
-  --paper: #ffffff;
-  --ground: #f5f5f2;
-  --brand: #ffd60a;
-  --brand-soft: #fff7cc;
-  --sale: #c8102e;
-  --ok: #166534;
-  --ok-soft: #e6f4ea;
-  --warn: #854d0e;
-  --warn-soft: #fef7e0;
-  --info: #1d4ed8;
-  --info-soft: #e8f0fe;
-  --error: #c8102e;
-  --error-soft: #fce8e6;
-  --muted: #5f6368;
-  --line: #d9d9d4;
-  /* Bí danh cũ (giữ để các rule khác trong file không vỡ) */
-  --primary: var(--brand);
-  --primary-hover: var(--brand);
-  --pdd-gradient: var(--brand);
-  --pdd-gradient-hover: var(--brand);
-  --dafl-yellow: var(--brand);
-  --dafl-line: var(--line);
-  --bg-primary: var(--paper);
-  --bg-card: var(--paper);
-  --bg-modal: var(--paper);
-  --bg-input: var(--paper);
-  --bg-subtle-light: var(--ground);
-  --border-subtle: var(--line);
-  --border-focus: var(--ink);
-  --text-main: var(--ink);
-  --text-muted: var(--muted);
-  --btn-secondary-bg: var(--paper);
-  --btn-secondary-hover: var(--ground);
+  --primary: #d81b60;
+  --primary-hover: #ad1457;
+  --primary-glow: rgba(216, 27, 96, 0.14);
+  --pdd-gradient: #d81b60;
+  --pdd-gradient-hover: #ad1457;
+  --dafl-yellow: #ffd900;
+  --dafl-line: #e8e8e8;
+  --bg-primary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-modal: #ffffff;
+  --bg-input: #ffffff;
+  --bg-subtle-light: #f5f5f5;
+  --border-subtle: #e8e8e8;
+  --border-focus: rgba(216, 27, 96, 0.55);
+  --text-main: #111111;
+  --text-muted: #5f5f5f;
+  --btn-secondary-bg: #f5f5f5;
+  --btn-secondary-hover: #eeeeee;
   --radius-sm: 6px;
   --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-lg: 10px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -88,35 +66,24 @@ body {
 }
 
 .btn-primary {
-  background: var(--brand);
-  color: var(--ink);
+  background: var(--pdd-gradient);
+  color: white;
+  box-shadow: 0 4px 14px var(--primary-glow);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--brand);
-  filter: brightness(0.94);
+  background: var(--pdd-gradient-hover);
+  transform: translateY(-1px);
 }
 
 .btn-secondary {
   background: var(--btn-secondary-bg);
   color: var(--text-main);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--border-subtle);
 }
 
 .btn-secondary:hover:not(:disabled) {
   background: var(--btn-secondary-hover);
-}
-
-/* Nút dạng chữ (link "Quên mật khẩu?", "Quay lại đăng nhập") */
-.btn-text {
-  background: none;
-  border: none;
-  color: var(--ink);
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  padding: 0;
-  text-decoration: underline;
 }
 
 
@@ -141,6 +108,7 @@ body {
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
   padding: 32px;
   position: relative;
   color: var(--text-main);
@@ -159,9 +127,8 @@ body {
 }
 
 .modal-title {
-  font-family: var(--font-display);
   font-size: 1.35rem;
-  font-weight: 600;
+  font-weight: 800;
   color: var(--text-main);
 }
 
@@ -203,8 +170,9 @@ body {
 }
 
 .tab-btn.active {
-  background: var(--brand);
-  color: var(--ink);
+  background: var(--pdd-gradient);
+  color: white;
+  box-shadow: 0 2px 8px var(--primary-glow);
 }
 
 
@@ -220,12 +188,9 @@ body {
   color: var(--text-muted);
 }
 
-/* Ô nhập theo hợp đồng: cao 44px, bo 8px. .form-input là bí danh cũ. */
-.input,
 .form-input {
   width: 100%;
-  height: 44px;
-  padding: 0 14px;
+  padding: 10px 14px;
   background: var(--bg-input);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -235,22 +200,10 @@ body {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.input:focus,
 .form-input:focus {
   outline: none;
-  border-color: var(--ink);
-  box-shadow: 0 0 0 3px var(--brand-soft);
-}
-
-.input-error {
-  border-color: var(--error);
-}
-
-/* Lỗi từng ô — chỉ hiện sau submit/blur */
-.field-error {
-  color: var(--error);
-  font-size: 13px;
-  margin-top: 6px;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
 /* Cart Items */
@@ -280,6 +233,7 @@ body {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: 32px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08);
 }
 
 .auth-card-header {
@@ -313,7 +267,7 @@ body {
 }
 
 .auth-side-panel {
-  background: var(--brand);
+  background: var(--dafl-yellow);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -325,25 +279,23 @@ body {
 .auth-side-logo {
   width: 92px;
   height: 92px;
-  border: 3px solid var(--ink);
+  border: 3px solid #111111;
   border-radius: 50%;
-  background: var(--paper);
+  background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-display);
   font-size: 2.4rem;
-  font-weight: 600;
-  color: var(--ink);
+  font-weight: 900;
+  color: #111111;
 }
 
 .auth-side-name {
-  font-family: var(--font-display);
   font-size: 2rem;
-  font-weight: 600;
+  font-weight: 900;
   letter-spacing: 0.28em;
   padding-left: 0.28em;
-  color: var(--ink);
+  color: #111111;
 }
 
 .auth-main-panel {
@@ -379,7 +331,7 @@ body {
 .product-detail-page,
 
 /* Bo góc tầng chuẩn hóa đợt 8 (index.css cuối file). */
-.modal-content { border-radius: 12px; }
-.product-card, .order-card, .profile-card, .payment-page-card, .notifications-page-card, .product-detail-page-card, .cart-page-content, .auth-page-card { border-radius: 12px; }
-.btn { border-radius: 8px; }
-.form-input, .input, select.form-input, .sort-select, .orders-filter-select { border-radius: 8px; }
+.modal-content { border-radius: 20px; }
+.product-card, .order-card, .profile-card, .payment-page-card, .notifications-page-card, .product-detail-page-card, .cart-page-content, .auth-page-card { border-radius: 16px; }
+.btn { border-radius: 12px; }
+.form-input, select.form-input, .sort-select, .orders-filter-select { border-radius: 12px; }

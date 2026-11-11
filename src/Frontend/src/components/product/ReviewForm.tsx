@@ -73,8 +73,8 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
   const shownRating = hoverRating || rating;
 
   return (
-    <div style={{ marginTop: 20, borderTop: '1px solid var(--border-subtle)', paddingTop: 16 }}>
-      <h5 style={{ margin: '0 0 12px', fontSize: '1.05rem', fontWeight: 700 }}>
+    <div style={{ marginTop: 20, borderTop: '1px solid var(--line)', paddingTop: 16 }}>
+      <h5 className="section-title" style={{ margin: '0 0 12px' }}>
         Viết đánh giá của bạn
       </h5>
       <form data-testid="review-form" onSubmit={handleSubmit}>
@@ -103,65 +103,41 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
         </div>
         <input
           type="text"
+          className="input"
           data-testid="review-name-input"
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="Tên của bạn (không bắt buộc)"
-          style={{
-            width: '100%',
-            boxSizing: 'border-box',
-            padding: '10px 12px',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 8,
-            fontSize: '1rem',
-            marginBottom: 10,
-          }}
+          style={{ width: '100%', boxSizing: 'border-box', marginBottom: 10 }}
         />
         <textarea
+          className="input"
           data-testid="review-comment-input"
           value={comment}
           onChange={e => setComment(e.target.value)}
           placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm..."
           rows={4}
-          style={{
-            width: '100%',
-            boxSizing: 'border-box',
-            padding: '10px 12px',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 8,
-            fontSize: '1rem',
-            resize: 'vertical',
-            marginBottom: 4,
-          }}
+          style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical', marginBottom: 4 }}
         />
-        <div style={{ textAlign: 'right', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 10 }}>
+        <div className="mono" style={{ textAlign: 'right', fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 10 }}>
           {comment.length}/1000
         </div>
         {error && (
-          <p data-testid="review-error-msg" style={{ color: '#d81b60', fontSize: '0.95rem', margin: '0 0 10px' }}>
+          <p className="field-error" data-testid="review-error-msg" style={{ margin: '0 0 10px' }}>
             {error}
           </p>
         )}
         {success && (
-          <p data-testid="review-success-msg" style={{ color: '#2e7d32', fontSize: '0.95rem', margin: '0 0 10px' }}>
+          <p data-testid="review-success-msg" style={{ color: 'var(--ok)', fontSize: '0.95rem', margin: '0 0 10px' }}>
             {success}
           </p>
         )}
         <button
           type="submit"
+          className="btn btn-primary"
           data-testid="review-submit-btn"
           disabled={submitting}
-          style={{
-            background: 'var(--primary)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 8,
-            padding: '10px 20px',
-            fontSize: '1rem',
-            fontWeight: 700,
-            cursor: submitting ? 'not-allowed' : 'pointer',
-            opacity: submitting ? 0.7 : 1,
-          }}
+          style={{ opacity: submitting ? 0.7 : 1 }}
         >
           {submitting ? 'Đang gửi...' : 'Gửi đánh giá'}
         </button>

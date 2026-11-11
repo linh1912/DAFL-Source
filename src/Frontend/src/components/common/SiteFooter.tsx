@@ -44,23 +44,24 @@ export const SiteFooter: React.FC = () => {
         </div>
         {newsletterDone ? (
           <p className="newsletter-success">
-            <CheckCircle2 size={19} /> Cảm ơn bạn đã đăng ký nhận bản tin DAFL.
+            <CheckCircle2 size={19} strokeWidth={1.75} /> Cảm ơn bạn đã đăng ký nhận bản tin DAFL.
           </p>
         ) : (
           <form className="newsletter-form" onSubmit={handleNewsletterSubmit} noValidate>
             <label className="newsletter-label" htmlFor="newsletter-email">
-              <Mail size={17} />
+              <Mail size={17} strokeWidth={1.75} />
               <span>Email của bạn</span>
             </label>
             <div className="newsletter-control">
               <input
                 id="newsletter-email"
                 type="email"
+                className="input"
                 value={newsletterEmail}
                 onChange={e => setNewsletterEmail(e.target.value)}
                 placeholder="Nhập email của bạn"
               />
-              <button type="submit" disabled={newsletterBusy}>{newsletterBusy ? 'Đang đăng ký...' : 'Đăng ký'}</button>
+              <button type="submit" className="btn btn-primary" disabled={newsletterBusy}>{newsletterBusy ? 'Đang đăng ký...' : 'Đăng ký'}</button>
             </div>
             {newsletterError && <span className="newsletter-error">{newsletterError}</span>}
           </form>
@@ -72,10 +73,10 @@ export const SiteFooter: React.FC = () => {
           <div className="site-footer-logo">DAFL</div>
           <p>Mỹ phẩm chính hãng từ nhiều gian hàng, giá rõ ràng.</p>
           <p className="site-footer-contact">
-            <Phone size={14} /> Hotline 1900 0000 (8h–21h)
+            <Phone size={14} strokeWidth={1.75} /> Hotline 1900 0000 (8h–21h)
           </p>
           <p className="site-footer-contact">
-            <MapPin size={14} /> Gian hàng DAFL trên toàn quốc
+            <MapPin size={14} strokeWidth={1.75} /> Gian hàng DAFL trên toàn quốc
           </p>
         </div>
 
@@ -115,9 +116,9 @@ export const SiteFooter: React.FC = () => {
       </footer>
 
       <div className="footer-bottom">
-        <span>© 2026 DAFL. Bảo lưu mọi quyền.</span>
+        <span className="mono">© 2026 DAFL. Bảo lưu mọi quyền.</span>
         <span className="footer-payments">
-          <CreditCard size={15} /> Thanh toán: PayOS · COD · Visa · Mastercard
+          <CreditCard size={15} strokeWidth={1.75} /> Thanh toán: PayOS · COD · Visa · Mastercard
         </span>
       </div>
     </div>

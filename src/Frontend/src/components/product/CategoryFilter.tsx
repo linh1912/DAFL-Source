@@ -33,7 +33,7 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
           <span>Danh mục mỹ phẩm ({categories.length})</span>
           {selectedCategory && (
             <button
-              className="category-clear-btn"
+              className="btn btn-text"
               onClick={() => onSelectCategory(null)}
               data-testid="clear-category-btn"
             >
@@ -47,7 +47,7 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
           <Search className="category-search-icon" size={15} />
           <input
             type="text"
-            className="category-search-input"
+            className="category-search-input input"
             placeholder="Tìm danh mục..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -72,7 +72,7 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
           <span>Không tìm thấy danh mục nào phù hợp với &quot;<strong>{searchTerm}</strong>&quot;</span>
           <button
             type="button"
-            className="category-pill category-empty-action"
+            className="chip category-empty-action"
             onClick={() => setSearchTerm('')}
           >
             Hiển thị tất cả
@@ -81,7 +81,7 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
       ) : (
         <div className="categories-bar" data-testid="categories-bar">
           <button
-            className={`category-pill ${selectedCategory === null ? 'active' : ''}`}
+            className={`chip ${selectedCategory === null ? 'active' : ''}`}
             onClick={() => onSelectCategory(null)}
             data-testid="category-pill-all"
           >
@@ -90,12 +90,11 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
           {filteredCategories.map(cat => (
             <button
               key={cat.id}
-              className={`category-pill ${selectedCategory === cat.id ? 'active' : ''}`}
+              className={`chip ${selectedCategory === cat.id ? 'active' : ''}`}
               onClick={() => onSelectCategory(cat.id)}
               data-testid={`category-pill-${cat.id}`}
               title={cat.name}
             >
-              {cat.iconUrl && cat.iconUrl.length <= 4 ? <span aria-hidden>{cat.iconUrl}</span> : null}
               {shortCategoryName(cat.name)}
             </button>
           ))}
@@ -104,4 +103,3 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
     </section>
   );
 };
-

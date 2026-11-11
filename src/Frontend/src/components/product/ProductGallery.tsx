@@ -51,7 +51,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, alt }) =
   const srcOf = (url: string) => (failed.has(url) ? IMAGE_PLACEHOLDER : url);
 
   if (count === 0) {
-    return <img src={IMAGE_PLACEHOLDER} alt={alt} className="product-detail-image" />;
+    return <img src={IMAGE_PLACEHOLDER} alt={alt} className="product-detail-image" style={{ borderRadius: 12 }} />;
   }
 
   return (
@@ -77,29 +77,30 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, alt }) =
           alt={`${alt} - ảnh ${index + 1}`}
           className="product-detail-image product-gallery-main"
           data-testid="product-gallery-main"
+          style={{ borderRadius: 12 }}
           onError={() => markFailed(images[index])}
         />
         {count > 1 && (
           <>
             <button
               type="button"
-              className="product-gallery-nav prev"
+              className="product-gallery-nav prev btn-icon"
               aria-label="Ảnh trước"
               data-testid="product-gallery-prev"
               onClick={() => go(index - 1)}
             >
-              <ChevronLeft size={20} />
+              <ChevronLeft size={20} strokeWidth={1.75} color="var(--ink)" />
             </button>
             <button
               type="button"
-              className="product-gallery-nav next"
+              className="product-gallery-nav next btn-icon"
               aria-label="Ảnh tiếp theo"
               data-testid="product-gallery-next"
               onClick={() => go(index + 1)}
             >
-              <ChevronRight size={20} />
+              <ChevronRight size={20} strokeWidth={1.75} color="var(--ink)" />
             </button>
-            <span className="product-gallery-counter" data-testid="product-gallery-counter" aria-live="polite">
+            <span className="product-gallery-counter mono" data-testid="product-gallery-counter" aria-live="polite">
               {index + 1}/{count}
             </span>
           </>
@@ -118,8 +119,22 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, alt }) =
               className={`product-gallery-thumb${i === index ? ' active' : ''}`}
               data-testid={`product-gallery-thumb-${i}`}
               onClick={() => go(i)}
+              style={{
+                width: 64,
+                height: 64,
+                padding: 0,
+                overflow: 'hidden',
+                borderRadius: 8,
+                border: i === index ? '1.5px solid var(--ink)' : '1px solid var(--line)',
+              }}
             >
-              <img src={srcOf(url)} alt="" loading="lazy" onError={() => markFailed(url)} />
+              <img
+                src={srcOf(url)}
+                alt=""
+                loading="lazy"
+                onError={() => markFailed(url)}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              />
             </button>
           ))}
         </div>

@@ -292,9 +292,14 @@ describe('Authentication Module - AuthModal Component', () => {
   it('TC_AUTH_21: Password checklist turns each rule green as it becomes satisfied', () => {
     render(<AuthModal {...defaultProps} authTab="register" registerPassword="Pass" />);
 
-    expect(screen.getByTestId('password-rule-upper')).toHaveStyle({ color: 'rgb(22, 163, 74)' });
-    expect(screen.getByTestId('password-rule-upper')).toHaveTextContent('✓');
-    expect(screen.getByTestId('password-rule-len')).not.toHaveStyle({ color: 'rgb(22, 163, 74)' });
+    // Quy tắc đã đạt: màu token --ok + icon Check (svg) + nhãn quy tắc (không còn ký tự ✓).
+    const upper = screen.getByTestId('password-rule-upper');
+    expect(upper).toHaveStyle({ color: 'var(--ok)' });
+    expect(upper).toHaveTextContent('Ít nhất 1 chữ hoa');
+    expect(upper.querySelector('svg')).not.toBeNull();
+    const len = screen.getByTestId('password-rule-len');
+    expect(len).not.toHaveStyle({ color: 'var(--ok)' });
+    expect(len).toHaveTextContent('Tối thiểu 8 ký tự');
   });
 
   // ==========================================

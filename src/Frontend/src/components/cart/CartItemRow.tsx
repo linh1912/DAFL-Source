@@ -64,7 +64,7 @@ export const CartItemRow: React.FC<CartItemRowProps> = ({
       <img
         src={item.product.imageUrl}
         alt={item.product.name}
-        style={{ width: 64, height: 64, borderRadius: 10, objectFit: 'cover', marginRight: 12, flexShrink: 0 }}
+        style={{ width: 72, height: 72, borderRadius: 12, objectFit: 'cover', marginRight: 12, flexShrink: 0, border: '1px solid var(--line)' }}
       />
       <div className="cart-item-info">
         <div className="cart-item-name" data-testid={`cart-item-name-${productId}`}>
@@ -73,7 +73,7 @@ export const CartItemRow: React.FC<CartItemRowProps> = ({
         <div className="cart-item-shop">{shopNameFor(item.product)}</div>
         <div className="cart-item-price" data-testid={`cart-item-price-${productId}`}>
           {formatPrice(item.product.price)}
-          <span className="cart-item-line-total"> · {formatPrice(item.product.price * item.quantity)}</span>
+          <span className="cart-item-line-total mono"> · {formatPrice(item.product.price * item.quantity)}</span>
         </div>
         {item.priceChanged && (
           <div className="cart-item-price-changed" data-testid={`cart-item-price-changed-${productId}`}>
@@ -86,9 +86,11 @@ export const CartItemRow: React.FC<CartItemRowProps> = ({
           </div>
         )}
       </div>
-      <div className="cart-item-actions">
+      {/* Bộ chọn số lượng liền khối: 1 khung viền mực, nút +/- và ô nhập không viền riêng. */}
+      <div className="cart-item-actions" style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--line)', borderRadius: 8, overflow: 'hidden', background: 'var(--paper)' }}>
         <button
           className="qty-btn"
+          style={{ border: 'none', background: 'transparent', color: 'var(--ink)' }}
           onClick={handleMinus}
           disabled={unavailable}
           data-testid={`cart-item-minus-${productId}`}
@@ -97,11 +99,12 @@ export const CartItemRow: React.FC<CartItemRowProps> = ({
           <Minus size={14} />
         </button>
         <input
-          className="cart-qty-input"
+          className="cart-qty-input mono"
           type="text"
           inputMode="numeric"
           value={qtyText}
           disabled={unavailable}
+          style={{ border: 'none', textAlign: 'center' }}
           onFocus={() => setEditing(true)}
           onChange={e => setQtyText(e.target.value)}
           onBlur={commitQtyText}
@@ -113,6 +116,7 @@ export const CartItemRow: React.FC<CartItemRowProps> = ({
         />
         <button
           className="qty-btn"
+          style={{ border: 'none', background: 'transparent', color: 'var(--ink)' }}
           onClick={() => onUpdateQuantity(productId, 1)}
           disabled={unavailable}
           data-testid={`cart-item-plus-${productId}`}
@@ -120,16 +124,16 @@ export const CartItemRow: React.FC<CartItemRowProps> = ({
         >
           <Plus size={14} />
         </button>
-        <button
-          type="button"
-          className="cart-item-remove-btn"
-          onClick={() => onRemoveRequest?.(productId)}
-          data-testid={`cart-item-remove-${productId}`}
-          title="Xóa sản phẩm khỏi giỏ hàng"
-        >
-          <Trash2 size={14} /> Xóa
-        </button>
       </div>
+      <button
+        type="button"
+        className="btn btn-text"
+        onClick={() => onRemoveRequest?.(productId)}
+        data-testid={`cart-item-remove-${productId}`}
+        title="Xóa sản phẩm khỏi giỏ hàng"
+      >
+        <Trash2 size={14} /> Xóa
+      </button>
     </div>
   );
 };

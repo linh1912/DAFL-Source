@@ -67,14 +67,8 @@ export const PayOSGatewayView: React.FC<PayOSGatewayViewProps> = ({
 
   return (
     <div
-      style={{
-        background: 'var(--bg-card, #ffffff)',
-        border: '1px solid var(--border-subtle, #e5e7eb)',
-        borderRadius: 16,
-        padding: 20,
-        margin: '12px auto',
-        maxWidth: 960,
-      }}
+      className="card"
+      style={{ margin: '12px auto', maxWidth: 960 }}
       data-testid="payos-mock-gateway"
     >
       {/* Cách thanh toán: chỉ còn quét VietQR tại chỗ (mặc định) hoặc mở PayOS ở tab mới. */}
@@ -93,7 +87,7 @@ export const PayOSGatewayView: React.FC<PayOSGatewayViewProps> = ({
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-secondary"
-            style={{ padding: '8px 16px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', marginLeft: 'auto', color: '#d81b60', fontWeight: 700 }}
+            style={{ padding: '8px 16px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', marginLeft: 'auto', color: 'var(--ink)', fontWeight: 700 }}
           >
             <ExternalLink size={14} /> Mở PayOS ở Tab Mới
           </a>
@@ -102,34 +96,34 @@ export const PayOSGatewayView: React.FC<PayOSGatewayViewProps> = ({
 
       <div className="payos-qr-grid">
           {/* VietQR Code Column */}
-          <div style={{ textAlign: 'center', background: 'var(--bg-subtle, #f9fafb)', padding: 16, borderRadius: 12, border: '1px solid var(--border-subtle, #e5e7eb)' }}>
-            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main, #374151)', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <QrCode size={15} color="#d81b60" /> Quét mã VietQR để thanh toán
+          <div className="card" style={{ textAlign: 'center', background: 'var(--ground)', padding: 16 }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--ink)', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <QrCode size={15} color="var(--ink)" /> Quét mã VietQR để thanh toán
             </div>
             <img
               src={qrUrl}
               alt={`Mã QR thanh toán đơn hàng #${orderCode}`}
-              style={{ width: '100%', maxWidth: 240, borderRadius: 8, margin: '0 auto', display: 'block', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+              style={{ width: '100%', maxWidth: 240, borderRadius: 8, margin: '0 auto', display: 'block', border: '1px solid var(--line)' }}
               onError={(e) => {
-                (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect width="200" height="200" fill="%23f3f4f6"/><text x="100" y="95" font-size="14" text-anchor="middle" fill="%23e02e24" font-weight="bold">VIETQR</text><text x="100" y="115" font-size="12" text-anchor="middle" fill="%234b5563">Quét mã thanh toán</text></svg>';
+                (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect width="200" height="200" fill="%23F5F5F2"/><text x="100" y="95" font-size="14" text-anchor="middle" fill="%2315171A" font-weight="bold">VIETQR</text><text x="100" y="115" font-size="12" text-anchor="middle" fill="%235F6368">Quét mã thanh toán</text></svg>';
               }}
             />
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted, #9ca3af)', marginTop: 8 }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 8 }}>
               Hỗ trợ 40+ ứng dụng Ngân hàng (MB, VCB, TCB, Momo, ...)
             </div>
           </div>
 
           {/* Bank Transfer Details Column */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ background: 'var(--bg-subtle, #f9fafb)', padding: 10, borderRadius: 8, fontSize: '0.85rem' }}>
+            <div className="card" style={{ background: 'var(--ground)', padding: 10, fontSize: '0.85rem' }}>
               <div className="payos-field-label">Ngân hàng thụ hưởng</div>
-              <strong style={{ color: 'var(--text-main, #111827)' }}>{bankName}</strong>
+              <strong style={{ color: 'var(--ink)' }}>{bankName}</strong>
             </div>
 
-            <div style={{ background: 'var(--bg-subtle, #f9fafb)', padding: 10, borderRadius: 8, fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="card" style={{ background: 'var(--ground)', padding: 10, fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div className="payos-field-label">Số tài khoản người nhận</div>
-                <strong style={{ color: 'var(--text-main, #111827)' }}>{finalAccountNumber}</strong>
+                <strong className="mono" style={{ color: 'var(--ink)' }}>{finalAccountNumber}</strong>
               </div>
               <button
                 type="button"
@@ -137,20 +131,20 @@ export const PayOSGatewayView: React.FC<PayOSGatewayViewProps> = ({
                 style={{ padding: '8px 12px', fontSize: '0.85rem' }}
                 onClick={() => copyToClipboard(finalAccountNumber, 'stk')}
               >
-                {copiedField === 'stk' ? <Check size={12} color="#10b981" /> : <Copy size={12} />}
+                {copiedField === 'stk' ? <Check size={12} color="var(--ok)" /> : <Copy size={12} />}
                 <span>{copiedField === 'stk' ? 'Đã chép' : 'Sao chép'}</span>
               </button>
             </div>
 
-            <div style={{ background: 'var(--bg-subtle, #f9fafb)', padding: 10, borderRadius: 8, fontSize: '0.85rem' }}>
+            <div className="card" style={{ background: 'var(--ground)', padding: 10, fontSize: '0.85rem' }}>
               <div className="payos-field-label">Tên người nhận</div>
-              <strong style={{ color: 'var(--text-main, #111827)' }}>{finalAccountName}</strong>
+              <strong style={{ color: 'var(--ink)' }}>{finalAccountName}</strong>
             </div>
 
-            <div style={{ background: 'var(--bg-subtle, #f9fafb)', padding: 10, borderRadius: 8, fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="card" style={{ background: 'var(--ground)', padding: 10, fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div className="payos-field-label">Nội dung chuyển khoản (bắt buộc)</div>
-                <strong style={{ color: '#d81b60', fontWeight: 800 }}>{finalDescription}</strong>
+                <strong className="mono" style={{ color: 'var(--ink)', fontWeight: 800 }}>{finalDescription}</strong>
               </div>
               <button
                 type="button"
@@ -158,7 +152,7 @@ export const PayOSGatewayView: React.FC<PayOSGatewayViewProps> = ({
                 style={{ padding: '8px 12px', fontSize: '0.85rem' }}
                 onClick={() => copyToClipboard(finalDescription, 'nd')}
               >
-                {copiedField === 'nd' ? <Check size={12} color="#10b981" /> : <Copy size={12} />}
+                {copiedField === 'nd' ? <Check size={12} color="var(--ok)" /> : <Copy size={12} />}
                 <span>{copiedField === 'nd' ? 'Đã chép' : 'Sao chép'}</span>
               </button>
             </div>
@@ -168,7 +162,7 @@ export const PayOSGatewayView: React.FC<PayOSGatewayViewProps> = ({
               <button
                 type="button"
                 className="btn btn-primary"
-                style={{ padding: '0 14px', height: 52, fontSize: '0.9rem', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontWeight: 700, borderRadius: 12 }}
+                style={{ marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                 onClick={onSimulateSuccess}
                 data-testid="simulate-payos-success-btn"
               >

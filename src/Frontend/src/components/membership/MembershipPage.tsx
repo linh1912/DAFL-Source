@@ -64,6 +64,14 @@ export const TIER_LABELS: Record<string, string> = {
 
 const TIER_ORDER = ['Member', 'Silver', 'Gold', 'Diamond'];
 
+/** Badge hạng theo đúng nghĩa trạng thái: Thường trung tính, Bạc thông tin, Vàng cảnh báo, Kim cương đạt chuẩn. */
+const TIER_BADGE_CLASS: Record<string, string> = {
+  Member: 'badge-muted',
+  Silver: 'badge-info',
+  Gold: 'badge-warn',
+  Diamond: 'badge-ok',
+};
+
 const LEDGER_TYPE_LABELS: Record<string, string> = {
   EARN: 'Tích điểm',
   USE: 'Dùng điểm',
@@ -189,7 +197,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({ onBack }) => {
               <ArrowLeft size={16} /> Tiếp tục mua sắm
             </button>
             <h1 className="page-title" style={{ margin: 0 }}>
-              <Award size={26} color="var(--primary)" /> Hội viên của tôi
+              <Award size={26} color="var(--ink)" /> Hội viên của tôi
             </h1>
           </div>
           <p className="page-subtitle" style={{ marginTop: 6 }}>
@@ -211,7 +219,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({ onBack }) => {
 
       {loading && <p>Đang tải thông tin hội viên...</p>}
       {error && !loading && (
-        <div className="empty-state-card" data-testid="membership-login-required">
+        <div className="card" data-testid="membership-login-required">
           <p>{error}</p>
         </div>
       )}
@@ -220,14 +228,14 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({ onBack }) => {
         <>
           {/* Hạng hiện tại + số dư điểm */}
           <div
-            className="empty-state-card"
+            className="card card-strong"
             style={{ textAlign: 'left', display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'center' }}
             data-testid="membership-tier"
           >
             <div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Hạng hiện tại</div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#d81b60' }}>{info.tierLabel}</div>
-              <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>Hạng hiện tại</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--ink)' }}>{info.tierLabel}</div>
+              <div style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>
                 Chi tiêu 12 tháng: {formatPrice(spent)}
                 {info.nextTierLabel ? (
                   <> — còn {formatPrice(Math.max(0, nextGoal - spent))} nữa để lên hạng {info.nextTierLabel}</>
@@ -237,22 +245,22 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({ onBack }) => {
               </div>
               {info.nextTierLabel && (
                 <div
-                  style={{ height: 8, background: '#f1f1f1', borderRadius: 4, marginTop: 8, overflow: 'hidden' }}
+                  style={{ height: 8, background: 'var(--line)', borderRadius: 4, marginTop: 8, overflow: 'hidden' }}
                   role="progressbar"
                   aria-valuenow={progress}
                   aria-valuemin={0}
                   aria-valuemax={100}
                 >
-                  <div style={{ width: `${progress}%`, height: '100%', background: '#ffd900' }} />
+                  <div style={{ width: `${progress}%`, height: '100%', background: 'var(--brand)' }} />
                 </div>
               )}
             </div>
             <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Số dư điểm khả dụng</div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 700 }} data-testid="membership-points-balance">
+              <div style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>Số dư điểm khả dụng</div>
+              <div className="mono" style={{ fontSize: '1.6rem', fontWeight: 700 }} data-testid="membership-points-balance">
                 {info.availablePoints.toLocaleString('vi-VN')} điểm
               </div>
-              <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>
                 Tương đương {formatPrice(pointsValue)} khi thanh toán
                 {info.expiringSoonPoints > 0 && (
                   <> — sắp hết hạn: {info.expiringSoonPoints.toLocaleString('vi-VN')} điểm</>
@@ -263,7 +271,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({ onBack }) => {
 
           {/* Quyền lợi theo hạng */}
           <div style={{ marginTop: 24 }} data-testid="membership-benefits">
-            <h2 style={{ fontSize: '1.15rem', margin: '0 0 10px' }}>Quyền lợi hạng {info.tierLabel}</h2>
+            <h2 className="section-title" style={{ margin: '0 0 10px' }}>Quyền lợi hạng {info.tierLabel}</h2>
             <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8 }}>
               <li>Tích 1 điểm cho mỗi {info.spendPerPoint.toLocaleString('vi-VN')}đ chi tiêu.</li>
               <li>Dùng điểm giảm tối đa {info.maxPointsPercent}% giá trị đơn hàng.</li>
@@ -278,14 +286,8 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({ onBack }) => {
                 <span
                   key={t}
                   data-testid={`membership-tier-badge-${t}`}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: 20,
-                    fontSize: '0.85rem',
-                    fontWeight: t === info.tier ? 700 : 400,
-                    background: t === info.tier ? '#ffd900' : '#f1f1f1',
-                    color: t === info.tier ? '#111' : 'var(--text-muted)',
-                  }}
+                  className={`badge ${TIER_BADGE_CLASS[t] ?? 'badge-muted'}`}
+                  style={{ fontWeight: t === info.tier ? 700 : 400 }}
                 >
                   {TIER_LABELS[t]}{t === info.tier ? ' • Hạng của bạn' : ''}
                 </span>
@@ -295,7 +297,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({ onBack }) => {
 
           {/* Ngày sinh & voucher sinh nhật — đợt 15, mục 3 */}
           <div style={{ marginTop: 24 }} data-testid="birthdate-section">
-            <h2 style={{ fontSize: '1.15rem', margin: '0 0 10px' }}>Ngày sinh &amp; voucher sinh nhật</h2>
+            <h2 className="section-title" style={{ margin: '0 0 10px' }}>Ngày sinh &amp; voucher sinh nhật</h2>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
               <label htmlFor="birthdate-input" style={{ fontSize: '0.9rem' }}>
                 Ngày sinh
@@ -303,6 +305,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({ onBack }) => {
               <input
                 id="birthdate-input"
                 type="date"
+                className="input"
                 data-testid="birthdate-input"
                 value={birthDateInput}
                 onChange={e => setBirthDateInput(e.target.value)}
@@ -317,16 +320,16 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({ onBack }) => {
               </button>
             </div>
             {birthDateError && (
-              <p data-testid="birthdate-error-msg" style={{ color: '#d81b60', margin: '8px 0 0' }}>
+              <p data-testid="birthdate-error-msg" className="field-error" style={{ margin: '8px 0 0' }}>
                 {birthDateError}
               </p>
             )}
             {birthDateSuccess && (
-              <p data-testid="birthdate-success-msg" style={{ color: '#1a7f37', margin: '8px 0 0' }}>
+              <p data-testid="birthdate-success-msg" style={{ color: 'var(--ok)', margin: '8px 0 0' }}>
                 {birthDateSuccess}
               </p>
             )}
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: '16px 0 10px' }}>
+            <p style={{ fontSize: '0.9rem', color: 'var(--muted)', margin: '16px 0 10px' }}>
               Chỉ hạng Vàng trở lên, trong 30 ngày quanh ngày sinh, mỗi năm 1 lần.
             </p>
             <button
@@ -338,12 +341,12 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({ onBack }) => {
               Nhận voucher sinh nhật
             </button>
             {voucherError && (
-              <p data-testid="birthday-voucher-error-msg" style={{ color: '#d81b60', margin: '8px 0 0' }}>
+              <p data-testid="birthday-voucher-error-msg" className="field-error" style={{ margin: '8px 0 0' }}>
                 {voucherError}
               </p>
             )}
             {voucherSuccess && (
-              <p data-testid="birthday-voucher-success-msg" style={{ color: '#1a7f37', margin: '8px 0 0' }}>
+              <p data-testid="birthday-voucher-success-msg" style={{ color: 'var(--ok)', margin: '8px 0 0' }}>
                 {voucherSuccess}
               </p>
             )}
@@ -351,17 +354,18 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({ onBack }) => {
 
           {/* Voucher của tôi */}
           <div style={{ marginTop: 24 }}>
-            <h2 style={{ fontSize: '1.15rem', margin: '0 0 10px' }}>
-              <Tag size={18} color="var(--primary)" /> Ưu đãi của tôi
+            <h2 className="section-title" style={{ margin: '0 0 10px' }}>
+              <Tag size={18} color="var(--ink)" /> Ưu đãi của tôi
             </h2>
             {vouchers.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)' }}>Bạn chưa có voucher nào.</p>
+              <p style={{ color: 'var(--muted)' }}>Bạn chưa có voucher nào.</p>
             ) : (
-              <div className="orders-list-container" data-testid="membership-vouchers">
+              <div data-testid="membership-vouchers" style={{ display: 'grid', gap: 10 }}>
                 {vouchers.map(v => (
-                  <div key={v.id} className="order-card" data-testid={`membership-voucher-${v.code}`}>
-                    <strong>{v.code}</strong> — {v.description}
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  <div key={v.id} className="card" data-testid={`membership-voucher-${v.code}`}>
+                    <span className="mono" style={{ display: 'inline-block', border: '1px dashed var(--ink)', borderRadius: 6, padding: '2px 8px', fontWeight: 700 }}>{v.code}</span>
+                    {' — '}{v.description}
+                    <div style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
                       Giảm {v.discountType === 'Percentage' ? `${v.discountValue}%` : formatPrice(v.discountValue)}
                       {v.maxDiscountAmount ? `, tối đa ${formatPrice(v.maxDiscountAmount)}` : ''}
                       {v.minOrderAmount > 0 ? `, đơn tối thiểu ${formatPrice(v.minOrderAmount)}` : ''}
@@ -376,23 +380,23 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({ onBack }) => {
 
           {/* Lịch sử điểm */}
           <div style={{ marginTop: 24 }} data-testid="membership-history">
-            <h2 style={{ fontSize: '1.15rem', margin: '0 0 10px' }}>Lịch sử điểm</h2>
+            <h2 className="section-title" style={{ margin: '0 0 10px' }}>Lịch sử điểm</h2>
             {history.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)' }}>Chưa có giao dịch điểm nào.</p>
+              <p style={{ color: 'var(--muted)' }}>Chưa có giao dịch điểm nào.</p>
             ) : (
-              <div className="orders-list-container">
+              <div style={{ display: 'grid', gap: 10 }}>
                 {history.map(h => (
-                  <div key={h.id} className="order-card" data-testid={`membership-history-item-${h.id}`}>
+                  <div key={h.id} className="card" data-testid={`membership-history-item-${h.id}`}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                       <span>
                         <strong>{LEDGER_TYPE_LABELS[h.type] ?? h.type}</strong>
                         {h.reason ? ` — ${h.reason}` : ''}
                       </span>
-                      <span style={{ fontWeight: 700, color: h.points >= 0 ? '#1a7f37' : '#d81b60' }}>
+                      <span className="mono" style={{ fontWeight: 700, color: h.points >= 0 ? 'var(--ok)' : 'var(--error)' }}>
                         {h.points >= 0 ? `+${h.points}` : h.points} điểm
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
                       {fmtDate(h.createdAt)}
                       {h.expiresAt ? ` — hết hạn ${fmtDate(h.expiresAt)}` : ''}
                     </div>

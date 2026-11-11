@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tag } from 'lucide-react';
+import { Tag, Check } from 'lucide-react';
 import { Voucher } from '../../../../Shared/types';
 import { formatPrice } from '../../utils/formatters';
 
@@ -24,12 +24,12 @@ export const VoucherSection: React.FC<VoucherSectionProps> = ({
 }) => {
   return (
     <div className="voucher-section" data-testid="voucher-section">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)' }}>
         <Tag size={15} /> Mã giảm giá
       </div>
       <div className="voucher-input-group">
         <input
-          className="form-input"
+          className="input"
           placeholder="Nhập mã voucher (VD: DAFL10)…"
           value={voucherCodeInput}
           onChange={e => setVoucherCodeInput(e.target.value.toUpperCase())}
@@ -46,30 +46,45 @@ export const VoucherSection: React.FC<VoucherSectionProps> = ({
         </button>
       </div>
 
-      {/* Quick Available Vouchers Chips */}
+      {/* Chip voucher nhanh: nền trắng, viền đứt nét mực; bấm để áp dụng, mã đã chọn thì nền vàng. */}
       <div className="voucher-chips" data-testid="voucher-chips">
-        {vouchers.map(v => (
-          <span
-            key={v.id}
-            className="voucher-chip"
-            onClick={() => {
-              setVoucherCodeInput(v.code);
-              onApplyVoucher(v.code);
-            }}
-            title={v.description}
-            data-testid={`voucher-chip-${v.code}`}
-          >
-            🏷️ {v.code} ({v.discountType === 'Percentage' ? `-${v.discountValue}%` : `-${formatPrice(v.discountValue)}`})
-          </span>
-        ))}
+        {vouchers.map(v => {
+          const isApplied = appliedVoucher?.code === v.code;
+          return (
+            <span
+              key={v.id}
+              className="chip ticket"
+              onClick={() => {
+                setVoucherCodeInput(v.code);
+                onApplyVoucher(v.code);
+              }}
+              title={v.description}
+              data-testid={`voucher-chip-${v.code}`}
+              style={{
+                background: isApplied ? 'var(--brand)' : 'var(--paper)',
+                border: '1px dashed var(--ink)',
+                color: 'var(--ink)',
+                cursor: 'pointer',
+              }}
+            >
+              {v.code} ({v.discountType === 'Percentage' ? `-${v.discountValue}%` : `-${formatPrice(v.discountValue)}`})
+            </span>
+          );
+        })}
       </div>
 
       {appliedVoucher && (
-        <div className="applied-voucher-banner" data-testid="applied-voucher-banner">
-          <span>✓ Đã áp dụng mã <strong>{appliedVoucher.code}</strong>: -{formatPrice(appliedVoucher.discountAmount)}</span>
+        <div
+          className="ticket"
+          data-testid="applied-voucher-banner"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '10px 14px', marginTop: 10, background: 'var(--brand)', color: 'var(--ink)', border: '1px dashed var(--ink)' }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Check size={15} /> Đã áp dụng mã <strong className="mono">{appliedVoucher.code}</strong>: <span className="mono">-{formatPrice(appliedVoucher.discountAmount)}</span>
+          </span>
           <button
             type="button"
-            style={{ background: 'none', border: 'none', color: '#f43f5e', cursor: 'pointer', fontWeight: 700 }}
+            className="btn btn-text"
             onClick={onRemoveVoucher}
             data-testid="remove-voucher-btn"
           >
@@ -79,7 +94,7 @@ export const VoucherSection: React.FC<VoucherSectionProps> = ({
       )}
 
       {voucherMessage && !appliedVoucher && (
-        <div style={{ fontSize: '0.8rem', color: '#f87171', marginTop: 6 }} data-testid="voucher-error-msg">
+        <div className="field-error" style={{ marginTop: 6 }} data-testid="voucher-error-msg">
           {voucherMessage}
         </div>
       )}

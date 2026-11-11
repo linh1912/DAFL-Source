@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingBag, X, CreditCard, Clock, Copy, CheckCircle2, RotateCcw, ArrowLeft, AlertTriangle, MapPin } from 'lucide-react';
+import { ShoppingBag, X, CreditCard, Clock, Copy, CheckCircle2, Check, RotateCcw, ArrowLeft, AlertTriangle, MapPin } from 'lucide-react';
 import { CartItem, Voucher, CheckoutResult, User } from '../../../../Shared/types';
 import { formatPrice, formatTime } from '../../utils/formatters';
 import { CartItemRow } from './CartItemRow';
@@ -151,7 +151,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             </button>
           )}
           <h2 className={isModal ? 'modal-title' : 'page-title'} style={{ margin: 0 }} data-testid="cart-drawer-title">
-            <ShoppingBag size={24} color="var(--primary)" />
+            <ShoppingBag size={24} color="var(--ink)" />
             {checkoutResult
               ? isCodSuccess
                 ? 'Đặt hàng thành công'
@@ -170,11 +170,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       {!checkoutResult ? (
         <>
           {cart.length === 0 ? (
-            <div className="cart-empty-box" style={{ textAlign: 'center', padding: '48px 20px', color: '#9ca3af', minHeight: 360, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }} data-testid="cart-empty-state">
-              <div style={{ width: 104, height: 104, borderRadius: '50%', background: 'var(--bg-subtle, #f3f4f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+            <div className="cart-empty-box" style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--muted)', minHeight: 360, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }} data-testid="cart-empty-state">
+              <div style={{ width: 104, height: 104, borderRadius: '50%', background: 'var(--ground)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
                 <ShoppingBag size={72} style={{ opacity: 0.35 }} />
               </div>
-              <h3 style={{ fontSize: '1.2rem', marginBottom: 8, color: 'var(--text-main)' }}>Giỏ hàng trống</h3>
+              <h3 style={{ fontSize: '1.2rem', marginBottom: 8, color: 'var(--ink)' }}>Giỏ hàng trống</h3>
               <p style={{ marginBottom: 20 }}>Khám phá deal mỹ phẩm ngay.</p>
               <button
                 type="button"
@@ -183,7 +183,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   onClose();
                   onNavigateToHome?.();
                 }}
-                style={{ padding: '10px 24px', borderRadius: 999 }}
+                style={{ padding: '10px 24px' }}
               >
                 Tiếp tục mua sắm
               </button>
@@ -224,17 +224,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               <div className="cart-right-col">
                 {/* Pricing Summary */}
                 <div
-                  className="cart-summary-card"
-                  style={{
-                    background: 'var(--bg-subtle)',
-                    border: '1px solid var(--border-subtle)',
-                    padding: 18,
-                    borderRadius: 16,
-                    marginBottom: 20
-                  }}
+                  className="card card-strong ticket"
+                  style={{ marginBottom: 20 }}
                   data-testid="cart-pricing-summary"
                 >
-                  <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: 12, color: 'var(--text-main)' }}>
+                  <h4 className="section-title" style={{ marginBottom: 12 }}>
                     Tóm tắt đơn hàng
                   </h4>
                   {/* Tiến độ freeship (đơn ≥ 299.000đ) */}
@@ -246,26 +240,29 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                       <div className="freeship-progress" data-testid="cart-freeship-progress">
                         <div className="freeship-progress-label">
                           {remaining === 0 ? (
-                            <span>🎉 Đã được freeship</span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--ok)', fontWeight: 600 }}>
+                              <Check size={15} /> Đã được freeship
+                            </span>
                           ) : (
-                            <span>Thêm <strong>{formatPrice(remaining)}</strong> để freeship</span>
+                            <span>Thêm <strong className="mono">{formatPrice(remaining)}</strong> để freeship</span>
                           )}
-                          <span>{pct}%</span>
+                          <span className="mono">{pct}%</span>
                         </div>
-                        <div className="freeship-progress-track">
-                          <div className="freeship-progress-fill" style={{ width: `${pct}%` }} />
+                        <div className="freeship-progress-track" style={{ background: 'var(--line)' }}>
+                          <div className="freeship-progress-fill" style={{ width: `${pct}%`, background: 'var(--brand)' }} />
                         </div>
                       </div>
                     );
                   })()}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                  <div className="tear" />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.9rem', color: 'var(--muted)' }}>
                     <span>Tạm tính ({totalItemCount} sản phẩm):</span>
-                    <span data-testid="cart-raw-subtotal">{formatPrice(rawSubTotal)}</span>
+                    <span className="mono" data-testid="cart-raw-subtotal">{formatPrice(rawSubTotal)}</span>
                   </div>
                   {appliedVoucher && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.9rem', color: '#10b981', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.9rem', color: 'var(--ok)', fontWeight: 600 }}>
                       <span>Khuyến mãi Voucher ({appliedVoucher.code}):</span>
-                      <span data-testid="cart-voucher-discount">-{formatPrice(appliedVoucher.discountAmount)}</span>
+                      <span className="mono" data-testid="cart-voucher-discount">-{formatPrice(appliedVoucher.discountAmount)}</span>
                     </div>
                   )}
                   {/* Dùng điểm hội viên (đợt 15, phần 2/4) — khách vãng lai không hiện mục. */}
@@ -279,20 +276,21 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     disabledReason={pointsDisabledReason}
                   />
                   {(pointsToUse ?? 0) > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.9rem', color: '#10b981', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.9rem', color: 'var(--ok)', fontWeight: 600 }}>
                       <span>Giảm giá bằng điểm hội viên:</span>
-                      <span data-testid="cart-points-discount">-{formatPrice((pointsToUse ?? 0) * 1000)}</span>
+                      <span className="mono" data-testid="cart-points-discount">-{formatPrice((pointsToUse ?? 0) * 1000)}</span>
                     </div>
                   )}
                   {shippingFee !== undefined && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.9rem', color: 'var(--muted)' }}>
                       <span>Phí vận chuyển:</span>
-                      <span data-testid="cart-shipping-fee">{shippingFee === 0 ? 'Miễn phí' : formatPrice(shippingFee)}</span>
+                      <span className="mono" data-testid="cart-shipping-fee">{shippingFee === 0 ? 'Miễn phí' : formatPrice(shippingFee)}</span>
                     </div>
                   )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, borderTop: '1px solid var(--border-subtle)', fontSize: '1.2rem', fontWeight: 800 }}>
+                  <div className="tear" />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: 10, fontSize: '1.2rem', fontWeight: 700, fontFamily: 'var(--font-display)' }}>
                     <span>Tổng thanh toán:</span>
-                    <span style={{ color: '#d81b60' }} data-testid="cart-final-total">{formatPrice(finalTotal)}</span>
+                    <span className="mono" style={{ color: 'var(--ink)', fontSize: 24, fontFamily: 'var(--font-display)', fontWeight: 700 }} data-testid="cart-final-total">{formatPrice(finalTotal)}</span>
                   </div>
                 </div>
 
@@ -343,8 +341,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     <X size={20} />
                   </button>
                 </div>
-                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.55, marginBottom: 18 }}>
-                  Bạn có chắc muốn xóa <strong style={{ color: 'var(--text-main)' }}>{pendingRemoveItem.product.name}</strong> khỏi giỏ hàng không?
+                <p style={{ fontSize: '0.9rem', color: 'var(--muted)', lineHeight: 1.55, marginBottom: 18 }}>
+                  Bạn có chắc muốn xóa <strong style={{ color: 'var(--ink)' }}>{pendingRemoveItem.product.name}</strong> khỏi giỏ hàng không?
                 </p>
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                   <button
@@ -374,26 +372,26 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       ) : isCodSuccess ? (
         /* View 2a: Đặt hàng COD thành công (CN-07.5) */
         <div style={{ textAlign: 'center', padding: '30px 10px' }} data-testid="order-success-view">
-          <div className="success-tick-wrap scale-in" style={{ width: 104, height: 104, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-            <CheckCircle2 size={72} color="#10b981" />
+          <div className="success-tick-wrap scale-in" style={{ width: 104, height: 104, borderRadius: '50%', background: 'var(--brand)', border: '2px solid var(--ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <CheckCircle2 size={72} color="var(--ink)" />
           </div>
-          <h3 style={{ fontSize: '1.7rem', fontWeight: 800, color: '#16a34a', marginBottom: 8, lineHeight: 1.3, padding: '0 16px' }}>
+          <h3 style={{ fontSize: '1.7rem', fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--ink)', marginBottom: 8, lineHeight: 1.3, padding: '0 16px' }}>
             Đặt hàng thành công!
           </h3>
-          <p style={{ color: 'var(--text-muted)', marginBottom: 6 }}>
-            Mã đơn hàng của bạn: <strong style={{ color: 'var(--text-main)', fontSize: '1.05rem' }} data-testid="order-success-code">
+          <p style={{ color: 'var(--muted)', marginBottom: 6 }}>
+            Mã đơn hàng của bạn: <strong className="mono" style={{ color: 'var(--ink)', fontSize: '1.05rem' }} data-testid="order-success-code">
               {checkoutResult.orderDisplayCode || `#${checkoutResult.orderCode}`}
             </strong>
           </p>
-          <p style={{ color: 'var(--text-muted)', marginBottom: 6 }}>
-            Tổng thanh toán: <strong style={{ color: '#d81b60', fontSize: '1.1rem' }}>{formatPrice(checkoutResult.totalAmount)}</strong>
+          <p style={{ color: 'var(--muted)', marginBottom: 6 }}>
+            Tổng thanh toán: <strong className="mono" style={{ color: 'var(--ink)', fontSize: '1.1rem' }}>{formatPrice(checkoutResult.totalAmount)}</strong>
             {' '}— thanh toán khi nhận hàng (COD).
           </p>
-          <p style={{ color: 'var(--text-muted)', marginBottom: 6 }}>
-            Trạng thái đơn: <strong style={{ color: 'var(--text-main)' }}>Chờ xác nhận</strong>
+          <p style={{ color: 'var(--muted)', marginBottom: 6 }}>
+            Trạng thái đơn: <strong style={{ color: 'var(--ink)' }}>Chờ xác nhận</strong>
           </p>
           {lastOrderAddress && (
-            <p style={{ color: 'var(--text-muted)', marginBottom: 20, display: 'flex', alignItems: 'flex-start', gap: 6, justifyContent: 'center' }}>
+            <p style={{ color: 'var(--muted)', marginBottom: 20, display: 'flex', alignItems: 'flex-start', gap: 6, justifyContent: 'center' }}>
               <MapPin size={15} style={{ flexShrink: 0, marginTop: 2 }} />
               <span>Giao đến: {lastOrderAddress}</span>
             </p>
@@ -424,7 +422,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             <h3 style={{ fontSize: '1.35rem', lineHeight: 1.35, padding: '0 16px', marginBottom: 4, fontWeight: 800, overflowWrap: 'break-word' }} data-testid="checkout-order-code">
               Đơn hàng #{checkoutResult.orderCode}
             </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', padding: '0 16px' }}>
+            <p style={{ color: 'var(--muted)', fontSize: '0.875rem', padding: '0 16px' }}>
               Quét mã VietQR tại chỗ hoặc mở PayOS ở tab mới — an toàn, không cần đăng nhập
             </p>
           </div>
@@ -433,14 +431,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             <div className="payos-embedded-card" style={{ marginTop: 0 }}>
               <div className="payos-embedded-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--brand)', border: '1px solid var(--ink)', color: 'var(--ink)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <CreditCard size={18} />
                   </div>
                   <div>
-                    <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-main)' }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--ink)' }}>
                       Cổng thanh toán PayOS (Thực hiện trực tiếp)
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
                       Quét mã QR VietQR hoặc chuyển khoản trực tiếp qua ngân hàng
                     </div>
                   </div>
@@ -450,10 +448,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 </div>
               </div>
 
-              <div className="payos-summary-bar">
+              <div className="payos-summary-bar" style={{ background: 'var(--paper)', borderBottom: '1px dashed var(--line)' }}>
                 <div>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Số tiền thanh toán: </span>
-                  <strong style={{ color: '#d81b60', fontSize: '1.2rem' }} data-testid="payment-total-amount">
+                  <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>Số tiền thanh toán: </span>
+                  <strong className="mono" style={{ color: 'var(--ink)', fontSize: '1.2rem' }} data-testid="payment-total-amount">
                     {formatPrice(checkoutResult.totalAmount)}
                   </strong>
                 </div>
@@ -500,18 +498,18 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
           {orderStatus === 'Paid' && (
             <div style={{ textAlign: 'center', padding: '30px 10px' }} data-testid="order-paid-view">
-              <div className="success-tick-wrap scale-in" style={{ width: 104, height: 104, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                <CheckCircle2 size={72} color="#10b981" />
+              <div className="success-tick-wrap scale-in" style={{ width: 104, height: 104, borderRadius: '50%', background: 'var(--brand)', border: '2px solid var(--ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <CheckCircle2 size={72} color="var(--ink)" />
               </div>
-              <h3 style={{ fontSize: '1.7rem', fontWeight: 800, color: '#10b981', marginBottom: 8, lineHeight: 1.3, padding: '0 16px' }}>
+              <h3 style={{ fontSize: '1.7rem', fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--ink)', marginBottom: 8, lineHeight: 1.3, padding: '0 16px' }}>
                 Thanh toán thành công!
               </h3>
-              <p style={{ color: 'var(--text-muted)', marginBottom: 16, maxWidth: 480, marginLeft: 'auto', marginRight: 'auto' }}>
+              <p style={{ color: 'var(--muted)', marginBottom: 16, maxWidth: 480, marginLeft: 'auto', marginRight: 'auto' }}>
                 Đơn hàng #{checkoutResult.orderCode} đã được thanh toán. Hệ thống đang tiến hành đóng gói và giao hàng.
               </p>
-              <div style={{ display: 'inline-flex', gap: 24, background: 'var(--bg-subtle, #f9fafb)', border: '1px solid var(--border-subtle, #e5e7eb)', borderRadius: 12, padding: '12px 20px', marginBottom: 20, fontSize: '0.9rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Mã đơn: <strong style={{ color: 'var(--text-main)' }}>#{checkoutResult.orderCode}</strong></span>
-                <span style={{ color: 'var(--text-muted)' }}>Số tiền: <strong style={{ color: '#d81b60' }}>{formatPrice(checkoutResult.totalAmount)}</strong></span>
+              <div className="card ticket" style={{ display: 'inline-flex', gap: 24, padding: '12px 20px', marginBottom: 20, fontSize: '0.9rem' }}>
+                <span style={{ color: 'var(--muted)' }}>Mã đơn: <strong className="mono" style={{ color: 'var(--ink)' }}>#{checkoutResult.orderCode}</strong></span>
+                <span style={{ color: 'var(--muted)' }}>Số tiền: <strong className="mono" style={{ color: 'var(--ink)' }}>{formatPrice(checkoutResult.totalAmount)}</strong></span>
               </div>
               <div className="paid-view-actions" style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
                 <button
@@ -536,9 +534,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
           {orderStatus === 'Expired' && (
             <div style={{ textAlign: 'center', padding: '30px 0' }} data-testid="order-expired-view">
-              <Clock size={56} color="#f43f5e" style={{ margin: '0 auto 16px' }} />
-              <h3 style={{ fontSize: '1.3rem', color: '#f43f5e', marginBottom: 8 }}>Đơn hàng đã hết hạn giữ chỗ!</h3>
-              <p style={{ color: '#9ca3af', fontSize: '0.9rem', marginBottom: 20 }}>
+              <Clock size={56} color="var(--error)" style={{ margin: '0 auto 16px' }} />
+              <h3 style={{ fontSize: '1.3rem', color: 'var(--error)', marginBottom: 8 }}>Đơn hàng đã hết hạn giữ chỗ!</h3>
+              <p style={{ color: 'var(--muted)', fontSize: '0.9rem', marginBottom: 20 }}>
                 Đã quá 15 phút mà đơn hàng chưa được thanh toán. Số lượng tồn kho đã được hoàn trả lại cho hệ thống.
               </p>
               <button

@@ -58,8 +58,6 @@ interface ShippingFieldErrors {
   note?: string;
 }
 
-const ERROR_COLOR = '#d81b60';
-const fieldErrorStyle: React.CSSProperties = { color: ERROR_COLOR, fontSize: '0.8rem', marginTop: 6 };
 
 const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 const isValidVietnamesePhone = (phone: string) => /^0\d{9}$/.test(phone.trim());
@@ -362,9 +360,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
     });
   };
 
-  const errorBorder = (hasError: boolean): React.CSSProperties =>
-    hasError ? { borderColor: ERROR_COLOR } : {};
-
   const setFieldRef = (field: FieldKey) => (element: HTMLElement | null) => {
     fieldRefs.current[field] = element;
   };
@@ -386,8 +381,8 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
 
   return (
     <form onSubmit={handleFormSubmit} noValidate data-testid="checkout-form">
-      <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: 12, color: 'var(--text-main)' }}>
-        Giao hàng
+      <h4 className="section-title" style={{ marginBottom: 12 }}>
+        1. Giao hàng
       </h4>
 
       {/* Email nhận thông tin đơn — luôn hiển thị, mặc định là email tài khoản */}
@@ -395,7 +390,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
         <label className="form-label" htmlFor="shipping-email">Email</label>
         <input
           id="shipping-email"
-          className="form-input"
+          className={errors.email ? "input input-error" : "input"}
           type="email"
           data-testid="shipping-email-input"
           ref={setFieldRef('email')}
@@ -404,10 +399,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
             setCustomerEmail(e.target.value);
             clearError('email');
           }}
-          style={errorBorder(!!errors.email)}
         />
         {errors.email && (
-          <div data-testid="shipping-email-error" style={fieldErrorStyle}>
+          <div data-testid="shipping-email-error" className="field-error">
             {errors.email}
           </div>
         )}
@@ -424,15 +418,13 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                 <label
                   key={address.id}
                   data-testid={`shipping-address-option-${address.id}`}
+                  className={isSelected ? 'card card-selected' : 'card'}
                   style={{
                     display: 'flex',
                     gap: 10,
                     alignItems: 'flex-start',
-                    border: `1px solid ${isSelected ? 'var(--primary)' : 'var(--border-subtle)'}`,
-                    borderRadius: 10,
                     padding: '10px 12px',
                     cursor: 'pointer',
-                    background: isSelected ? 'var(--bg-subtle)' : '#fff',
                   }}
                 >
                   <input
@@ -445,13 +437,13 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                   <span style={{ fontSize: '0.9rem', lineHeight: 1.5 }}>
                     <strong>{address.recipientName}</strong> — {address.phone}
                     {address.isDefault && (
-                      <span style={{ marginLeft: 8, fontSize: '0.78rem', fontWeight: 700, color: 'var(--primary)' }}>
+                      <span className="badge badge-muted" style={{ marginLeft: 8 }}>
                         MẶC ĐỊNH
                       </span>
                     )}
-                    {address.label && <span style={{ color: 'var(--text-muted)' }}> ({address.label})</span>}
+                    {address.label && <span style={{ color: 'var(--muted)' }}> ({address.label})</span>}
                     <br />
-                    <span style={{ color: 'var(--text-muted)' }}>{composeFullAddress(address)}</span>
+                    <span style={{ color: 'var(--muted)' }}>{composeFullAddress(address)}</span>
                   </span>
                 </label>
               );
@@ -477,7 +469,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
               <label className="form-label" htmlFor="shipping-recipient">Người nhận</label>
             <input
               id="shipping-recipient"
-              className="form-input"
+              className={errors.recipient ? "input input-error" : "input"}
               placeholder="VD: Nguyễn Văn A"
               data-testid="shipping-recipient-input"
               ref={setFieldRef('recipient')}
@@ -486,10 +478,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                 setCustomerName(e.target.value);
                 clearError('recipient');
               }}
-              style={errorBorder(!!errors.recipient)}
             />
             {errors.recipient && (
-              <div data-testid="shipping-recipient-error" style={fieldErrorStyle}>
+              <div data-testid="shipping-recipient-error" className="field-error">
                 {errors.recipient}
               </div>
             )}
@@ -499,7 +490,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
             <label className="form-label" htmlFor="shipping-phone">Số điện thoại</label>
             <input
               id="shipping-phone"
-              className="form-input"
+              className={errors.phone ? "input input-error" : "input"}
               inputMode="numeric"
               placeholder="VD: 0901234567"
               data-testid="shipping-phone-input"
@@ -509,10 +500,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                 setCustomerPhone(e.target.value);
                 clearError('phone');
               }}
-              style={errorBorder(!!errors.phone)}
             />
             {errors.phone && (
-              <div data-testid="shipping-phone-error" style={fieldErrorStyle}>
+              <div data-testid="shipping-phone-error" className="field-error">
                 {errors.phone}
               </div>
             )}
@@ -525,7 +515,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                 <label className="form-label" htmlFor="shipping-province">Tỉnh / Thành phố</label>
                 <select
                   id="shipping-province"
-                  className="form-input"
+                  className={errors.province ? "input input-error" : "input"}
                   data-testid="shipping-province-select"
                   ref={setFieldRef('province')}
                   value={provinceCode ?? ''}
@@ -539,7 +529,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                     clearError('district');
                     clearError('ward');
                   }}
-                  style={errorBorder(!!errors.province)}
                 >
                   <option value="">— Chọn Tỉnh / Thành phố —</option>
                   {VIETNAM_PROVINCES.map(province => (
@@ -549,7 +538,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                   ))}
                 </select>
                 {errors.province && (
-                  <div data-testid="shipping-province-error" style={fieldErrorStyle}>
+                  <div data-testid="shipping-province-error" className="field-error">
                     {errors.province}
                   </div>
                 )}
@@ -560,7 +549,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                   <label className="form-label" htmlFor="shipping-district">Quận / Huyện</label>
                   <select
                     id="shipping-district"
-                    className="form-input"
+                    className={errors.district ? "input input-error" : "input"}
                     data-testid="shipping-district-select"
                     ref={setFieldRef('district')}
                     value={districtCode ?? ''}
@@ -573,7 +562,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                       clearError('district');
                       clearError('ward');
                     }}
-                    style={errorBorder(!!errors.district)}
                   >
                     <option value="">— Chọn quận —</option>
                     {(selectedProvince?.districts ?? []).map(district => (
@@ -583,7 +571,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                     ))}
                   </select>
                   {errors.district && (
-                    <div data-testid="shipping-district-error" style={fieldErrorStyle}>
+                    <div data-testid="shipping-district-error" className="field-error">
                       {errors.district}
                     </div>
                   )}
@@ -593,7 +581,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                   <label className="form-label" htmlFor="shipping-ward">Phường / Xã</label>
                   <select
                     id="shipping-ward"
-                    className="form-input"
+                    className={errors.ward ? "input input-error" : "input"}
                     data-testid="shipping-ward-select"
                     ref={setFieldRef('ward')}
                     value={wardCode ?? ''}
@@ -602,7 +590,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                       setWardCode(e.target.value ? Number(e.target.value) : null);
                       clearError('ward');
                     }}
-                    style={errorBorder(!!errors.ward)}
                   >
                     <option value="">— Chọn phường —</option>
                     {(selectedDistrict?.wards ?? []).map(ward => (
@@ -612,7 +599,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                     ))}
                   </select>
                   {errors.ward && (
-                    <div data-testid="shipping-ward-error" style={fieldErrorStyle}>
+                    <div data-testid="shipping-ward-error" className="field-error">
                       {errors.ward}
                     </div>
                   )}
@@ -625,7 +612,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                 <label className="form-label" htmlFor="shipping-province">Tỉnh / Thành phố</label>
                 <input
                   id="shipping-province"
-                  className="form-input"
+                  className={errors.province ? "input input-error" : "input"}
                   data-testid="shipping-province-select"
                   ref={setFieldRef('province')}
                   value={provinceText}
@@ -633,10 +620,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                     setProvinceText(e.target.value);
                     clearError('province');
                   }}
-                  style={errorBorder(!!errors.province)}
                 />
                 {errors.province && (
-                  <div data-testid="shipping-province-error" style={fieldErrorStyle}>
+                  <div data-testid="shipping-province-error" className="field-error">
                     {errors.province}
                   </div>
                 )}
@@ -646,7 +632,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                   <label className="form-label" htmlFor="shipping-district">Quận / Huyện</label>
                   <input
                     id="shipping-district"
-                    className="form-input"
+                    className={errors.district ? "input input-error" : "input"}
                     data-testid="shipping-district-select"
                     ref={setFieldRef('district')}
                     value={districtText}
@@ -654,10 +640,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                       setDistrictText(e.target.value);
                       clearError('district');
                     }}
-                    style={errorBorder(!!errors.district)}
                   />
                   {errors.district && (
-                    <div data-testid="shipping-district-error" style={fieldErrorStyle}>
+                    <div data-testid="shipping-district-error" className="field-error">
                       {errors.district}
                     </div>
                   )}
@@ -666,7 +651,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                   <label className="form-label" htmlFor="shipping-ward">Phường / Xã</label>
                   <input
                     id="shipping-ward"
-                    className="form-input"
+                    className={errors.ward ? "input input-error" : "input"}
                     data-testid="shipping-ward-select"
                     ref={setFieldRef('ward')}
                     value={wardText}
@@ -674,10 +659,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                       setWardText(e.target.value);
                       clearError('ward');
                     }}
-                    style={errorBorder(!!errors.ward)}
                   />
                   {errors.ward && (
-                    <div data-testid="shipping-ward-error" style={fieldErrorStyle}>
+                    <div data-testid="shipping-ward-error" className="field-error">
                       {errors.ward}
                     </div>
                   )}
@@ -690,7 +674,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
             <label className="form-label" htmlFor="shipping-detail">Số nhà, tên đường</label>
             <input
               id="shipping-detail"
-              className="form-input"
+              className={errors.detail ? "input input-error" : "input"}
               placeholder="VD: 123 Nguyễn Trãi"
               data-testid="shipping-detail-input"
               ref={setFieldRef('detail')}
@@ -700,10 +684,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                 setDetailAddress(e.target.value);
                 clearError('detail');
               }}
-              style={errorBorder(!!errors.detail)}
             />
             {errors.detail && (
-              <div data-testid="shipping-detail-error" style={fieldErrorStyle}>
+              <div data-testid="shipping-detail-error" className="field-error">
                 {errors.detail}
               </div>
             )}
@@ -716,7 +699,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
             </label>
             <textarea
               id="shipping-note"
-              className="form-input"
+              className={errors.note ? "input input-error" : "input"}
               rows={2}
               data-testid="shipping-note-input"
               ref={setFieldRef('note')}
@@ -726,10 +709,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                 clearError('note');
               }}
               placeholder="Ví dụ: Gọi trước khi giao"
-              style={errorBorder(!!errors.note)}
             />
             {errors.note && (
-              <div data-testid="shipping-note-error" style={fieldErrorStyle}>
+              <div data-testid="shipping-note-error" className="field-error">
                 {errors.note}
               </div>
             )}
@@ -753,9 +735,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
 
       {/* Phương thức thanh toán (CN-07 bước 3) */}
       <div className="form-group" style={{ marginTop: 16 }}>
-        <span className="form-label">Phương thức thanh toán</span>
+        <span className="form-label">2. Phương thức thanh toán</span>
         <div className="payment-method-options">
-          <label className={`payment-method-option ${effectivePaymentMethod === 'COD' ? 'selected' : ''} ${!codAvailable ? 'disabled' : ''}`}>
+          <label className={`payment-method-option ${effectivePaymentMethod === 'COD' ? 'selected card-selected' : 'card'} ${!codAvailable ? 'disabled' : ''}`}>
             <input
               type="radio"
               name="payment-method"
@@ -770,7 +752,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
               <small>Trả tiền khi nhận hàng.</small>
             </span>
           </label>
-          <label className={`payment-method-option ${effectivePaymentMethod === 'PayOS' ? 'selected' : ''}`}>
+          <label className={`payment-method-option ${effectivePaymentMethod === 'PayOS' ? 'selected card-selected' : 'card'}`}>
             <input
               type="radio"
               name="payment-method"
@@ -786,7 +768,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
           </label>
         </div>
         {!codAvailable && (
-          <div data-testid="payment-cod-limit-note" style={{ color: ERROR_COLOR, fontSize: '0.8rem', marginTop: 6 }}>
+          <div data-testid="payment-cod-limit-note" className="field-error" style={{ marginTop: 6 }}>
             Đơn hàng trên {formatPrice(COD_MAX_TOTAL)} chỉ hỗ trợ thanh toán trực tuyến PayOS.
           </div>
         )}
@@ -795,7 +777,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
       <button
         type="submit"
         className="btn btn-primary checkout-submit-btn"
-        style={{ width: '100%', height: 52, padding: '0 14px', marginTop: 10, borderRadius: 12, fontSize: '1rem' }}
+        style={{ width: '100%', marginTop: 10 }}
         disabled={isCheckingOut}
         data-testid="cart-checkout-btn"
       >

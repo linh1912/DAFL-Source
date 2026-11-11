@@ -720,17 +720,43 @@ describe('AdminPage — menu dropdown + badge (đợt 21, 22:18 — ghi đè men
     expect(screen.getByTestId('admin-nav-group-products')).toHaveAttribute('aria-expanded', 'false');
   });
 
-  it('menu dropdown qua CSS: tiêu đề nhóm 16px/700 TO hơn tên menu 14px/500; chevron xoay 180° khi mở; mở mượt 200ms ease-out; reduced-motion tắt hiệu ứng', () => {
+  it('menu dropdown qua CSS (đợt 23, sidebar TỐI): tiêu đề nhóm 15px/600 KHÔNG in hoa, màu #e6f0ea; menu con 14px/500 #b9cdc0 thụt 12–16px + đường dọc trái; chevron xoay 180° khi mở; mở mượt 200ms ease-out; reduced-motion tắt hiệu ứng', () => {
     const css = adminPageCss();
     const titleRules = [...css.matchAll(/\.spark-admin\s+\.sa-nav-group-title\s*\{([^}]*)\}/g)].map(m => m[1]);
     expect(titleRules.length).toBeGreaterThan(0);
-    expect(titleRules.some(r => r.includes('font-size: 16px'))).toBe(true);
-    expect(titleRules.some(r => r.includes('font-weight: 700'))).toBe(true);
-    expect(titleRules.some(r => r.includes('letter-spacing: 0.02em'))).toBe(true);
+    expect(titleRules.some(r => r.includes('font-size: 15px'))).toBe(true);
+    expect(titleRules.some(r => r.includes('font-weight: 600'))).toBe(true);
+    expect(titleRules.some(r => r.includes('letter-spacing: 0'))).toBe(true);
+    // KHÔNG in hoa (đợt 22 uppercase đã bỏ): không rule tiêu đề nào uppercase.
+    expect(titleRules.some(r => r.includes('text-transform: uppercase'))).toBe(false);
+    // Màu #e6f0ea trên nền tối: tương phản 13.15–15.68 (WCAG AA ≥ 4.5).
+    expect(titleRules.some(r => r.includes('color: #e6f0ea'))).toBe(true);
+    expect(titleRules.some(r => r.includes('padding: 10px 12px'))).toBe(true);
+    // Chevron phải màu trung tính #8aa396 (tương phản 5.67–6.75, WCAG AA).
+    const chevronRule = css.match(/\.spark-admin\s+\.sa-nav-group-chevron\s*\{([^}]*)\}/);
+    expect(chevronRule).not.toBeNull();
+    expect(chevronRule![1]).toContain('color: #8aa396');
     const btnRules = [...css.matchAll(/\.spark-admin\s+\.sa-nav-btn\s*\{([^}]*)\}/g)].map(m => m[1]);
     expect(btnRules.length).toBeGreaterThan(0);
     expect(btnRules.some(r => r.includes('font-size: 14px'))).toBe(true);
     expect(btnRules.some(r => r.includes('font-weight: 500'))).toBe(true);
+    expect(btnRules.some(r => r.includes('color: #b9cdc0'))).toBe(true);
+    expect(btnRules.some(r => r.includes('padding: 8px 12px'))).toBe(true);
+    expect(btnRules.some(r => r.includes('border-radius: 8px'))).toBe(true);
+    // Mục con thụt 12–16px so với menu cha: vùng mục con margin-left 12px +
+    // đường dọc trái 1px mờ; chữ con bắt đầu ở 25px, tiêu đề ở 12px → thụt 13px.
+    const itemsRule = css.match(/\.spark-admin\s+\.sa-nav-group-items\s*\{([^}]*)\}/);
+    expect(itemsRule).not.toBeNull();
+    expect(itemsRule![1]).toContain('margin-left: 12px');
+    expect(itemsRule![1]).toContain('border-left: 1px solid rgba(255, 255, 255, 0.12)');
+    // Menu cha KHÔNG đổi màu khi con đang active: không có rule .sa-open
+    // nào đặt màu cho tiêu đề nhóm.
+    expect(css).not.toMatch(/\.spark-admin\s+\.sa-nav-group\.sa-open\s+\.sa-nav-group-title\s*\{/);
+    // Hover mục con: nền nhạt + chữ sáng hơn.
+    const hoverRule = css.match(/\.spark-admin\s+\.sa-nav-btn:hover\s*\{([^}]*)\}/);
+    expect(hoverRule).not.toBeNull();
+    expect(hoverRule![1]).toContain('background: rgba(255, 255, 255, 0.06)');
+    expect(hoverRule![1]).toContain('color: #e6f0ea');
     // Chevron xoay 180° khi nhóm mở + transition 200ms ease-out.
     expect(css).toMatch(/\.spark-admin\s+\.sa-nav-group\.sa-open\s+\.sa-nav-group-chevron\s*\{[^}]*transform:\s*rotate\(180deg\)/);
     expect(css).toMatch(/\.spark-admin\s+\.sa-nav-group-chevron\s*\{[^}]*transition:\s*transform 200ms ease-out/);
@@ -764,19 +790,53 @@ describe('AdminPage — menu dropdown + badge (đợt 21, 22:18 — ghi đè men
     expect(screen.queryByTestId('admin-nav-group-products-badge')).toBeNull();
   });
 
-  it('spacing menu phẳng qua CSS: nhóm cách 20px, mục padding 10px 16px + cách 4px, Tổng quan cách nhóm dưới 8px', () => {
+  it('spacing + màu menu TỐI qua CSS (đợt 23): nhóm cách 14px, mục padding 8px 12px + cách 4px, Tổng quan cách nhóm đầu 14px; sidebar gradient tối, mục chọn nền xanh đậm + chữ lime #bff53c, badge giữ cam; drawer <960px', () => {
     const css = adminPageCss();
-    expect(css).toMatch(/\.spark-admin\s+\.sa-nav-group\s*\{\s*margin-top:\s*20px;?\s*\}/);
-    expect(css).toMatch(/\.spark-admin\s+\.sa-nav-overview\s*\{\s*margin-bottom:\s*8px;?\s*\}/);
-    // AdminPage.css có 2 khối .sa-nav-btn (cũ + wave D): rule wave D mới là
-    // khối có padding 10px 16px — khẳng định CÓ rule như vậy (không lấy khối đầu).
+    expect(css).toMatch(/\.spark-admin\s+\.sa-nav-group\s*\{\s*margin-top:\s*14px;?\s*\}/);
+    expect(css).toMatch(/\.spark-admin\s+\.sa-nav-overview\s*\{\s*margin-bottom:\s*0;?\s*\}/);
+    // Chỉ có 1 kiểu ngắt nhóm (whitespace 14px): không còn rule nhóm kề nhau riêng.
+    expect(css).not.toMatch(/\.spark-admin\s+\.sa-nav-group\s*\+\s*\.sa-nav-group\s*\{/);
     const btnRules = [...css.matchAll(/\.spark-admin\s+\.sa-nav-btn\s*\{([^}]*)\}/g)].map(m => m[1]);
     expect(btnRules.length).toBeGreaterThan(0);
-    expect(btnRules.some(r => r.includes('padding: 10px 16px'))).toBe(true);
+    expect(btnRules.some(r => r.includes('padding: 8px 12px'))).toBe(true);
     expect(btnRules.some(r => /margin-bottom:\s*4px/.test(r))).toBe(true);
     const titleRules = [...css.matchAll(/\.spark-admin\s+\.sa-nav-group-title\s*\{([^}]*)\}/g)].map(m => m[1]);
     expect(titleRules.length).toBeGreaterThan(0);
-    expect(titleRules.some(r => r.includes('padding: 0 16px 6px'))).toBe(true);
+    expect(titleRules.some(r => r.includes('padding: 10px 12px'))).toBe(true);
+    // Sidebar TỐI (đợt 23 đảo ngược đợt 22 sáng): gradient #0E2A1F→#0B1F17→
+    // #081811, viền phải mờ trắng — không còn nền trắng.
+    const sidebarRule = css.match(/\.spark-admin\s+\.sa-sidebar\s*\{([^}]*)\}/);
+    expect(sidebarRule).not.toBeNull();
+    expect(sidebarRule![1]).toContain('background: linear-gradient(180deg, #0e2a1f 0%, #0b1f17 55%, #081811 100%)');
+    expect(sidebarRule![1]).toContain('border-right: 1px solid rgba(255, 255, 255, 0.08)');
+    expect(sidebarRule![1]).not.toContain('background: #ffffff');
+    // Một font Inter cho toàn bộ menu: rule .sa-sidebar * ép font.
+    expect(css).toMatch(/\.spark-admin\s+\.sa-sidebar,\s*\.spark-admin\s+\.sa-sidebar\s+\*\s*\{[^}]*font-family:\s*'Inter'/);
+    // Mục chọn: nền xanh đậm rgba(22,163,74,0.22) + chữ lime #bff53c
+    // (tương phản 9.69 trên nền active đã blend #0d3c22, WCAG AA) + thanh lime 3px.
+    const activeRule = css.match(/\.spark-admin\s+\.sa-nav-btn\.sa-active\s*\{([^}]*)\}/);
+    expect(activeRule).not.toBeNull();
+    expect(activeRule![1]).toContain('background: rgba(22, 163, 74, 0.22)');
+    expect(activeRule![1]).toContain('color: #bff53c');
+    expect(activeRule![1]).toContain('font-weight: 600');
+    const barRule = css.match(/\.spark-admin\s+\.sa-nav-btn::before\s*\{([^}]*)\}/);
+    expect(barRule).not.toBeNull();
+    expect(barRule![1]).toContain('width: 3px');
+    expect(barRule![1]).toContain('background: #bff53c');
+    // Badge giữ cam sáng: nền #FEF3C7 + chữ #92400E (tương phản 6.37), cao 20px, font 12px.
+    const badgeRule = css.match(/\.spark-admin\s+\.sa-nav-badge\s*\{([^}]*)\}/);
+    expect(badgeRule).not.toBeNull();
+    expect(badgeRule![1]).toContain('background: #fef3c7');
+    expect(badgeRule![1]).toContain('color: #92400e');
+    expect(badgeRule![1]).toContain('height: 20px');
+    expect(badgeRule![1]).toContain('font-size: 12px');
+    // Badge KHÔNG đổi sang xanh lá/lime trên mục đang chọn.
+    expect(css).not.toMatch(/\.spark-admin\s+\.sa-nav-btn\.sa-active\s+\.sa-nav-badge\s*\{/);
+    // Drawer dưới 960px (đợt 23 đổi từ 1023px); không còn breakpoint 1023px
+    // cho sidebar trong CSS.
+    expect(css).toMatch(/@media\s*\(max-width:\s*959px\)\s*\{/);
+    expect(css).not.toMatch(/@media\s*\(max-width:\s*1023px\)/);
+    expect(css).toMatch(/@media\s*\(min-width:\s*960px\)\s*\{/);
   });
 
   it('badge: ẩn khi = 0 (chờ dashboard tải xong vẫn không có badge)', async () => {
@@ -1060,7 +1120,7 @@ describe('AdminPage — form XEM khuyến mãi + footer đơn + trả hàng + đ
     expect(JSON.parse(String(call![1]!.body))).toEqual({ approve: false, adminNote: 'Sản phẩm không lỗi' });
   });
 
-  it('Đổi mật khẩu: modal FormShell đúng 2 nút [Hủy] + [Đổi mật khẩu]; bấm X thì đóng', async () => {
+  it('Đổi mật khẩu: modal giữa màn hình 560px, 3 hàng 1 cột, đúng 2 nút [Hủy] + [Đổi mật khẩu]; bấm X thì đóng', async () => {
     mockFetchDot18({});
     renderAdmin();
     await waitFor(() => {
@@ -1075,9 +1135,20 @@ describe('AdminPage — form XEM khuyến mãi + footer đơn + trả hàng + đ
     await waitFor(() => {
       expect(screen.getByTestId('admin-change-password-modal')).toBeInTheDocument();
     });
+    // Đợt 23 phần A: modal giữa màn hình (.sa-modal 560px), không còn Drawer
+    // FormShell 680px; 3 hàng mỗi hàng 1 ô full width; không còn hint policy.
+    const pwModal = screen.getByTestId('admin-change-password-modal');
+    expect(pwModal).toHaveClass('sa-modal');
+    expect(pwModal).toHaveClass('sa-profile-pw-modal');
+    expect(pwModal.closest('.sa-modal-overlay')).not.toBeNull();
+    expect(pwModal.closest('.fs-drawer')).toBeNull();
+    const pwGrid = pwModal.querySelector('.sa-profile-pw-grid');
+    expect(pwGrid).not.toBeNull();
+    expect(pwGrid!.children).toHaveLength(3);
+    expect(screen.queryByText('Tối thiểu 8 ký tự, gồm chữ hoa, chữ số và ký tự đặc biệt.')).toBeNull();
     expect(screen.getByTestId('admin-change-password-modal-title')).toHaveTextContent('Đổi mật khẩu');
     const footerBtns = within(screen.getByTestId('admin-change-password-modal')).getAllByRole('button')
-      .filter(b => b.closest('.fs-foot'));
+      .filter(b => b.closest('.sa-modal-foot'));
     expect(footerBtns).toHaveLength(2);
     expect(screen.getByTestId('admin-change-password-cancel-btn')).toHaveTextContent('Hủy');
     expect(screen.getByTestId('admin-change-password-save-btn')).toHaveTextContent('Đổi mật khẩu');
@@ -1215,19 +1286,23 @@ describe('AdminPage — form XEM khuyến mãi + footer đơn + trả hàng + đ
   });
 });
 
-// F. Bản vá 18.1 — viền focus mục menu (.sa-nav-btn)
+// F. Bản vá 18.1 — viền focus mục menu (.sa-nav-btn), cập nhật đợt 23:
 // Vấn đề: mục menu đang chọn bị khung viền XANH mặc định của trình duyệt
 // (focus outline) bao quanh. Vá trong AdminPage.css:
 //   .sa-nav-btn:focus { outline: none; }
-//   .sa-nav-btn:focus-visible { outline: 2px solid var(--sa-green-bright);
-//                               outline-offset: 1px; }
-// → bấm chuột không còn viền; chỉ đi bằng bàn phím mới hiện viền xanh chanh.
+//   .sa-nav-btn:focus-visible { outline: 2px solid #bff53c;
+//                               outline-offset: 2px; }
+// → bấm chuột không còn viền; chỉ đi bằng bàn phím mới hiện viền lime.
+// Đợt 22 đổi sang #15803D vì xanh chanh chìm trên nền sidebar trắng mới;
+// đợt 23 sidebar về TỐI nên #15803D lại chìm → đổi sang lime #bff53c
+// (tương phản 11.93–14.22 trên nền gradient tối); offset 2px đồng nhất
+// với tiêu đề nhóm.
 // GIỚI HẠN jsdom: jsdom không áp stylesheet vào computed style nên không đo
 // được outline thật sau click/focus; các test dưới đây khẳng định (a) 2 rule
 // CSS tồn tại đúng nội dung trong AdminPage.css, (b) nút menu mang đúng class
 // .sa-nav-btn, (c) bấm chuột vẫn điều hướng đúng tab, (d) focus bằng bàn phím
 // đặt đúng activeElement và không sinh inline outline. Kiểm tra bằng mắt
-// (bấm chuột không viền / Tab có viền xanh chanh) vẫn cần làm trên Acer.
+// (bấm chuột không viền / Tab có viền lime) vẫn cần làm trên Acer.
 // ============================================================================
 describe('AdminPage — viền focus mục menu (bản vá 18.1)', () => {
   beforeEach(() => {
@@ -1254,12 +1329,31 @@ describe('AdminPage — viền focus mục menu (bản vá 18.1)', () => {
     expect(css).toMatch(/\.spark-admin\s+\.sa-nav-btn:focus\s*\{\s*outline:\s*none;?\s*\}/);
   });
 
-  it('AdminPage.css: :focus-visible hiện viền xanh chanh 2px, offset 1px trên .sa-nav-btn', () => {
+  it('AdminPage.css: :focus-visible hiện viền lime 2px, offset 2px trên .sa-nav-btn và .sa-nav-group-title', () => {
     const css = adminPageCss();
     const rule = css.match(/\.spark-admin\s+\.sa-nav-btn:focus-visible\s*\{([^}]*)\}/);
     expect(rule).not.toBeNull();
-    expect(rule![1]).toContain('outline: 2px solid var(--sa-green-bright)');
-    expect(rule![1]).toContain('outline-offset: 1px');
+    expect(rule![1]).toContain('outline: 2px solid #bff53c');
+    expect(rule![1]).toContain('outline-offset: 2px');
+    const titleRule = css.match(/\.spark-admin\s+\.sa-nav-group-title:focus-visible\s*\{([^}]*)\}/);
+    expect(titleRule).not.toBeNull();
+    expect(titleRule![1]).toContain('outline: 2px solid #bff53c');
+    expect(titleRule![1]).toContain('outline-offset: 2px');
+  });
+
+  it('AdminPage.tsx (đợt 23): nút hamburger phân biệt drawer <960px bằng matchMedia (max-width: 959px); không còn breakpoint 1023px', () => {
+    const candidates = [
+      path.resolve(process.cwd(), 'src/components/admin/AdminPage.tsx'),
+      path.resolve(process.cwd(), 'src/Admin/src/components/admin/AdminPage.tsx'),
+    ];
+    const found = candidates.find((p) => existsSync(p));
+    if (!found) throw new Error(`Không tìm thấy AdminPage.tsx (cwd=${process.cwd()})`);
+    const tsx = readFileSync(found, 'utf-8');
+    expect(tsx).toContain("window.matchMedia('(max-width: 959px)')");
+    expect(tsx).not.toContain('1023px');
+    // Tên nhóm thống nhất "Quản trị": không còn breadcrumb "Quản lý khách hàng".
+    expect(tsx).not.toContain('root="Quản lý khách hàng"');
+    expect(tsx.match(/root="Quản trị"/g)?.length).toBe(4);
   });
 
   it('bấm mục menu bằng chuột: điều hướng đúng tab, nút mang class .sa-nav-btn và không có outline inline', async () => {

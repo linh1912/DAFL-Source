@@ -12,7 +12,7 @@ import AdminPage from '../components/admin/AdminPage';
  * hoạt động], toast qua messages.vi (tiêu đề ngắn + mô tả).
  * - STT liên tục theo trang (trang 2 bắt đầu 11), cột Mã SP/DM/KH.
  * - Switch trạng thái + popup xác nhận (Ẩn/Hiển thị, Khóa/Mở khóa, Tắt/Bật KM).
- * - Menu tài khoản + trang Hồ sơ quản trị (FR-ACC) + đổi mật khẩu (FormShell modal).
+ * - Menu tài khoản + trang Hồ sơ quản trị (FR-ACC) + đổi mật khẩu (modal giữa màn hình 560px, đợt 23 phần A).
  * - Form sửa khách hàng (Q1): Mã KH disable, Email chỉ xem.
  * - Validate mẫu VCB §2: trống → "Vui lòng bổ sung thông tin bắt buộc.";
  *   SĐT sai → "Số điện thoại không đúng định dạng."; trùng mã → CẢ toast
@@ -633,6 +633,14 @@ describe('AdminPage — đợt 17', () => {
       expect(screen.getByTestId('admin-profile-form')).toBeInTheDocument();
     });
     expect(screen.getByTestId('admin-profile-email-input')).toBeDisabled();
+    // Đợt 23 phần A: 2 hint dưới ô Email/SĐT đã bỏ (validate giữ nguyên);
+    // đang sửa thì nút "Sửa thông tin" biến mất hẳn (không còn "Đóng form sửa"),
+    // chỉ còn nút [Hủy] ở cuối form để đóng form sửa.
+    expect(screen.queryByText('Bắt đầu bằng 0, gồm 10 chữ số.')).toBeNull();
+    expect(screen.queryByText('Email là định danh đăng nhập — chỉ xem, không sửa.')).toBeNull();
+    expect(screen.queryByTestId('admin-profile-edit-btn')).toBeNull();
+    expect(screen.queryByText('Đóng form sửa')).toBeNull();
+    expect(screen.getByTestId('admin-profile-cancel-btn')).toBeInTheDocument();
     fireEvent.change(screen.getByTestId('admin-profile-name-input'), { target: { value: '' } });
     fireEvent.click(screen.getByTestId('admin-profile-save-btn'));
     await waitFor(() => {
@@ -655,6 +663,8 @@ describe('AdminPage — đợt 17', () => {
     });
     expect(callBody('/api/admin/profile', 'PUT').fullName).toBe('Super Admin');
     expect(callBody('/api/admin/profile', 'PUT').phoneNumber).toBe('0901234567');
+    // Lưu xong form đóng, nút "Sửa thông tin" hiện lại (không phải "Đóng form sửa").
+    expect(screen.getByTestId('admin-profile-edit-btn')).toHaveTextContent('Sửa thông tin');
   });
 
   it('Hồ sơ: Đổi mật khẩu — mật khẩu yếu → lỗi policy; xác nhận lệch → lỗi khớp; hợp lệ → POST rồi về /login', async () => {
@@ -672,6 +682,18 @@ describe('AdminPage — đợt 17', () => {
     await waitFor(() => {
       expect(screen.getByTestId('admin-change-password-form')).toBeInTheDocument();
     });
+    // Đợt 23 phần A: đổi mật khẩu là MODAL giữa màn hình (.sa-modal 560px,
+    // 3 hàng mỗi hàng 1 ô), không còn Drawer (fs-drawer); hint/mô tả policy
+    // đã bỏ nhưng validate policy vẫn chạy khi lưu (assert lỗi bên dưới).
+    const pwModal = screen.getByTestId('admin-change-password-modal');
+    expect(pwModal).toHaveClass('sa-modal');
+    expect(pwModal).toHaveClass('sa-profile-pw-modal');
+    expect(pwModal.closest('.sa-modal-overlay')).not.toBeNull();
+    expect(pwModal.closest('.fs-drawer')).toBeNull();
+    const pwGrid = pwModal.querySelector('.sa-profile-pw-grid');
+    expect(pwGrid).not.toBeNull();
+    expect(pwGrid!.children).toHaveLength(3);
+    expect(screen.queryByText('Tối thiểu 8 ký tự, gồm chữ hoa, chữ số và ký tự đặc biệt.')).toBeNull();
     fireEvent.change(screen.getByTestId('admin-change-password-current-input'), { target: { value: 'Old@1234' } });
     fireEvent.change(screen.getByTestId('admin-change-password-new-input'), { target: { value: 'ngan' } });
     fireEvent.change(screen.getByTestId('admin-change-password-confirm-input'), { target: { value: 'ngan' } });

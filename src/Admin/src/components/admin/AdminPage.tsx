@@ -87,7 +87,7 @@ interface AdminReview {
 }
 
 // ---------- Hằng số ----------
-// Palette admin: sidebar Dark Forest Green #051C12, điểm nhấn Lime Yellow #B4F105
+// Palette admin (đợt 22): sidebar SÁNG nền trắng, điểm nhấn xanh lá #16A34A/#15803D
 // (cột biểu đồ doanh thu dùng lime; pill trạng thái giữ xanh lá/cam/đỏ theo ngữ nghĩa).
 const LIME = '#b4f105';
 /** Đợt 21 — nhóm lọc trạng thái CHỈ cho trang danh sách Đơn hàng (nhãn theo
@@ -2562,8 +2562,9 @@ export default function AdminPage() {
       {/* Host toast + popup xác nhận (đợt 18, W1): mount MỘT LẦN ở gốc. */}
       <ToastHost />
       <ConfirmDialogHost />
-      {/* ---------- Sidebar xanh đen đậm (đợt 20: Inter, gradient, mục chọn
-        viên thuốc, badge cam tối, chân sidebar thẻ admin + menu bật lên) ---------- */}
+      {/* ---------- Sidebar TỐI (đợt 23: gradient tối đợt 20, tiêu đề nhóm
+        15px/600 #e6f0ea, menu con 14px/500 #b9cdc0 + đường dọc trái, active
+        nền xanh đậm + chữ lime #bff53c; drawer <960px) ---------- */}
       <aside className="sa-sidebar">
         <button
           type="button"
@@ -2580,7 +2581,7 @@ export default function AdminPage() {
           className={`sa-nav${navFadeTop ? ' sa-nav-fade-top' : ''}${navFadeBottom ? ' sa-nav-fade-bottom' : ''}`}
           aria-label="Menu chính"
         >
-          {/* Tổng quan đứng riêng trên cùng, không tiêu đề nhóm, cách các nhóm 20px. */}
+          {/* Tổng quan đứng riêng trên cùng, không tiêu đề nhóm, cách các nhóm 14px (đợt 23). */}
           <button
             type="button"
             data-testid={NAV_BY_KEY.dashboard.testid}
@@ -2696,9 +2697,9 @@ export default function AdminPage() {
             type="button"
             className="sa-topbar-btn"
             onClick={() => {
-              // Mobile (<1024px): mở/đóng drawer. Desktop: ẨN HẲN sidebar (đợt 20 —
+              // Mobile (<960px — đợt 23 đổi từ 1024px): mở/đóng drawer. Desktop: ẨN HẲN sidebar (đợt 20 —
               // bỏ chế độ thu về cột icon), nhớ trạng thái vào localStorage.
-              if (window.matchMedia('(max-width: 1023px)').matches) setSidebarOpen(v => !v);
+              if (window.matchMedia('(max-width: 959px)').matches) setSidebarOpen(v => !v);
               else {
                 setSidebarHidden(v => {
                   const next = !v;
@@ -3020,13 +3021,13 @@ export default function AdminPage() {
                 <p className="sa-muted-text" data-testid="admin-customer-loading">Đang tải khách hàng...</p>
               ) : !customerResolved ? (
                 <section className="sa-promo-page" data-testid="admin-customer-not-found">
-                  <EntityBreadcrumb root="Quản lý khách hàng" current="Chỉnh sửa" onBackToList={backToCustomerList} />
+                  <EntityBreadcrumb root="Quản trị" current="Chỉnh sửa" onBackToList={backToCustomerList} />
                   <p className="sa-error" role="alert">{customerResolveError ?? 'Không tìm thấy khách hàng.'}</p>
                   <button type="button" className="sa-btn" onClick={backToCustomerList}>Về danh sách khách hàng</button>
                 </section>
               ) : (
                 <section className="sa-promo-page-wrap" data-testid="admin-customer-edit-page">
-                  <EntityBreadcrumb root="Quản lý khách hàng" current="Chỉnh sửa" onBackToList={backToCustomerList} />
+                  <EntityBreadcrumb root="Quản trị" current="Chỉnh sửa" onBackToList={backToCustomerList} />
                   <CustomerForm
                     key={`customer-edit-${customerResolved.id}`}
                     variant="page"
@@ -3043,13 +3044,13 @@ export default function AdminPage() {
                 <p className="sa-muted-text" data-testid="admin-customer-loading">Đang tải khách hàng...</p>
               ) : !customerResolved ? (
                 <section className="sa-promo-page" data-testid="admin-customer-not-found">
-                  <EntityBreadcrumb root="Quản lý khách hàng" current="Chi tiết" onBackToList={backToCustomerList} />
+                  <EntityBreadcrumb root="Quản trị" current="Chi tiết" onBackToList={backToCustomerList} />
                   <p className="sa-error" role="alert">{customerResolveError ?? 'Không tìm thấy khách hàng.'}</p>
                   <button type="button" className="sa-btn" onClick={backToCustomerList}>Về danh sách khách hàng</button>
                 </section>
               ) : (
                 <section className="sa-promo-page-wrap" data-testid="admin-customer-detail-page">
-                  <EntityBreadcrumb root="Quản lý khách hàng" current="Chi tiết" onBackToList={backToCustomerList} />
+                  <EntityBreadcrumb root="Quản trị" current="Chi tiết" onBackToList={backToCustomerList} />
                   <CustomerForm
                     key={`customer-view-${customerResolved.id}`}
                     variant="page"

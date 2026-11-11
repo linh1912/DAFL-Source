@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import React, { useEffect, useId, useRef, useState } from 'react';
+import { ArrowLeft, X } from 'lucide-react';
 import { PHONE_FORMAT_MSG, PHONE_RE, REQUIRED_MSG, passwordPolicyError } from './formUtils';
 import { FieldError, Req } from './FormControls';
-import { FormShell } from './FormShell';
 import type { FormSaveResult } from './AdminForms';
 
 /**
@@ -16,9 +15,15 @@ import type { FormSaveResult } from './AdminForms';
  *   Lưu → PUT /api/admin/profile (cha xử lý). Validate theo mẫu VCB §2:
  *   trống → "Vui lòng bổ sung thông tin bắt buộc.", SĐT sai → "Số điện thoại không đúng định dạng.".
  * - Thẻ "Bảo mật tài khoản": nút "Đổi mật khẩu" (admin-change-password-btn)
- *   mở form Mật khẩu hiện tại* / Mật khẩu mới* / Xác nhận* → POST /api/admin/change-password.
- *   Mật khẩu mới theo đúng policy BE (≥8 ký tự + chữ hoa + chữ số + ký tự đặc biệt).
+ *   mở MODAL giữa màn hình (đợt 23 phần A — thay FormShell Drawer 680px đợt 18):
+ *   .sa-modal 560px (.sa-profile-pw-modal), 3 hàng mỗi hàng 1 ô full width
+ *   (Mật khẩu hiện tại / Mật khẩu mới / Xác nhận) → POST /api/admin/change-password.
+ *   Mật khẩu mới theo đúng policy BE (≥8 ký tự + chữ hoa + chữ số + ký tự đặc biệt)
+ *   — KHÔNG còn dòng mô tả/hint policy, sai thì báo lỗi đỏ khi lưu.
  *   Đổi thành công thì BE vô hiệu mọi JWT → cha đăng xuất về /login.
+ * - Đợt 23 phần A: trang full màn hình (bỏ max-width 1180px, gap 2 cột 64px);
+ *   đang sửa thì nút "Sửa thông tin" biến mất hẳn (chỉ còn [Hủy] cuối form);
+ *   đã bỏ 2 hint dưới ô Email/SĐT (validate giữ nguyên).
  */
 
 export interface AdminProfileData {
@@ -39,6 +44,137 @@ const avatarColor = (name: string) => {
   for (const ch of (name || '?')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return AVATAR_COLORS[h % AVATAR_COLORS.length];
 };
+
+/**
+ * Modal Đổi mật khẩu giữa màn hình (đợt 23 phần A — thay FormShell Drawer
+ * 680px đợt 18): dùng đúng pattern modal admin (.sa-modal +
+ * .sa-modal-overlay), rộng 560px (.sa-profile-pw-modal), 3 hàng mỗi hàng
+ * 1 ô full width (.sa-profile-pw-grid), đúng 2 nút [Hủy] + [Đổi mật khẩu].
+ * Đóng bằng X / ESC / bấm nền mờ / nút Hủy. Autofocus ô đầu tiên, trap
+ * focus, trả focus khi đóng (như FormShell). KHÔNG còn dòng mô tả hay hint
+ * policy — quy tắc mật khẩu vẫn validate khi lưu, sai thì lỗi đỏ dưới ô.
+ * Testid giữ nguyên như Drawer cũ (admin-change-password-modal/-form,
+ * các ô/nút, -close-btn, -title) nên Selenium không cần đổi locator.
+ */
+function ChangePasswordModal({ currentPassword, newPassword, confirmPassword, pwErrors, pwFormError, pwBusy, onChange, onSubmit, onClose }: {
+  currentPassword: string; newPassword: string; confirmPassword: string;
+  pwErrors: Record<string, string>; pwFormError: string | null; pwBusy: boolean;
+  onChange: (field: 'current' | 'new' | 'confirm', value: string) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  onClose: () => void;
+}) {
+  const titleId = useId();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const prevActive = document.activeElement as HTMLElement | null;
+    el.querySelector<HTMLElement>('input:not([disabled])')?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); onCloseRef.current(); return; }
+      if (e.key !== 'Tab') return;
+      const list = Array.from(el.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled])'));
+      if (list.length === 0) return;
+      const firstEl = list[0];
+      const lastEl = list[list.length - 1];
+      if (e.shiftKey && document.activeElement === firstEl) { e.preventDefault(); lastEl.focus(); }
+      else if (!e.shiftKey && document.activeElement === lastEl) { e.preventDefault(); firstEl.focus(); }
+    };
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown, true);
+      prevActive?.focus?.();
+    };
+    // Chỉ chạy 1 lần khi mount (mở modal).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="sa-modal-overlay" onClick={onClose}>
+      <div
+        ref={containerRef}
+        className="sa-modal sa-profile-pw-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        data-testid="admin-change-password-modal"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="sa-modal-head">
+          <h3 id={titleId} data-testid="admin-change-password-modal-title">Đổi mật khẩu</h3>
+          <button
+            type="button"
+            className="sa-modal-close"
+            data-testid="admin-change-password-modal-close-btn"
+            onClick={onClose}
+            aria-label="Đóng"
+            title="Đóng"
+          >
+            <X size={18} strokeWidth={2} />
+          </button>
+        </div>
+        <form onSubmit={onSubmit} data-testid="admin-change-password-form" noValidate>
+          <div className="sa-modal-body">
+            {pwFormError && <p className="sa-error" role="alert">{pwFormError}</p>}
+            <div className="sa-profile-pw-grid">
+              <div className="sa-field">
+                <label className="sa-field-label" htmlFor="admin-change-password-current">Mật khẩu hiện tại<Req /></label>
+                <input
+                  id="admin-change-password-current"
+                  type="password"
+                  className={`sa-input${pwErrors.currentPassword ? ' sa-input-error' : ''}`}
+                  value={currentPassword}
+                  data-testid="admin-change-password-current-input"
+                  aria-describedby={pwErrors.currentPassword ? 'admin-change-password-current-error' : undefined}
+                  onChange={e => onChange('current', e.target.value)}
+                  autoComplete="current-password"
+                />
+                <FieldError id="admin-change-password-current-error" testid="admin-change-password-current-error" message={pwErrors.currentPassword} />
+              </div>
+              <div className="sa-field">
+                <label className="sa-field-label" htmlFor="admin-change-password-new">Mật khẩu mới<Req /></label>
+                <input
+                  id="admin-change-password-new"
+                  type="password"
+                  className={`sa-input${pwErrors.newPassword ? ' sa-input-error' : ''}`}
+                  value={newPassword}
+                  data-testid="admin-change-password-new-input"
+                  aria-describedby={pwErrors.newPassword ? 'admin-change-password-new-error' : undefined}
+                  onChange={e => onChange('new', e.target.value)}
+                  autoComplete="new-password"
+                />
+                <FieldError id="admin-change-password-new-error" testid="admin-change-password-new-error" message={pwErrors.newPassword} />
+              </div>
+              <div className="sa-field">
+                <label className="sa-field-label" htmlFor="admin-change-password-confirm">Xác nhận mật khẩu mới<Req /></label>
+                <input
+                  id="admin-change-password-confirm"
+                  type="password"
+                  className={`sa-input${pwErrors.confirmPassword ? ' sa-input-error' : ''}`}
+                  value={confirmPassword}
+                  data-testid="admin-change-password-confirm-input"
+                  aria-describedby={pwErrors.confirmPassword ? 'admin-change-password-confirm-error' : undefined}
+                  onChange={e => onChange('confirm', e.target.value)}
+                  autoComplete="new-password"
+                />
+                <FieldError id="admin-change-password-confirm-error" testid="admin-change-password-confirm-error" message={pwErrors.confirmPassword} />
+              </div>
+            </div>
+          </div>
+          <div className="sa-modal-foot">
+            <button type="button" className="sa-btn sa-btn-ghost" data-testid="admin-change-password-cancel-btn" onClick={onClose}>Hủy</button>
+            <button type="submit" className="sa-btn" data-testid="admin-change-password-save-btn" disabled={pwBusy}>
+              {pwBusy ? 'Đang lưu...' : 'Đổi mật khẩu'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminProfilePage({ profile, onSaveProfile, onChangePassword, onBack, initialPwOpen }: {
   profile: AdminProfileData;
@@ -184,9 +320,13 @@ export default function AdminProfilePage({ profile, onSaveProfile, onChangePassw
             <span data-testid="admin-profile-last-login-at">Hoạt động lần cuối: {fmtDate(profile.lastLoginAt)}</span>
           </p>
         </div>
-        <button type="button" className="sa-btn" data-testid="admin-profile-edit-btn" onClick={() => setEditing(v => !v)}>
-          {editing ? 'Đóng form sửa' : 'Sửa thông tin'}
-        </button>
+        {/* Đợt 23 phần A: đang sửa thì nút này biến mất hẳn — chỉ còn nút
+            [Hủy] ở cuối form để đóng form sửa. */}
+        {!editing && (
+          <button type="button" className="sa-btn" data-testid="admin-profile-edit-btn" onClick={() => setEditing(true)}>
+            Sửa thông tin
+          </button>
+        )}
       </section>
 
       {/* Thẻ Thông tin cá nhân */}
@@ -218,7 +358,6 @@ export default function AdminProfilePage({ profile, onSaveProfile, onChangePassw
                   disabled
                   readOnly
                 />
-                <span className="sa-field-meta"><span className="sa-hint">Email là định danh đăng nhập — chỉ xem, không sửa.</span></span>
                 <FieldError id="admin-profile-email-error" testid="admin-profile-email-error" message={errors.email} />
               </div>
               <div className="sa-field">
@@ -231,7 +370,6 @@ export default function AdminProfilePage({ profile, onSaveProfile, onChangePassw
                   aria-describedby={errors.phoneNumber ? 'admin-profile-phone-error' : undefined}
                   onChange={e => setPhoneNumber(e.target.value)}
                 />
-                <span className="sa-field-meta"><span className="sa-hint">Bắt đầu bằng 0, gồm 10 chữ số.</span></span>
                 <FieldError id="admin-profile-phone-error" testid="admin-profile-phone-error" message={errors.phoneNumber} />
               </div>
               <div className="sa-field">
@@ -262,78 +400,31 @@ export default function AdminProfilePage({ profile, onSaveProfile, onChangePassw
         )}
       </section>
 
-      {/* Thẻ Bảo mật tài khoản — đổi mật khẩu mở bằng FormShell Drawer 680px (đợt 18 wave D),
-          đúng 2 nút [Hủy] + [Đổi mật khẩu]; đóng bằng X/ESC/nút Hủy. */}
+      {/* Thẻ Bảo mật tài khoản — đổi mật khẩu mở bằng MODAL giữa màn hình
+          (.sa-modal 560px, 3 hàng 1 cột — đợt 23 phần A, thay FormShell
+          Drawer 680px đợt 18), đúng 2 nút [Hủy] + [Đổi mật khẩu];
+          đóng bằng X/ESC/bấm nền mờ/nút Hủy. */}
       <section className="sa-card sa-profile-card">
         <h3>Bảo mật tài khoản</h3>
         <button type="button" className="sa-btn" data-testid="admin-change-password-btn" onClick={() => setPwOpen(true)}>
           Đổi mật khẩu
         </button>
         {pwOpen && (
-          <FormShell
-            width={680}
-            testid="admin-change-password-modal"
-            formTestid="admin-change-password-form"
-            title="Đổi mật khẩu"
-            description="Mật khẩu mới tối thiểu 8 ký tự, gồm chữ hoa, chữ số và ký tự đặc biệt."
-            onClose={closePwForm}
+          <ChangePasswordModal
+            currentPassword={currentPassword}
+            newPassword={newPassword}
+            confirmPassword={confirmPassword}
+            pwErrors={pwErrors}
+            pwFormError={pwFormError}
+            pwBusy={pwBusy}
+            onChange={(field, value) => {
+              if (field === 'current') setCurrentPassword(value);
+              else if (field === 'new') setNewPassword(value);
+              else setConfirmPassword(value);
+            }}
             onSubmit={handleChangePassword}
-            footer={(
-              <>
-                <button type="button" className="sa-btn sa-btn-ghost" data-testid="admin-change-password-cancel-btn" onClick={closePwForm}>Hủy</button>
-                <button type="submit" className="sa-btn" data-testid="admin-change-password-save-btn" disabled={pwBusy}>
-                  {pwBusy ? 'Đang lưu...' : 'Đổi mật khẩu'}
-                </button>
-              </>
-            )}
-          >
-            {pwFormError && <p className="sa-error" role="alert">{pwFormError}</p>}
-            <div className="sa-form-grid">
-              <div className="sa-field">
-                <label className="sa-field-label" htmlFor="admin-change-password-current">Mật khẩu hiện tại<Req /></label>
-                <input
-                  id="admin-change-password-current"
-                  type="password"
-                  className={`sa-input${pwErrors.currentPassword ? ' sa-input-error' : ''}`}
-                  value={currentPassword}
-                  data-testid="admin-change-password-current-input"
-                  aria-describedby={pwErrors.currentPassword ? 'admin-change-password-current-error' : undefined}
-                  onChange={e => setCurrentPassword(e.target.value)}
-                  autoComplete="current-password"
-                />
-                <FieldError id="admin-change-password-current-error" testid="admin-change-password-current-error" message={pwErrors.currentPassword} />
-              </div>
-              <div className="sa-field">
-                <label className="sa-field-label" htmlFor="admin-change-password-new">Mật khẩu mới<Req /></label>
-                <input
-                  id="admin-change-password-new"
-                  type="password"
-                  className={`sa-input${pwErrors.newPassword ? ' sa-input-error' : ''}`}
-                  value={newPassword}
-                  data-testid="admin-change-password-new-input"
-                  aria-describedby={pwErrors.newPassword ? 'admin-change-password-new-error' : undefined}
-                  onChange={e => setNewPassword(e.target.value)}
-                  autoComplete="new-password"
-                />
-                <span className="sa-field-meta"><span className="sa-hint">Tối thiểu 8 ký tự, gồm chữ hoa, chữ số và ký tự đặc biệt.</span></span>
-                <FieldError id="admin-change-password-new-error" testid="admin-change-password-new-error" message={pwErrors.newPassword} />
-              </div>
-              <div className="sa-field">
-                <label className="sa-field-label" htmlFor="admin-change-password-confirm">Xác nhận mật khẩu mới<Req /></label>
-                <input
-                  id="admin-change-password-confirm"
-                  type="password"
-                  className={`sa-input${pwErrors.confirmPassword ? ' sa-input-error' : ''}`}
-                  value={confirmPassword}
-                  data-testid="admin-change-password-confirm-input"
-                  aria-describedby={pwErrors.confirmPassword ? 'admin-change-password-confirm-error' : undefined}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  autoComplete="new-password"
-                />
-                <FieldError id="admin-change-password-confirm-error" testid="admin-change-password-confirm-error" message={pwErrors.confirmPassword} />
-              </div>
-            </div>
-          </FormShell>
+            onClose={closePwForm}
+          />
         )}
       </section>
     </div>

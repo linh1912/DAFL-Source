@@ -36,15 +36,21 @@
   box-sizing: border-box;
 }
 
-/* ---------- Sidebar (đợt 20: Inter, gradient #0E2A1F → #081811, viền phải
-   trắng 6%, mục chọn viên thuốc #C6F432, badge cam tối, chân sidebar thẻ
-   admin + menu bật lên; KHÔNG còn chế độ thu về cột icon) ---------- */
+/* ---------- Sidebar TỐI (đợt 23, ĐẢO NGƯỢC đợt 22 sáng: bỏ toàn bộ
+   style sáng #FFFFFF/11px-uppercase/#15803D; nền gradient tối đợt 20
+   #0E2A1F→#0B1F17→#081811 được GIỮ, chỉ sửa những gì spec đợt 23 liệt kê.
+   Một font duy nhất Inter cho toàn bộ menu (cha + con + Tổng quan + chân
+   sidebar — rule .sa-sidebar * bên dưới ép font, không trộn font).
+   Tiêu đề nhóm 15px/600 #e6f0ea (tương phản 13.15–15.68 trên nền gradient,
+   WCAG AA); menu con 14px/500 #b9cdc0 (9.17–10.93, WCAG AA); active nền
+   xanh đậm + chữ lime #bff53c + thanh lime 3px; badge giữ cam sáng;
+   KHÔNG còn chế độ thu về cột icon) ---------- */
 .spark-admin .sa-sidebar {
   width: 256px;
   flex-shrink: 0;
   background: linear-gradient(180deg, #0e2a1f 0%, #0b1f17 55%, #081811 100%);
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.72);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  color: #d7e5db;
   display: flex;
   flex-direction: column;
   position: sticky;
@@ -54,9 +60,17 @@
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   transition: width 200ms ease-out, opacity 200ms ease-out, visibility 0s linear 0s, border-right-color 200ms ease-out;
 }
+/* Thống nhất 1 font Inter cho toàn bộ menu (đợt 23 §1): mọi phần tử trong
+   sidebar kế thừa đúng font sidebar, kể cả <button> (UA stylesheet mặc
+   định không inherit font). */
+.spark-admin .sa-sidebar,
+.spark-admin .sa-sidebar * {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
 
-/* Sidebar ẩn hẳn (chỉ desktop ≥1024px): co về 0, nội dung giãn ra mượt 200ms. */
-@media (min-width: 1024px) {
+/* Sidebar ẩn hẳn (chỉ desktop ≥960px — đợt 23 đổi breakpoint drawer
+   1024 → 960): co về 0, nội dung giãn ra mượt 200ms. */
+@media (min-width: 960px) {
   .spark-admin.sa-sidebar-hidden .sa-sidebar {
     width: 0;
     min-width: 0;
@@ -79,9 +93,9 @@
   min-height: 64px;
   padding: 0 20px;
   border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   background: transparent;
-  color: #fff;
+  color: #f2f7f3;
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-size: 18px;
   font-weight: 700;
@@ -92,7 +106,7 @@
   transition: background-color 180ms ease-out;
 }
 .spark-admin .sa-logo:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
 }
 .spark-admin .sa-logo:hover .sa-logo-star {
   filter: brightness(1.08);
@@ -102,8 +116,8 @@
   height: 36px;
   flex-shrink: 0;
   border-radius: 10px;
-  background: var(--sa-lime);
-  color: #0b1f17;
+  background: #16a34a;
+  color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -133,10 +147,10 @@
   border-radius: 3px;
 }
 .spark-admin .sa-sidebar:hover .sa-nav {
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
 }
 .spark-admin .sa-sidebar:hover .sa-nav::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.25);
 }
 /* Mờ dần 2 mép vùng cuộn (chỉ khi còn nội dung bị che — class do JS bật). */
 .spark-admin .sa-nav.sa-nav-fade-top {
@@ -152,63 +166,70 @@
   mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
 }
 
+/* Ngắt nhóm 14px (đợt 23 §2: 12–16px): Tổng quan cách nhóm đầu 14px,
+   nhóm cách nhóm 14px, một nhịp duy nhất. */
 .spark-admin .sa-nav-group {
-  margin-top: 0;
-}
-.spark-admin .sa-nav-group + .sa-nav-group {
-  margin-top: 24px;
+  margin-top: 14px;
 }
 .spark-admin .sa-nav-overview {
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
-/* Tiêu đề nhóm — DROPDOWN (đợt 21, 22:18): là <button> bấm được, chữ TO
-   hơn tên menu (16px/700 so với 14px/500), chevron Lucide ở phía PHẢI xoay
-   180° khi mở. Chữ trắng 50% trên nền #0B1F17: tương phản 5.15 (WCAG AA). */
+/* Tiêu đề nhóm — DROPDOWN (đợt 23 §2, đảo quyết định đợt 22): 15px/600,
+   KHÔNG in hoa, letter-spacing bình thường, màu #e6f0ea trên nền tối
+   (tương phản 13.15–15.68, WCAG AA), padding 10px 12px. Chevron Lucide ở
+   phía PHẢI, màu trung tính #8aa396 (tương phản 5.67–6.75, WCAG AA),
+   xoay 180° khi mở. CHÚ Ý: menu cha KHÔNG đổi màu khi con đang active
+   (không có rule .sa-open nào đổi màu tiêu đề). */
 .spark-admin .sa-nav-group-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   width: 100%;
-  padding: 0 12px 8px;
+  padding: 10px 12px;
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.5);
+  color: #e6f0ea;
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  line-height: 24px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 20px;
   text-align: left;
   cursor: pointer;
   user-select: none;
 }
 .spark-admin .sa-nav-group-title:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
 }
 .spark-admin .sa-nav-group-title:focus {
   outline: none;
 }
 .spark-admin .sa-nav-group-title:focus-visible {
-  outline: 2px solid rgba(198, 244, 50, 0.6);
+  outline: 2px solid #bff53c;
   outline-offset: 2px;
 }
 /* Chevron phải: xoay 180° (chỉ xuống → chỉ lên) khi nhóm mở, ~200ms. */
 .spark-admin .sa-nav-group-chevron {
   flex-shrink: 0;
-  color: rgba(255, 255, 255, 0.5);
+  color: #8aa396;
   transition: transform 200ms ease-out;
 }
 .spark-admin .sa-nav-group.sa-open .sa-nav-group-chevron {
   transform: rotate(180deg);
 }
 /* Vùng mục con: mở/thu mượt ~200ms ease-out bằng grid-rows (không dùng
-   max-height cố định); khi đóng thì visibility:hidden nên không tab tới được. */
+   max-height cố định); khi đóng thì visibility:hidden nên không tab tới được.
+   Đợt 23 §3: thụt vào so với menu cha — margin-left 12px + đường dọc mảnh
+   border-left 1px mờ nối bên trái, chữ mục con bắt đầu ở 12+1+12 = 25px
+   (tiêu đề nhóm ở 12px → thụt 13px, trong khoảng 12–16px). */
 .spark-admin .sa-nav-group-items {
   display: grid;
   grid-template-rows: 1fr;
+  margin-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
   transition: grid-template-rows 200ms ease-out, visibility 0s linear 0s;
 }
 .spark-admin .sa-nav-group-items-inner {
@@ -221,24 +242,28 @@
   transition: grid-template-rows 200ms ease-out, visibility 0s linear 200ms;
 }
 
+/* Mục menu con + mục đơn "Tổng quan" (đợt 23 §3–§4): CÙNG 14px/500 —
+   Tổng quan đúng bằng menu con, không dùng cỡ chữ menu cha. Màu #b9cdc0
+   dịu hơn menu cha (tương phản 9.17–10.93 trên nền tối, WCAG AA);
+   padding 8px 12px, bo góc 8px. */
 .spark-admin .sa-nav-btn {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  height: 40px;
+  min-height: 36px;
   text-align: left;
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-size: 14px;
   font-weight: 500;
   line-height: 20px;
   letter-spacing: -0.005em;
-  padding: 0 12px;
-  margin-bottom: 2px;
+  padding: 8px 12px;
+  margin-bottom: 4px;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.72);
+  color: #b9cdc0;
   cursor: pointer;
   position: relative;
   transition: background-color 180ms ease-out, color 180ms ease-out, transform 180ms ease-out, box-shadow 180ms ease-out;
@@ -255,36 +280,39 @@
   transition: transform 180ms ease-out;
 }
 .spark-admin .sa-nav-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e6f0ea;
 }
 .spark-admin .sa-nav-btn:hover .sa-nav-label {
   transform: translateX(2px);
 }
 .spark-admin .sa-nav-btn:active {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
   transform: scale(0.99);
 }
 /* Mục menu đang focus: KHÔNG dùng viền xanh mặc định của trình duyệt (bấm
-   chuột không hiện viền — sửa 18.1). Chỉ hiện vòng sáng khi đi bằng bàn phím. */
+   chuột không hiện viền — sửa 18.1). Chỉ hiện vòng sáng khi đi bằng bàn phím:
+   viền lime #bff53c (đợt 23: xanh lá đậm #15803D chìm trên nền tối nên đổi
+   sang lime; tương phản 11.93–14.22 trên nền gradient, nhìn rõ). */
 .spark-admin .sa-nav-btn:focus {
   outline: none;
 }
 .spark-admin .sa-nav-btn:focus-visible {
-  outline: 2px solid rgba(198, 244, 50, 0.6);
+  outline: 2px solid #bff53c;
   outline-offset: 2px;
 }
 
-/* Mục đang chọn: KHÔNG viền bao quanh — nền xanh chanh nhạt gradient trái →
-   phải + thanh nhấn viên thuốc 3×18px ở mép trái + chữ trắng đậm. */
+/* Mục đang chọn (CHỈ mục con hoặc Tổng quan mới có active — menu cha
+   không đổi màu): nền xanh đậm rgba(22,163,74,0.22) + chữ lime #bff53c
+   (tương phản 9.69 trên nền active đã blend #0d3c22, WCAG AA) +
+   thanh nhấn lime 3×18px ở mép trái. */
 .spark-admin .sa-nav-btn.sa-active {
-  background: linear-gradient(90deg, rgba(198, 244, 50, 0.14), rgba(198, 244, 50, 0.06));
-  color: #fff;
+  background: rgba(22, 163, 74, 0.22);
+  color: #bff53c;
   font-weight: 600;
-  box-shadow: inset 0 0 0 1px rgba(198, 244, 50, 0.12);
 }
 .spark-admin .sa-nav-btn.sa-active:hover {
-  background: linear-gradient(90deg, rgba(198, 244, 50, 0.14), rgba(198, 244, 50, 0.06));
+  background: rgba(22, 163, 74, 0.22);
 }
 .spark-admin .sa-nav-btn.sa-active:hover .sa-nav-label {
   transform: none;
@@ -298,7 +326,7 @@
   width: 3px;
   height: 18px;
   border-radius: 999px;
-  background: var(--sa-lime);
+  background: #bff53c;
   opacity: 0;
   transition: opacity 200ms ease-out;
 }
@@ -306,7 +334,11 @@
   opacity: 1;
 }
 
-/* Badge đếm: viên thuốc cam tối (bỏ nền kem sáng), nhấp nhẹ khi số đổi. */
+/* Badge đếm (đợt 23 §6): giữ ở mép phải, cao 20px, font 12px, bo tròn,
+   căn giữa dọc với chữ. GIỮ CAM SÁNG trên nền tối — nền #FEF3C7 + chữ
+   #92400E (tương phản 6.37 trên nền badge) nên badge vẫn nổi trên sidebar
+   tối và tách bạch vai trò "cảnh báo số lượng" với lime "đang chọn";
+   badge giữ NGUYÊN màu cam ngay cả trên mục đang chọn. */
 @keyframes sa-badge-pop {
   0% { transform: scale(1); }
   50% { transform: scale(1.12); }
@@ -323,9 +355,9 @@
   min-width: 20px;
   padding: 0 6px;
   border-radius: 999px;
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  background: rgba(245, 158, 11, 0.18);
-  color: #fbbf77;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  background: #fef3c7;
+  color: #92400e;
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
@@ -333,16 +365,13 @@
   text-align: center;
   animation: sa-badge-pop 240ms ease-out;
 }
-.spark-admin .sa-nav-btn.sa-active .sa-nav-badge {
-  background: rgba(198, 244, 50, 0.18);
-  border-color: rgba(198, 244, 50, 0.3);
-  color: var(--sa-lime);
-}
 
-/* ---------- Chân sidebar: thẻ admin + menu bật lên phía trên ---------- */
+/* ---------- Chân sidebar: thẻ admin + menu bật lên phía trên (đợt 23:
+   về nền TỐI theo sidebar — thẻ nền trắng/viền nhạt đợt 22 đã bỏ; chữ
+   tên #e6f0ea, email #b9cdc0; menu bật lên nền xanh đen đậm) ---------- */
 .spark-admin .sa-sidebar-user {
   position: relative;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding: 12px;
 }
 .spark-admin .sa-sidebar-user-card {
@@ -352,17 +381,17 @@
   width: 100%;
   min-width: 0;
   padding: 10px 12px;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e6f0ea;
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   text-align: left;
   cursor: pointer;
   transition: background-color 180ms ease-out;
 }
 .spark-admin .sa-sidebar-user-card:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
 }
 .spark-admin .sa-sidebar-user-info {
   flex: 1;
@@ -373,7 +402,7 @@
 }
 .spark-admin .sa-sidebar-user-name {
   display: block;
-  color: #fff;
+  color: #e6f0ea;
   font-size: 14px;
   font-weight: 600;
   line-height: 20px;
@@ -383,7 +412,7 @@
 }
 .spark-admin .sa-sidebar-user-email {
   display: block;
-  color: rgba(255, 255, 255, 0.55);
+  color: #b9cdc0;
   font-size: 12px;
   line-height: 16px;
   white-space: nowrap;
@@ -392,7 +421,7 @@
 }
 .spark-admin .sa-sidebar-user-chevron {
   flex-shrink: 0;
-  color: rgba(255, 255, 255, 0.55);
+  color: #8aa396;
   font-size: 12px;
   line-height: 1;
 }
@@ -404,7 +433,7 @@
   z-index: 60;
   padding: 6px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   background: #0e2a1f;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
 }
@@ -415,7 +444,7 @@
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.72);
+  color: #d7e5db;
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-size: 14px;
   font-weight: 500;
@@ -424,16 +453,16 @@
   transition: background-color 160ms ease-out, color 160ms ease-out;
 }
 .spark-admin .sa-sidebar-user-menu button:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
 }
 .spark-admin .sa-sidebar-user-menu-sep {
   height: 1px;
   margin: 6px 4px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.12);
 }
 .spark-admin .sa-sidebar-user-menu-logout {
-  color: #fca5a5;
+  color: #f87171;
 }
 
 /* Avatar tròn chữ cái đầu — màu nền hash theo tên (topbar/bảng dùng -sm). */
@@ -455,10 +484,10 @@
   height: 32px;
   font-size: 0.85rem;
 }
-/* Avatar ở chân sidebar: nền xanh chanh nhạt + chữ xanh chanh đậm. */
+/* Avatar ở chân sidebar: nền lime mờ + chữ lime (trên nền tối). */
 .spark-admin .sa-avatar.sa-sidebar-avatar {
-  background: rgba(198, 244, 50, 0.16);
-  color: var(--sa-lime);
+  background: rgba(191, 245, 60, 0.16);
+  color: #bff53c;
 }
 
 /* Tôn trọng prefers-reduced-motion: tắt trượt/dịch chữ/nhấp badge. */
@@ -1371,8 +1400,8 @@
   display: none;
 }
 
-/* ---------- Responsive: sidebar thành drawer trượt từ trái (<1024px) ---------- */
-@media (max-width: 1023px) {
+/* ---------- Responsive: sidebar thành drawer trượt từ trái (<960px — đợt 23 đổi từ 1023px) ---------- */
+@media (max-width: 959px) {
   .spark-admin .sa-sidebar {
     position: fixed;
     left: 0;
@@ -1970,7 +1999,10 @@
 .spark-admin .sa-status-switch { padding: 2px 0; }
 
 /* ---------- Đợt 17: trang Hồ sơ quản trị ---------- */
-.spark-admin .sa-profile-page { max-width: 1180px; }
+/* Đợt 23 phần A: trang FULL màn hình — bỏ max-width 1180px (ở màn 1920px
+ * nội dung bị bó, bên phải trống lớn); .sa-content đã tràn full nên trang
+ * Hồ sơ giờ chiếm hết chiều rộng nội dung. */
+.spark-admin .sa-profile-page { max-width: none; }
 .spark-admin .sa-profile-head {
   display: flex;
   align-items: center;
@@ -1998,15 +2030,27 @@
 /* Đợt 21: thẻ "Thông tin cá nhân" 2 hàng × 2 cột (Họ tên | Email /
  * Số điện thoại | Địa chỉ) ở CẢ trạng thái xem lẫn form sửa — form sửa
  * dùng chung class này cùng .sa-form-grid. Dưới 640px về 1 cột (cùng
- * breakpoint với .sa-form-grid). */
+ * breakpoint với .sa-form-grid).
+ * Đợt 23 phần A: tăng khoảng cách giữa 2 cột từ 24px lên 64px cho dãn
+ * xa nhau, thoáng ở màn rộng (1920px). */
 .spark-admin .sa-profile-info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px 24px;
+  gap: 16px 64px;
 }
 .spark-admin .sa-profile-info-grid > p { margin: 0; }
 @media (max-width: 640px) {
   .spark-admin .sa-profile-info-grid { grid-template-columns: 1fr; }
+}
+
+/* Đợt 23 phần A: modal Đổi mật khẩu giữa màn hình — rộng 560px (ghi đè
+ * width 640px của .sa-modal ở trên, cùng độ đặc hiệu nên rule sau thắng),
+ * 3 hàng mỗi hàng 1 ô full width (không chia 2 cột như Drawer cũ). */
+.spark-admin .sa-profile-pw-modal { width: 560px; }
+.spark-admin .sa-profile-pw-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
 }
 
 /* ==========================================================================

@@ -1985,7 +1985,7 @@ describe('AdminPage', () => {
     });
   };
 
-  it('Form Sản phẩm mới (đợt 21): trang full page + autofocus ô mã + dropzone có input file thật + preview + toggle', async () => {
+  it('Form Sản phẩm mới (đợt 21): trang full page + autofocus ô mã + dropzone có input file thật + toggle', async () => {
     await openProductAddForm();
     // Trang full page, KHÔNG Drawer: không role dialog, không fs-drawer.
     expect(screen.queryByTestId('admin-product-form-modal')).toBeNull();
@@ -2002,12 +2002,13 @@ describe('AdminPage', () => {
     expect(fileInput).not.toHaveStyle('display: none');
     expect(dropzone).toContainElement(fileInput);
     // Đợt 25/26: KHÔNG còn bộ đếm tên (0/120) hay dán link ảnh; toggle trạng thái
-    // hiện "Đang bán"; preview realtime + nút +/- tồn kho vẫn có; dropzone giữ
+    // hiện "Đang bán"; nút +/- tồn kho vẫn có; dropzone giữ
     // dòng định dạng (ngoại lệ được giữ) + input file thật.
+    // Đợt 27: card Xem trước (admin-product-preview) đã xóa hẳn khỏi form.
     expect(screen.queryByTestId('admin-product-name-count')).toBeNull();
     expect(screen.getByTestId('admin-product-name-input')).toHaveAttribute('maxLength', '120');
     expect(screen.getByTestId('admin-product-status-toggle')).toHaveTextContent('Đang bán');
-    expect(screen.getByTestId('admin-product-preview')).toBeInTheDocument();
+    expect(screen.queryByTestId('admin-product-preview')).toBeNull();
     expect(screen.getByTestId('admin-product-stock-minus-btn')).toBeInTheDocument();
     expect(screen.getByTestId('admin-product-stock-plus-btn')).toBeInTheDocument();
     expect(screen.queryByTestId('admin-product-image-link-toggle')).toBeNull();
@@ -2056,7 +2057,8 @@ describe('AdminPage', () => {
     expect(screen.getByTestId('admin-product-original-price-input')).toHaveValue('250.000');
     fireEvent.change(screen.getByTestId('admin-product-name-input'), { target: { value: 'Son kem' } });
     expect(screen.queryByTestId('admin-product-name-count')).toBeNull();
-    expect(screen.getByTestId('admin-product-preview')).toHaveTextContent('Son kem');
+    // Đợt 27: card Xem trước đã xóa hẳn — gõ tên không còn khối preview nào hiện.
+    expect(screen.queryByTestId('admin-product-preview')).toBeNull();
     // Nhãn trạng thái kho (đợt 25): chưa nhập thì chưa hiện; 1 → Sắp hết hàng; 0 → Hết hàng.
     expect(screen.queryByTestId('admin-product-stock-status')).toBeNull();
     fireEvent.click(screen.getByTestId('admin-product-stock-plus-btn'));

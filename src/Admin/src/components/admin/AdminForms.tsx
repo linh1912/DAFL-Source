@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { PHONE_FORMAT_MSG, PHONE_RE, REQUIRED_MSG, discountPercent, formatDateTimeVN, formatDateVN, formatMoneyVND, parseMoney, randomPromoCode, slugify, validateEntityCode } from './formUtils';
 import { CategoryPicker, FieldError, ImageUploader, MoneyInput, Req, Toggle, ViewImageGallery, imageItemFromUrl } from './FormControls';
 import type { UploadImageItem } from './FormControls';
-import { ArrowLeft, Banknote, Lock, Percent, Save, ShoppingBag, Sparkles, Truck } from 'lucide-react';
+import { ArrowLeft, Banknote, Lock, Percent, Save, Sparkles, Truck } from 'lucide-react';
 import { FormShell } from './FormShell';
 import './product-form.css';
 import { notify } from './notify';
@@ -247,7 +247,8 @@ export function ProductForm({ initial, categories, onSave, onRequestClose, mode:
   onSwitchToEdit?: () => void;
   /** Đợt 21 — 'drawer' (FormShell 760px, đợt 18, mặc định) và 'page' (trang
    *  full page: header sticky có nút Lưu/Hủy ở trên cùng, KHÔNG Drawer).
-   *  Nội dung form (trường + validate + upload + xem trước) dùng chung. */
+   *  Nội dung form (trường + validate + upload) dùng chung. (Đợt 27: đã bỏ
+   *  card "Xem trước" khỏi form sản phẩm.) */
   variant?: 'drawer' | 'page';
 }) {
   const isPage = variant === 'page';
@@ -433,7 +434,6 @@ export function ProductForm({ initial, categories, onSave, onRequestClose, mode:
     : stockNum >= LOW_STOCK_THRESHOLD ? { tone: 'green', label: 'Còn hàng' }
     : stockNum >= 1 ? { tone: 'yellow', label: 'Sắp hết hàng' }
     : { tone: 'red', label: 'Hết hàng' };
-  const categoryName = categories.find(c => c.id === categoryId)?.name ?? '';
 
   /** Nội dung form dùng chung cho cả 2 variant (đợt 21): Drawer (FormShell)
    *  và trang full page (form thường + header sticky). Chỉ khác cách bọc ngoài:
@@ -668,29 +668,10 @@ export function ProductForm({ initial, categories, onSave, onRequestClose, mode:
         </div>
     </FormSection>
   );
-  const previewSection = !isView ? (
-    <FormSection title="Xem trước" className="sa-product-preview-card">
-          <div className="sa-product-preview" data-testid="admin-product-preview">
-            {readyUrls[0]
-              ? <img src={readyUrls[0]} alt="" className="sa-preview-img" />
-              : <span className="sa-preview-img sa-preview-ph" aria-hidden="true"><ShoppingBag size={26} strokeWidth={1.8} /></span>}
-            <span className="sa-preview-info">
-              <strong>{name.trim() || 'Tên sản phẩm'}</strong>
-              <small>{categoryName || 'Chưa chọn danh mục'}</small>
-              <span className="sa-preview-price">
-                <span className="sa-money">{Number.isNaN(priceNum) || priceNum <= 0 ? '—' : `${priceNum.toLocaleString('vi-VN')}đ`}</span>
-                {origNum !== null && origNum > 0 && <s>{origNum.toLocaleString('vi-VN')}đ</s>}
-                {pct !== null && <span className="sa-discount-badge">-{pct}%</span>}
-              </span>
-              <small>Tồn kho: {stock === '' ? '—' : stockNum}</small>
-            </span>
-          </div>
-    </FormSection>
-  ) : null;
   const viewMetaNode = isView ? (
     <ViewMeta prefix="admin-product" createdAt={initial.createdAt} updatedAt={initial.updatedAt} updatedBy={initial.updatedBy} />
   ) : null;
-  /** Drawer: 1 cột theo thứ tự cũ (cơ bản, giá, trạng thái, hình ảnh, mô tả, xem trước). */
+  /** Drawer: 1 cột theo thứ tự cũ (cơ bản, giá, trạng thái, hình ảnh, mô tả). */
   const body = (
     <>
       {formErrorNode}
@@ -699,19 +680,18 @@ export function ProductForm({ initial, categories, onSave, onRequestClose, mode:
       {statusSection}
       {imageSection}
       {descSection}
-      {previewSection}
       {viewMetaNode}
     </>
   );
   /** Trang full page (đợt 25/26): lưới 2 cột trái 1.6fr/phải 1fr — trái: thông
-   *  tin cơ bản, mô tả, hình ảnh; phải: giá & tồn kho, trạng thái, xem trước
-   *  (sticky, giữ nguyên nội dung preview). Dưới 960px 1 cột. */
+   *  tin cơ bản, mô tả, hình ảnh; phải: giá & tồn kho, trạng thái.
+   *  Dưới 960px 1 cột. (Đợt 27: bỏ hẳn card "Xem trước" khỏi cột phải.) */
   const pageBody = (
     <>
       {formErrorNode}
       <div className="sa-product-form-cols">
         <div className="sa-product-form-col">{basicSection}{descSection}{imageSection}</div>
-        <div className="sa-product-form-col sa-product-form-col-side">{priceSection}{statusSection}{previewSection}</div>
+        <div className="sa-product-form-col sa-product-form-col-side">{priceSection}{statusSection}</div>
       </div>
       {viewMetaNode}
     </>

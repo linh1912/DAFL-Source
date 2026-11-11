@@ -9,6 +9,10 @@
  * ========================================================================== */
 
 .spark-admin {
+  /* Đợt 27: ép toàn bộ admin luôn render sáng kể cả khi OS bật dark mode
+     (đã xóa các khối media query dark); control native như date/select
+     cũng theo light). */
+  color-scheme: light;
   /* Đợt 24/25/26 — hợp đồng token duy nhất (worker B định nghĩa, worker A dùng):
      admin KHÔNG có cơ chế dark mode (chỉ shop có); các biến dưới đây chỉ có
      giá trị light. Nền trang #f2f6f2, nút chính #166534, font Inter 400/500/600. */

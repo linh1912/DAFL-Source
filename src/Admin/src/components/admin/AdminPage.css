@@ -1911,30 +1911,6 @@
 .spark-admin .sa-code-row .sa-input { flex: 1; text-transform: uppercase; }
 
 /* Badge % giảm. */
-/* Preview thẻ sản phẩm realtime. */
-.spark-admin .sa-product-preview {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  padding: 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  background: #f9fafb;
-}
-.spark-admin .sa-preview-img {
-  width: 72px;
-  height: 72px;
-  flex-shrink: 0;
-  border-radius: 8px;
-  object-fit: cover;
-  background: #e5e7eb;
-}
-.spark-admin .sa-preview-ph { display: inline-flex; align-items: center; justify-content: center; font-size: 1.6rem; }
-.spark-admin .sa-preview-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.spark-admin .sa-preview-info strong { overflow-wrap: anywhere; }
-.spark-admin .sa-preview-info small { color: var(--sa-muted); }
-.spark-admin .sa-preview-price { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.spark-admin .sa-preview-price s { color: #9ca3af; font-size: 0.88rem; }
 
 /* Toast (góc phải dưới). */
 .spark-admin .sa-toast {

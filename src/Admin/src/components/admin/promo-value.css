@@ -9,10 +9,10 @@
  * hiệu cao hơn (tiền tố .spark-admin .pv-card ...) để thắng bất kể thứ tự.
  *
  * Token: xanh lá #166534 (dùng chung --sa-primary), nền card trắng, viền #e2e9e3, bo 12px.
- * Dark: admin HIỆN KHÔNG có cơ chế dark mode (không data-theme, không toggle,
- * không prefers-color-scheme trong src/Admin — chỉ shop mới có). Khối này vẫn
- * định nghĩa biến dark qua @media (prefers-color-scheme: dark) để sẵn sàng
- * khi admin có dark mode; xem ghi chú cuối file.
+ * Dark: admin KHÔNG có dark mode (chỉ shop mới có). Đợt 27 đã xóa hẳn khối
+ * media query dark cuối file; .spark-admin đặt `color-scheme: light` trong
+ * design-tokens.css nên toàn bộ khối này luôn render sáng kể cả khi OS bật
+ * dark mode.
  */
 
 /* ---------- Biến màu của khối (light mặc định) ---------- */
@@ -359,56 +359,4 @@
   }
 }
 
-/* ---------- Dark (chuẩn bị sẵn — xem ghi chú cuối file) ---------- */
-@media (prefers-color-scheme: dark) {
-  .pv-card {
-    --pv-green: #86efac;
-    --pv-green-strong: #166534;
-    --pv-green-soft: #1c2b21;
-    --pv-green-bg: #14261a;
-    --pv-ring: rgba(134, 239, 172, 0.25);
-    --pv-border: #2a3f31;
-    --pv-card-border: #33473a;
-    --pv-input-border: #3a4f41;
-    --pv-card-bg: #122019;
-    --pv-input-bg: #16281d;
-    --pv-text: #e7f0e9;
-    --pv-title: #9db3a5;
-    --pv-label: #c3d2c7;
-    --pv-muted: #9db3a5;
-    --pv-addon-bg: #1e3325;
-    --pv-addon-text: #b9cdc0;
-    --pv-addon-border: #3a4f41;
-    --pv-error: #fda29b;
-    --pv-error-ring: rgba(253, 162, 155, 0.25);
-    --pv-preview-bg: #1c2b21;
-    --pv-preview-muted-bg: #1a2620;
-    --pv-divider: #2a3f31;
-    --pv-radio-border: #5c7263;
-  }
 
-  /* Ghi chú FreeShip dùng màu nền --sa-success-bg (xanh nhạt) ở light;
-     ở dark phải đổi theo, nếu không sẽ thành ô sáng chói trong card tối. */
-  .spark-admin .pv-card .sa-promo-freeship-note {
-    background: var(--pv-preview-bg);
-    border-color: var(--pv-green);
-    color: var(--pv-text);
-  }
-}
-
-/**
- * GHI CHÚ DARK MODE (kết quả kiểm tra đợt 24):
- * - Admin KHÔNG có cơ chế dark mode: grep toàn src/Admin không có data-theme,
- *   prefers-color-scheme, class dark hay toggle dark nào (chỉ có 1 class tên
- *   "sa-badge--darkred" không liên quan). Chỉ shop (src/Frontend) mới có
- *   [data-theme="dark"] + công tắc đổi theme. Vì vậy khối này KHÔNG tự gắn
- *   dark mode cho cả admin, và cũng không thêm công tắc nào.
- * - Các màu của khối đi qua biến --pv-*; khối @media (prefers-color-scheme:
- *   dark) trên chỉ định nghĩa lại các biến đó. Hệ quả thực tế hôm nay: trên
- *   máy người dùng bật dark ở cấp hệ điều hành, RIÊNG card "Giá trị giảm"
- *   sẽ tối theo trong khi toàn bộ admin còn lại vẫn sáng — lệch tông, dù
- *   vẫn đọc được (mọi chữ/label trong card đều dùng biến nên đổi theo).
- *   Đây là trạng thái "sẵn sàng, chưa kích hoạt đồng bộ": để dark hoạt động
- *   đúng, admin cần một cơ chế chung (vd [data-theme="dark"] ở root như
- *   shop) rồi đổi media query trên thành selector theo theme đó.
- */
